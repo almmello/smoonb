@@ -1,0 +1,18 @@
+{
+  "supabase": {
+    "url": "https://your-project.supabase.co",
+    "serviceKey": "your-service-key-here",
+    "anonKey": "your-anon-key-here"
+  },
+  "backup": {
+    "includeFunctions": true,
+    "includeStorage": true,
+    "includeAuth": true,
+    "includeRealtime": true,
+    "outputDir": "./backups"
+  },
+  "restore": {
+    "cleanRestore": false,
+    "verifyAfterRestore": true
+  }
+}

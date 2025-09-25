@@ -1,0 +1,43 @@
+{
+  "name": "smoonb",
+  "version": "0.0.1",
+  "description": "Complete Supabase backup and migration tool - EXPERIMENTAL VERSION - USE AT YOUR OWN RISK",
+  "main": "index.js",
+  "bin": {
+    "smoonb": "./bin/smoonb.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node bin/smoonb.js"
+  },
+  "keywords": [
+    "supabase",
+    "backup",
+    "migration",
+    "postgresql",
+    "edge-functions",
+    "database",
+    "cli",
+    "tool"
+  ],
+  "author": "Goalmoon Tecnologia LTDA <https://goalmoon.com>",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "commander": "^11.1.0",
+    "@supabase/supabase-js": "^2.38.0",
+    "chalk": "^4.1.2",
+    "inquirer": "^8.2.6"
+  },
+  "type": "commonjs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/almmello/smoonb.git"
+  },
+  "bugs": {
+    "url": "https://github.com/almmello/smoonb/issues"
+  },
+  "homepage": "https://github.com/almmello/smoonb#readme"
+}

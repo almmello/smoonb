@@ -1,0 +1,65 @@
+# Development files
+.git/
+.gitignore
+.vscode/
+.idea/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependencies
+node_modules/
+npm-shrinkwrap.json
+package-lock.json
+yarn.lock
+
+# Testing
+coverage/
+.nyc_output/
+test/
+tests/
+__tests__/
+*.test.js
+*.spec.js
+
+# Build artifacts
+dist/
+build/
+*.tgz
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+*.swp
+*.swo
+*~
+
+# Documentation (keep only README.md and LICENSE.md)
+docs/
+*.md
+!README.md
+!LICENSE.md
+
+# Development scripts
+scripts/
+dev/
+development/
+
+# Temporary files
+tmp/
+temp/
