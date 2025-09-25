@@ -202,7 +202,7 @@ Encontrou um bug? [Abra uma issue](https://github.com/almmello/smoonb/issues) co
 
 Se este projeto te ajudou e você gostaria de apoiar o desenvolvimento:
 
-- ☕ **Compre um café**: [Link de pagamento](https://pag.ae/7Yj8QjQjQ) 
+- ☕ **Compre um café**: [Link de pagamento](https://buy.stripe.com/aFadR99XtbTNb18egpbfO02) 
 - ⭐ **Dê uma estrela** no GitHub
 - 🐛 **Reporte bugs** e contribua com melhorias
 - 📢 **Compartilhe** com outros desenvolvedores
