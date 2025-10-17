@@ -6,11 +6,51 @@ const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { execSync } = require('child_process');
 
 /**
  * Cliente Supabase configurado
  */
 let supabaseClient = null;
+
+/**
+ * Encontrar caminho do pg_dump no Windows
+ */
+function findPgDumpPath() {
+  // Tentar configuração personalizada primeiro
+  const config = loadConfig();
+  if (config?.backup?.pgDumpPath && fs.existsSync(config.backup.pgDumpPath)) {
+    return config.backup.pgDumpPath;
+  }
+  
+  // Detecção automática no Windows
+  const possiblePaths = [
+    'C:\\Program Files\\PostgreSQL\\17\\bin\\pg_dump.exe',
+    'C:\\Program Files\\PostgreSQL\\16\\bin\\pg_dump.exe',
+    'C:\\Program Files\\PostgreSQL\\15\\bin\\pg_dump.exe',
+    'C:\\Program Files\\PostgreSQL\\14\\bin\\pg_dump.exe',
+    'C:\\Program Files\\PostgreSQL\\13\\bin\\pg_dump.exe',
+    'C:\\Program Files\\PostgreSQL\\12\\bin\\pg_dump.exe',
+    'pg_dump' // Fallback para PATH
+  ];
+  
+  for (const pgPath of possiblePaths) {
+    try {
+      if (pgPath === 'pg_dump') {
+        // Testar se está no PATH
+        execSync('pg_dump --version', { stdio: 'pipe' });
+        return pgPath;
+      } else if (fs.existsSync(pgPath)) {
+        return pgPath;
+      }
+    } catch (error) {
+      // Continuar para o próximo caminho
+      continue;
+    }
+  }
+  
+  throw new Error('pg_dump não encontrado. Instale o PostgreSQL ou configure pgDumpPath no .smoonbrc');
+}
 
 /**
  * Inicializar cliente Supabase
@@ -45,15 +85,28 @@ function getSupabaseClient() {
  * Carregar configuração do arquivo .smoonbrc
  */
 function loadConfig() {
-  const configPath = path.join(os.homedir(), '.smoonbrc');
+  // Primeiro tentar no diretório do projeto atual
+  const projectConfigPath = path.join(process.cwd(), '.smoonbrc');
   
   try {
-    if (fs.existsSync(configPath)) {
-      const configContent = fs.readFileSync(configPath, 'utf8');
+    if (fs.existsSync(projectConfigPath)) {
+      const configContent = fs.readFileSync(projectConfigPath, 'utf8');
       return JSON.parse(configContent);
     }
   } catch (error) {
-    console.warn('Erro ao carregar configuração:', error.message);
+    console.warn('Erro ao carregar configuração do projeto:', error.message);
+  }
+  
+  // Fallback: tentar no diretório home
+  const homeConfigPath = path.join(os.homedir(), '.smoonbrc');
+  
+  try {
+    if (fs.existsSync(homeConfigPath)) {
+      const configContent = fs.readFileSync(homeConfigPath, 'utf8');
+      return JSON.parse(configContent);
+    }
+  } catch (error) {
+    console.warn('Erro ao carregar configuração do home:', error.message);
   }
   
   return null;
@@ -63,10 +116,11 @@ function loadConfig() {
  * Salvar configuração no arquivo .smoonbrc
  */
 function saveConfig(config) {
-  const configPath = path.join(os.homedir(), '.smoonbrc');
+  // Salvar no diretório do projeto atual
+  const projectConfigPath = path.join(process.cwd(), '.smoonbrc');
   
   try {
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    fs.writeFileSync(projectConfigPath, JSON.stringify(config, null, 2));
     return true;
   } catch (error) {
     console.error('Erro ao salvar configuração:', error.message);
@@ -85,7 +139,9 @@ function getProjectId() {
   
   // Tentar configuração
   const config = loadConfig();
-  if (config?.supabase?.projectId && config.supabase.projectId.trim() !== '') {
+  if (config?.supabase?.projectId && 
+      config.supabase.projectId.trim() !== '' && 
+      config.supabase.projectId !== 'your-project-id-here') {
     return config.supabase.projectId;
   }
   
@@ -103,7 +159,10 @@ function getDatabaseUrl(projectId = null) {
   
   // Tentar configuração
   const config = loadConfig();
-  if (config?.supabase?.databaseUrl && config.supabase.databaseUrl.trim() !== '') {
+  if (config?.supabase?.databaseUrl && 
+      config.supabase.databaseUrl.trim() !== '' && 
+      !config.supabase.databaseUrl.includes('your-project') &&
+      !config.supabase.databaseUrl.includes('[password]')) {
     return config.supabase.databaseUrl;
   }
   
@@ -383,5 +442,6 @@ module.exports = {
   listExtensions,
   getAuthSettings,
   getStorageSettings,
-  getRealtimeSettings
+  getRealtimeSettings,
+  findPgDumpPath
 };

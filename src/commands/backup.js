@@ -8,7 +8,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
-const { getProjectId, getDatabaseUrl } = require('../utils/supabase');
+const { getProjectId, getDatabaseUrl, findPgDumpPath, loadConfig } = require('../utils/supabase');
 
 /**
  * Backup completo do projeto Supabase
@@ -29,18 +29,23 @@ async function backupCommand(options) {
     if (!projectId) {
       console.error(chalk.red.bold('❌ Erro: Project ID não encontrado'));
       console.log(chalk.yellow('💡 Opções:'));
-      console.log(chalk.gray('   1. Use: smoonb backup --project-id <seu-project-id>'));
-      console.log(chalk.gray('   2. Configure: smoonb config --init'));
+      console.log(chalk.gray('   1. Use: npx smoonb backup --project-id <seu-project-id>'));
+      console.log(chalk.gray('   2. Configure: npx smoonb config --init'));
       console.log(chalk.gray('   3. Ou defina SUPABASE_PROJECT_ID no ambiente'));
-      console.log(chalk.gray('   4. Ou edite ~/.smoonbrc e configure o projectId'));
+      console.log(chalk.gray('   4. Ou edite .smoonbrc e configure o projectId'));
+      console.log(chalk.gray('   5. Substitua "your-project-id-here" por seu ID real'));
       process.exit(1);
     }
 
     console.log(chalk.blue('🆔 Project ID:'), projectId);
 
+    // Obter diretório de backup da configuração ou usar opção
+    const config = loadConfig();
+    const outputDir = config?.backup?.outputDir || options.output;
+    
     // Criar diretório de backup com timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupDir = path.resolve(options.output, `backup-${timestamp}`);
+    const backupDir = path.resolve(outputDir, `backup-${timestamp}`);
     await fs.promises.mkdir(backupDir, { recursive: true });
 
     console.log(chalk.green('✅ Diretório de backup criado:'), backupDir);
@@ -145,6 +150,10 @@ async function backupDatabase(projectId, outputDir) {
       return null;
     }
     
+    // Encontrar caminho do pg_dump (detecção automática no Windows)
+    const pgDumpPath = findPgDumpPath();
+    console.log(chalk.gray(`   - Usando pg_dump: ${pgDumpPath}`));
+    
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `database-${timestamp}.dump`;
     const filepath = path.join(outputDir, filename);
@@ -152,7 +161,7 @@ async function backupDatabase(projectId, outputDir) {
     console.log(chalk.gray('   - Executando pg_dump com formato Custom (-Fc)...'));
     
     // Usar formato Custom (-Fc) para restauração mais segura
-    const command = `pg_dump "${dbUrl}" -Fc -f "${filepath}"`;
+    const command = `"${pgDumpPath}" "${dbUrl}" -Fc -f "${filepath}"`;
     execSync(command, { stdio: 'pipe' });
     
     return filepath;
@@ -161,6 +170,7 @@ async function backupDatabase(projectId, outputDir) {
     console.log(chalk.gray('   - Verifique se DATABASE_URL está correta'));
     console.log(chalk.gray('   - Verifique se pg_dump está instalado'));
     console.log(chalk.gray('   - Verifique se as credenciais estão corretas'));
+    console.log(chalk.gray('   - Configure pgDumpPath no .smoonbrc se necessário'));
     return null;
   }
 }

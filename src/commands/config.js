@@ -16,7 +16,7 @@ async function configCommand(options) {
   console.log(chalk.cyan.bold('⚙️  Configuração do smoonb...\n'));
 
   try {
-    const configPath = path.join(os.homedir(), '.smoonbrc');
+    const configPath = path.join(process.cwd(), '.smoonbrc');
 
     if (options.init) {
       // Inicializar configuração
@@ -33,7 +33,8 @@ async function configCommand(options) {
           includeStorage: true,
           includeAuth: true,
           includeRealtime: true,
-          outputDir: './backups'
+          outputDir: './backups',
+          pgDumpPath: 'C:\\Program Files\\PostgreSQL\\17\\bin\\pg_dump.exe'
         },
         restore: {
           cleanRestore: false,

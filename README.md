@@ -40,20 +40,20 @@ smoonb é a **primeira ferramenta** que faz backup **COMPLETO** do Supabase:
 
 ```bash
 # Backup completo do projeto
-smoonb backup
+npx smoonb backup
 
 # Restauração completa
-smoonb restore
+npx smoonb restore
 
 # Gerenciamento de secrets
-smoonb secrets export
-smoonb secrets import
+npx smoonb secrets export
+npx smoonb secrets import
 
 # Deploy de Edge Functions
-smoonb functions push
+npx smoonb functions push
 
 # Checklist pós-restore
-smoonb check
+npx smoonb check
 ```
 
 ## 📊 Comparação: smoonb vs Outras Ferramentas
@@ -72,34 +72,39 @@ smoonb check
 ## 🛠️ Instalação
 
 ```bash
-# Instalação global
-npm install -g smoonb
+# Instalar localmente no projeto
+npm install smoonb
 
-# Ou uso local
-npx smoonb --help
+# Usar com npx
+npx smoonb --version
+
+# Ou adicionar script no package.json
+npm pkg set scripts.backup="npx smoonb backup"
+npm run backup
 ```
 
 ## ⚡ Quick Start
 
 ```bash
-# 1. Configure suas credenciais Supabase
-smoonb config
+# 1. Instale o smoonb no projeto
+npm install smoonb
 
-# 2. Faça backup completo
-smoonb backup --project-id your-project-id
+# 2. Configure suas credenciais Supabase
+npx npx smoonb config --init
 
-# 3. Restaure em outro projeto
-smoonb restore --project-id target-project-id
+# 3. Edite o arquivo .smoonbrc com suas credenciais
+# 4. Execute o backup completo
+npx npx smoonb backup
 
-# 4. Verifique a restauração
-smoonb check --project-id target-project-id
+# 5. Restaure em outro projeto
+npx npx smoonb restore --backup-dir ./backups/backup-2024-01-15T10-30-00Z
 ```
 
 ## 📋 Exemplos de Uso
 
 ### Backup Completo
 ```bash
-smoonb backup \
+npx smoonb backup \
   --project-id abc123def456 \
   --output ./backup-$(date +%Y%m%d) \
   --include-functions \
@@ -109,7 +114,7 @@ smoonb backup \
 
 ### Restauração com Verificação
 ```bash
-smoonb restore \
+npx smoonb restore \
   --project-id xyz789uvw012 \
   --backup-dir ./backup-20241201 \
   --verify \
@@ -119,19 +124,19 @@ smoonb restore \
 ### Migração Entre Projetos
 ```bash
 # 1. Backup do projeto origem
-smoonb backup --project-id source-project
+npx smoonb backup --project-id source-project
 
 # 2. Export secrets (opcional)
-smoonb secrets export --project-id source-project
+npx smoonb secrets export --project-id source-project
 
 # 3. Restore no projeto destino
-smoonb restore --project-id target-project
+npx smoonb restore --project-id target-project
 
 # 4. Import secrets (opcional)
-smoonb secrets import --project-id target-project
+npx smoonb secrets import --project-id target-project
 
 # 5. Verificação final
-smoonb check --project-id target-project
+npx smoonb check --project-id target-project
 ```
 
 ## 🔧 Configuração

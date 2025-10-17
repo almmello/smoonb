@@ -1,3 +1,6 @@
+# Backups
+ backups/
+
 # Dependencies
 node_modules/
 npm-shrinkwrap.json

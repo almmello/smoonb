@@ -11,7 +11,8 @@
     "includeStorage": true,
     "includeAuth": true,
     "includeRealtime": true,
-    "outputDir": "./backups"
+    "outputDir": "./backups",
+    "pgDumpPath": "C:\\Program Files\\PostgreSQL\\17\\bin\\pg_dump.exe"
   },
   "restore": {
     "cleanRestore": false,

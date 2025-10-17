@@ -31,10 +31,10 @@ program
   })
   .addHelpText('after', () => {
     return chalk.cyan.bold(`
-📋 CONFIGURAÇÃO AUTOMÁTICA:
-   smoonb config --init           # Cria ~/.smoonbrc com projectId, URLs, etc.
-   # Edite o arquivo com suas credenciais Supabase
-   smoonb backup                  # Funciona sem --project-id!
+                📋 CONFIGURAÇÃO AUTOMÁTICA:
+                   npx smoonb config --init       # Cria .smoonbrc com projectId, URLs, etc.
+                   # Edite o arquivo com suas credenciais Supabase
+                   npx smoonb backup              # Funciona sem --project-id!
 
 📝 EXEMPLO DE CONFIGURAÇÃO (.smoonbrc):
    {
@@ -58,10 +58,10 @@ program
      }
    }
 
-🔧 COMO CONFIGURAR:
-   1. smoonb config --init
-   2. Edite ~/.smoonbrc com suas credenciais
-   3. smoonb backup (funciona automaticamente!)
+                🔧 COMO CONFIGURAR:
+                   1. npx smoonb config --init
+                   2. Edite .smoonbrc com suas credenciais
+                   3. npx smoonb backup (funciona automaticamente!)
 `);
   });
 
@@ -70,7 +70,7 @@ program
   .command('backup')
   .description('Fazer backup completo do projeto Supabase')
   .option('-p, --project-id <id>', 'ID do projeto Supabase')
-  .option('-o, --output <dir>', 'Diretório de saída do backup', './backup')
+  .option('-o, --output <dir>', 'Diretório de saída do backup', './backups')
   .option('--include-functions', 'Incluir Edge Functions no backup', true)
   .option('--include-storage', 'Incluir Storage Objects no backup', true)
   .option('--include-auth', 'Incluir Auth Settings no backup', true)
