@@ -8,6 +8,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
+const { getProjectId, getDatabaseUrl } = require('../utils/supabase');
 
 /**
  * Backup completo do projeto Supabase
@@ -22,12 +23,19 @@ async function backupCommand(options) {
   console.log(chalk.cyan.bold('🚀 Iniciando backup COMPLETO do projeto Supabase...\n'));
 
   try {
-    // Validar opções
-    if (!options.projectId) {
-      console.error(chalk.red.bold('❌ Erro: Project ID é obrigatório'));
-      console.log(chalk.yellow('💡 Use: smoonb backup --project-id <seu-project-id>'));
+    // Obter projectId (da opção ou da configuração)
+    const projectId = options.projectId || getProjectId();
+    
+    if (!projectId) {
+      console.error(chalk.red.bold('❌ Erro: Project ID não encontrado'));
+      console.log(chalk.yellow('💡 Opções:'));
+      console.log(chalk.gray('   1. Use: smoonb backup --project-id <seu-project-id>'));
+      console.log(chalk.gray('   2. Configure: smoonb config --init'));
+      console.log(chalk.gray('   3. Ou defina SUPABASE_PROJECT_ID no ambiente'));
       process.exit(1);
     }
+
+    console.log(chalk.blue('🆔 Project ID:'), projectId);
 
     // Criar diretório de backup com timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -38,41 +46,45 @@ async function backupCommand(options) {
 
     // 1. BACKUP DA DATABASE (formato Custom - mais confiável)
     console.log(chalk.blue.bold('\n📊 1/5 - Backup da Database PostgreSQL...'));
-    const dbBackupFile = await backupDatabase(options.projectId, backupDir);
-    console.log(chalk.green('✅ Database backupado:'), path.basename(dbBackupFile));
+    const dbBackupFile = await backupDatabase(projectId, backupDir);
+    if (dbBackupFile) {
+      console.log(chalk.green('✅ Database backupado:'), path.basename(dbBackupFile));
+    } else {
+      console.log(chalk.yellow('⚠️  Database não foi backupada (credenciais não configuradas)'));
+    }
 
     // 2. BACKUP DAS EDGE FUNCTIONS
     if (options.includeFunctions) {
       console.log(chalk.blue.bold('\n⚡ 2/5 - Backup das Edge Functions...'));
-      const functionsDir = await backupEdgeFunctions(options.projectId, backupDir);
+      const functionsDir = await backupEdgeFunctions(projectId, backupDir);
       console.log(chalk.green('✅ Edge Functions backupadas:'), functionsDir);
     }
 
     // 3. BACKUP DAS CONFIGURAÇÕES DE AUTH
     if (options.includeAuth) {
       console.log(chalk.blue.bold('\n🔐 3/5 - Backup das configurações de Auth...'));
-      const authConfig = await backupAuthSettings(options.projectId, backupDir);
+      const authConfig = await backupAuthSettings(projectId, backupDir);
       console.log(chalk.green('✅ Auth settings backupadas:'), authConfig);
     }
 
     // 4. BACKUP DOS STORAGE OBJECTS
     if (options.includeStorage) {
       console.log(chalk.blue.bold('\n📁 4/5 - Backup dos Storage Objects...'));
-      const storageBackup = await backupStorageObjects(options.projectId, backupDir);
+      const storageBackup = await backupStorageObjects(projectId, backupDir);
       console.log(chalk.green('✅ Storage Objects backupados:'), storageBackup);
     }
 
     // 5. BACKUP DAS CONFIGURAÇÕES DE REALTIME
     if (options.includeRealtime) {
       console.log(chalk.blue.bold('\n🔄 5/5 - Backup das configurações de Realtime...'));
-      const realtimeConfig = await backupRealtimeSettings(options.projectId, backupDir);
+      const realtimeConfig = await backupRealtimeSettings(projectId, backupDir);
       console.log(chalk.green('✅ Realtime settings backupadas:'), realtimeConfig);
     }
 
     // Criar arquivo de manifesto do backup
     const manifest = {
       timestamp: new Date().toISOString(),
-      projectId: options.projectId,
+      projectId: projectId,
       version: '0.1.0-beta',
       components: {
         database: !!dbBackupFile,
@@ -113,8 +125,14 @@ async function backupCommand(options) {
  */
 async function backupDatabase(projectId, outputDir) {
   try {
-    // Construir URL de conexão (assumindo que está configurada)
-    const dbUrl = process.env.DATABASE_URL || `postgresql://postgres:[password]@db.${projectId}.supabase.co:5432/postgres`;
+    // Obter URL de conexão da configuração
+    const dbUrl = getDatabaseUrl(projectId);
+    
+    if (!dbUrl) {
+      console.log(chalk.yellow('⚠️  Database URL não configurada'));
+      console.log(chalk.gray('   - Configure DATABASE_URL ou use smoonb config --init'));
+      return null;
+    }
     
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `database-${timestamp}.dump`;

@@ -75,9 +75,27 @@ function saveConfig(config) {
 }
 
 /**
+ * Obter Project ID do Supabase
+ */
+function getProjectId() {
+  // Tentar variável de ambiente primeiro
+  if (process.env.SUPABASE_PROJECT_ID) {
+    return process.env.SUPABASE_PROJECT_ID;
+  }
+  
+  // Tentar configuração
+  const config = loadConfig();
+  if (config?.supabase?.projectId) {
+    return config.supabase.projectId;
+  }
+  
+  return null;
+}
+
+/**
  * Obter URL de conexão da database
  */
-function getDatabaseUrl(projectId) {
+function getDatabaseUrl(projectId = null) {
   // Tentar variável de ambiente primeiro
   if (process.env.DATABASE_URL) {
     return process.env.DATABASE_URL;
@@ -89,8 +107,12 @@ function getDatabaseUrl(projectId) {
     return config.supabase.databaseUrl;
   }
   
-  // URL padrão (requer configuração de senha)
-  return `postgresql://postgres:[password]@db.${projectId}.supabase.co:5432/postgres`;
+  // Se projectId foi fornecido, usar URL padrão
+  if (projectId) {
+    return `postgresql://postgres:[password]@db.${projectId}.supabase.co:5432/postgres`;
+  }
+  
+  return null;
 }
 
 /**
@@ -349,6 +371,7 @@ module.exports = {
   getSupabaseClient,
   loadConfig,
   saveConfig,
+  getProjectId,
   getDatabaseUrl,
   getSupabaseUrl,
   getServiceKey,

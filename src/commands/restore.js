@@ -7,6 +7,7 @@ const chalk = require('chalk');
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { getProjectId } = require('../utils/supabase');
 
 /**
  * Restauração completa do projeto Supabase
@@ -21,12 +22,19 @@ async function restoreCommand(options) {
   console.log(chalk.cyan.bold('🔄 Iniciando restauração COMPLETA do projeto Supabase...\n'));
 
   try {
-    // Validar opções
-    if (!options.projectId) {
-      console.error(chalk.red.bold('❌ Erro: Project ID é obrigatório'));
-      console.log(chalk.yellow('💡 Use: smoonb restore --project-id <seu-project-id> --backup-dir <diretorio-backup>'));
+    // Obter projectId (da opção ou da configuração)
+    const projectId = options.projectId || getProjectId();
+    
+    if (!projectId) {
+      console.error(chalk.red.bold('❌ Erro: Project ID não encontrado'));
+      console.log(chalk.yellow('💡 Opções:'));
+      console.log(chalk.gray('   1. Use: smoonb restore --project-id <seu-project-id>'));
+      console.log(chalk.gray('   2. Configure: smoonb config --init'));
+      console.log(chalk.gray('   3. Ou defina SUPABASE_PROJECT_ID no ambiente'));
       process.exit(1);
     }
+
+    console.log(chalk.blue('🆔 Project ID:'), projectId);
 
     if (!options.backupDir) {
       console.error(chalk.red.bold('❌ Erro: Diretório de backup é obrigatório'));

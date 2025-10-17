@@ -7,6 +7,7 @@ const chalk = require('chalk');
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { getProjectId } = require('../utils/supabase');
 
 /**
  * Checklist pós-restore - Verificação de integridade
@@ -21,19 +22,24 @@ async function checkCommand(options) {
   console.log(chalk.cyan.bold('🔍 Checklist pós-restore - Verificação de integridade...\n'));
 
   try {
-    // Validar opções
-    if (!options.projectId) {
-      console.error(chalk.red.bold('❌ Erro: Project ID é obrigatório'));
-      console.log(chalk.yellow('💡 Use: smoonb check --project-id <seu-project-id>'));
+    // Obter projectId (da opção ou da configuração)
+    const projectId = options.projectId || getProjectId();
+    
+    if (!projectId) {
+      console.error(chalk.red.bold('❌ Erro: Project ID não encontrado'));
+      console.log(chalk.yellow('💡 Opções:'));
+      console.log(chalk.gray('   1. Use: smoonb check --project-id <seu-project-id>'));
+      console.log(chalk.gray('   2. Configure: smoonb config --init'));
+      console.log(chalk.gray('   3. Ou defina SUPABASE_PROJECT_ID no ambiente'));
       process.exit(1);
     }
 
-    console.log(chalk.blue('🆔 Project ID:'), options.projectId);
+    console.log(chalk.blue('🆔 Project ID:'), projectId);
     console.log(chalk.blue('📊 Modo verbose:'), options.verbose ? 'Ativado' : 'Desativado');
     console.log();
 
     // Executar verificações
-    const results = await runPostRestoreChecks(options.projectId, options.verbose);
+    const results = await runPostRestoreChecks(projectId, options.verbose);
 
     // Mostrar resumo
     showCheckSummary(results);

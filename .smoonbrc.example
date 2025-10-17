@@ -1,8 +1,10 @@
 {
   "supabase": {
+    "projectId": "your-project-id-here",
     "url": "https://your-project.supabase.co",
     "serviceKey": "your-service-key-here",
-    "anonKey": "your-anon-key-here"
+    "anonKey": "your-anon-key-here",
+    "databaseUrl": "postgresql://postgres:[password]@db.your-project.supabase.co:5432/postgres"
   },
   "backup": {
     "includeFunctions": true,

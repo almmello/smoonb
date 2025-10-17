@@ -22,9 +22,11 @@ async function configCommand(options) {
       // Inicializar configuração
       const defaultConfig = {
         supabase: {
+          projectId: '',
           url: '',
           serviceKey: '',
-          anonKey: ''
+          anonKey: '',
+          databaseUrl: ''
         },
         backup: {
           includeFunctions: true,

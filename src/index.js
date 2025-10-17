@@ -92,10 +92,12 @@ function showQuickHelp() {
 🚀 COMANDOS PRINCIPAIS:
 
 📊 Backup completo:
-   smoonb backup --project-id <project-id>
+   smoonb backup                    # Usa projectId da configuração
+   smoonb backup --project-id <id>  # Especifica projectId
 
 🔄 Restauração completa:
-   smoonb restore --project-id <project-id> --backup-dir <backup-dir>
+   smoonb restore --backup-dir <dir>                    # Usa projectId da configuração
+   smoonb restore --project-id <id> --backup-dir <dir>  # Especifica projectId
 
 🔐 Gerenciamento de secrets:
    smoonb secrets export
@@ -106,10 +108,33 @@ function showQuickHelp() {
    smoonb functions list
 
 🔍 Verificação pós-restore:
-   smoonb check --project-id <project-id>
+   smoonb check                    # Usa projectId da configuração
+   smoonb check --project-id <id>  # Especifica projectId
 
 ⚙️  Configuração:
-   smoonb config --init
+   smoonb config --init           # Criar arquivo de configuração
+   smoonb config --show           # Mostrar configuração atual
+
+📋 CONFIGURAÇÃO AUTOMÁTICA:
+   smoonb config --init           # Cria ~/.smoonbrc com projectId, URLs, etc.
+   # Edite o arquivo com suas credenciais Supabase
+   smoonb backup                  # Funciona sem --project-id!
+
+📝 EXEMPLO DE CONFIGURAÇÃO (.smoonbrc):
+   {
+     "supabase": {
+       "projectId": "abc123def456",
+       "url": "https://abc123def456.supabase.co",
+       "serviceKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+       "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+       "databaseUrl": "postgresql://postgres:[senha]@db.abc123def456.supabase.co:5432/postgres"
+     }
+   }
+
+🔧 COMO CONFIGURAR:
+   1. smoonb config --init
+   2. Edite ~/.smoonbrc com suas credenciais
+   3. smoonb backup (funciona automaticamente!)
 `));
 }
 
