@@ -4,7 +4,7 @@
  * smoonb - Complete Supabase backup and migration tool
  * 
  * CLI principal para backup e migração de projetos Supabase
- * Versão: 0.0.1 (EXPERIMENTAL VERSION - USE AT YOUR OWN RISK)
+ * EXPERIMENTAL VERSION - USE AT YOUR OWN RISK
  * 
  * Desenvolvido por: Goalmoon Tecnologia LTDA
  * Website: https://goalmoon.com
@@ -28,6 +28,41 @@ program
   .addHelpText('before', () => {
     showBetaBanner();
     return '';
+  })
+  .addHelpText('after', () => {
+    return chalk.cyan.bold(`
+📋 CONFIGURAÇÃO AUTOMÁTICA:
+   smoonb config --init           # Cria ~/.smoonbrc com projectId, URLs, etc.
+   # Edite o arquivo com suas credenciais Supabase
+   smoonb backup                  # Funciona sem --project-id!
+
+📝 EXEMPLO DE CONFIGURAÇÃO (.smoonbrc):
+   {
+     "supabase": {
+       "projectId": "abc123def456",
+       "url": "https://abc123def456.supabase.co",
+       "serviceKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+       "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+       "databaseUrl": "postgresql://postgres:[senha]@db.abc123def456.supabase.co:5432/postgres"
+     },
+     "backup": {
+       "includeFunctions": true,
+       "includeStorage": true,
+       "includeAuth": true,
+       "includeRealtime": true,
+       "outputDir": "./backups"
+     },
+     "restore": {
+       "cleanRestore": false,
+       "verifyAfterRestore": true
+     }
+   }
+
+🔧 COMO CONFIGURAR:
+   1. smoonb config --init
+   2. Edite ~/.smoonbrc com suas credenciais
+   3. smoonb backup (funciona automaticamente!)
+`);
   });
 
 // Comandos principais

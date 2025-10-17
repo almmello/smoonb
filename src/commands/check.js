@@ -14,7 +14,7 @@ const { getProjectId } = require('../utils/supabase');
  * Resolve o problema: garantir que restauração foi bem-sucedida
  */
 async function checkCommand(options) {
-  console.log(chalk.red.bold('🚀 smoonb v0.0.3 - EXPERIMENTAL VERSION'));
+  console.log(chalk.red.bold('🚀 smoonb - EXPERIMENTAL VERSION'));
   console.log(chalk.red.bold('⚠️  VERSÃO EXPERIMENTAL - NUNCA TESTADA EM PRODUÇÃO!'));
   console.log(chalk.red.bold('🚨 USE POR SUA CONTA E RISCO - Pode causar perda de dados!'));
   console.log(chalk.red.bold('❌ NÃO NOS RESPONSABILIZAMOS por qualquer perda de dados!\n'));

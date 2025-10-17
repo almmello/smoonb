@@ -24,7 +24,6 @@ const validationUtils = require('./utils/validation');
  */
 const packageInfo = {
   name: 'smoonb',
-  version: '0.0.3',
   description: 'Complete Supabase backup and migration tool - EXPERIMENTAL VERSION - USE AT YOUR OWN RISK',
   author: 'Goalmoon Tecnologia LTDA <https://goalmoon.com>',
   license: 'SEE LICENSE IN LICENSE.md'
@@ -36,7 +35,7 @@ const packageInfo = {
 function showBetaBanner() {
   console.log(chalk.red.bold(`
 ╔══════════════════════════════════════════════════════════════╗
-║                    🚀 smoonb v0.0.3                        ║
+║                    🚀 smoonb                                ║
 ║                                                              ║
 ║              ⚠️  EXPERIMENTAL VERSION - NÃO TESTADA!        ║
 ║                                                              ║
