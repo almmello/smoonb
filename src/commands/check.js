@@ -31,6 +31,7 @@ async function checkCommand(options) {
       console.log(chalk.gray('   1. Use: smoonb check --project-id <seu-project-id>'));
       console.log(chalk.gray('   2. Configure: smoonb config --init'));
       console.log(chalk.gray('   3. Ou defina SUPABASE_PROJECT_ID no ambiente'));
+      console.log(chalk.gray('   4. Ou edite ~/.smoonbrc e configure o projectId'));
       process.exit(1);
     }
 

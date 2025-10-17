@@ -85,7 +85,7 @@ function getProjectId() {
   
   // Tentar configuração
   const config = loadConfig();
-  if (config?.supabase?.projectId) {
+  if (config?.supabase?.projectId && config.supabase.projectId.trim() !== '') {
     return config.supabase.projectId;
   }
   
@@ -103,7 +103,7 @@ function getDatabaseUrl(projectId = null) {
   
   // Tentar configuração
   const config = loadConfig();
-  if (config?.supabase?.databaseUrl) {
+  if (config?.supabase?.databaseUrl && config.supabase.databaseUrl.trim() !== '') {
     return config.supabase.databaseUrl;
   }
   

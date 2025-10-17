@@ -21,6 +21,7 @@ coverage/
 .nyc_output/
 
 # Environment variables
+.smoonbrc
 .env
 .env.local
 .env.development.local

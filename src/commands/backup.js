@@ -32,6 +32,7 @@ async function backupCommand(options) {
       console.log(chalk.gray('   1. Use: smoonb backup --project-id <seu-project-id>'));
       console.log(chalk.gray('   2. Configure: smoonb config --init'));
       console.log(chalk.gray('   3. Ou defina SUPABASE_PROJECT_ID no ambiente'));
+      console.log(chalk.gray('   4. Ou edite ~/.smoonbrc e configure o projectId'));
       process.exit(1);
     }
 
@@ -130,7 +131,17 @@ async function backupDatabase(projectId, outputDir) {
     
     if (!dbUrl) {
       console.log(chalk.yellow('⚠️  Database URL não configurada'));
-      console.log(chalk.gray('   - Configure DATABASE_URL ou use smoonb config --init'));
+      console.log(chalk.gray('   - Configure DATABASE_URL no ambiente'));
+      console.log(chalk.gray('   - Ou edite ~/.smoonbrc e configure databaseUrl'));
+      console.log(chalk.gray('   - Ou use smoonb config --init'));
+      return null;
+    }
+    
+    // Verificar se a URL contém placeholder de senha
+    if (dbUrl.includes('[password]')) {
+      console.log(chalk.yellow('⚠️  Database URL contém placeholder [password]'));
+      console.log(chalk.gray('   - Substitua [password] pela senha real da database'));
+      console.log(chalk.gray('   - Ou configure DATABASE_URL completa no ambiente'));
       return null;
     }
     
@@ -146,8 +157,10 @@ async function backupDatabase(projectId, outputDir) {
     
     return filepath;
   } catch (error) {
-    console.log(chalk.yellow('⚠️  Backup da database falhou (credenciais não configuradas)'));
-    console.log(chalk.gray('   - Configure DATABASE_URL ou use smoonb config --init'));
+    console.log(chalk.yellow('⚠️  Backup da database falhou:'), error.message);
+    console.log(chalk.gray('   - Verifique se DATABASE_URL está correta'));
+    console.log(chalk.gray('   - Verifique se pg_dump está instalado'));
+    console.log(chalk.gray('   - Verifique se as credenciais estão corretas'));
     return null;
   }
 }

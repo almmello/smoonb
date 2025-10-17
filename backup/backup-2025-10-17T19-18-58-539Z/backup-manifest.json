@@ -1,0 +1,19 @@
+{
+  "timestamp": "2025-10-17T19:18:58.559Z",
+  "projectId": "itrnlqsdfsdfsdf",
+  "version": "0.1.0-beta",
+  "components": {
+    "database": false,
+    "functions": true,
+    "auth": true,
+    "storage": true,
+    "realtime": true
+  },
+  "files": {
+    "database": null,
+    "functions": "functions/",
+    "auth": "auth-config.json",
+    "storage": "storage/",
+    "realtime": "realtime-config.json"
+  }
+}
