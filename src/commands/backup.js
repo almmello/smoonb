@@ -15,7 +15,7 @@ const { getProjectId, getDatabaseUrl } = require('../utils/supabase');
  * Resolve o problema: ferramentas existentes só fazem backup da database
  */
 async function backupCommand(options) {
-  console.log(chalk.red.bold('🚀 smoonb v0.0.1 - EXPERIMENTAL VERSION'));
+  console.log(chalk.red.bold('🚀 smoonb v0.0.3 - EXPERIMENTAL VERSION'));
   console.log(chalk.red.bold('⚠️  VERSÃO EXPERIMENTAL - NUNCA TESTADA EM PRODUÇÃO!'));
   console.log(chalk.red.bold('🚨 USE POR SUA CONTA E RISCO - Pode causar perda de dados!'));
   console.log(chalk.red.bold('❌ NÃO NOS RESPONSABILIZAMOS por qualquer perda de dados!\n'));
