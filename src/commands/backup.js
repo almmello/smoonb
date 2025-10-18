@@ -5,7 +5,6 @@ const { ensureBin, runCommand } = require('../utils/cli');
 const { ensureDir, writeJson, copyDir } = require('../utils/fsx');
 const { sha256 } = require('../utils/hash');
 const { readConfig, validateFor } = require('../utils/config');
-const { IntrospectionService } = require('../services/introspect');
 const { showBetaBanner } = require('../utils/banner');
 
 // Exportar FUNÇÃO em vez de objeto Command
@@ -45,8 +44,8 @@ module.exports = async (options) => {
     console.log(chalk.blue(`📁 Diretório: ${backupDir}`));
     console.log(chalk.gray(`🔧 Usando pg_dump: ${pgDumpPath}`));
 
-    // 1. Backup da Database usando pg_dump/pg_dumpall
-    console.log(chalk.blue('\n📊 1/3 - Backup da Database PostgreSQL...'));
+    // 1. Backup da Database usando APENAS pg_dump/pg_dumpall
+    console.log(chalk.blue('\n📊 1/2 - Backup da Database PostgreSQL...'));
     const dbBackupResult = await backupDatabaseWithPgDump(databaseUrl, backupDir, pgDumpPath);
     
     if (!dbBackupResult.success) {
@@ -58,12 +57,8 @@ module.exports = async (options) => {
       process.exit(1);
     }
 
-    // 2. Gerar inventário real
-    console.log(chalk.blue('\n🔍 2/3 - Gerando inventário completo...'));
-    await generateInventory(config, backupDir);
-
-    // 3. Backup das Edge Functions locais
-    console.log(chalk.blue('\n⚡ 3/3 - Backup das Edge Functions locais...'));
+    // 2. Backup das Edge Functions locais (se existirem)
+    console.log(chalk.blue('\n⚡ 2/2 - Backup das Edge Functions locais...'));
     await backupLocalFunctions(backupDir);
 
     // Gerar manifesto do backup
@@ -72,6 +67,15 @@ module.exports = async (options) => {
     console.log(chalk.green('\n🎉 Backup completo finalizado!'));
     console.log(chalk.blue(`📁 Localização: ${backupDir}`));
     console.log(chalk.green(`✅ Database: ${dbBackupResult.files.length} arquivos SQL gerados`));
+    
+    // Mostrar resumo dos arquivos
+    console.log(chalk.blue('\n📊 Resumo dos arquivos gerados:'));
+    for (const file of dbBackupResult.files) {
+      const filePath = path.join(backupDir, file.filename);
+      const stats = fs.statSync(filePath);
+      const sizeKB = (stats.size / 1024).toFixed(1);
+      console.log(chalk.gray(`   - ${file.filename}: ${sizeKB} KB`));
+    }
 
   } catch (error) {
     console.error(chalk.red(`❌ Erro no backup: ${error.message}`));
@@ -107,7 +111,7 @@ async function findPgDumpPath() {
   return null;
 }
 
-// Backup da database usando pg_dump/pg_dumpall
+// Backup da database usando APENAS pg_dump/pg_dumpall
 async function backupDatabaseWithPgDump(databaseUrl, backupDir, pgDumpPath) {
   try {
     // Parse da URL da database
@@ -125,43 +129,26 @@ async function backupDatabaseWithPgDump(databaseUrl, backupDir, pgDumpPath) {
     const files = [];
     let success = true;
 
-    // 1. Backup dos roles usando pg_dumpall
-    console.log(chalk.blue('   - Exportando roles...'));
-    const rolesFile = path.join(backupDir, 'roles.sql');
-    const rolesCommand = `"${pgDumpPath.replace('pg_dump', 'pg_dumpall')}" --host=${host} --port=${port} --username=${username} --roles-only -f "${rolesFile}"`;
-    
-    try {
-      await runCommand(rolesCommand, {
-        env: { ...process.env, PGPASSWORD: password }
-      });
-      
-      if (await validateSqlFile(rolesFile)) {
-        files.push('roles.sql');
-        console.log(chalk.green('     ✅ Roles exportados com sucesso'));
-      } else {
-        console.log(chalk.yellow('     ⚠️ Arquivo roles.sql está vazio'));
-        success = false;
-      }
-    } catch (error) {
-      console.log(chalk.red(`     ❌ Erro ao exportar roles: ${error.message}`));
-      success = false;
-    }
-
-    // 2. Backup do schema usando pg_dump
+    // 1. Backup do schema usando pg_dump (COMANDO VALIDADO)
     console.log(chalk.blue('   - Exportando schema...'));
     const schemaFile = path.join(backupDir, 'schema.sql');
-    const schemaCommand = `"${pgDumpPath}" --host=${host} --port=${port} --username=${username} --schema-only -f "${schemaFile}" ${database}`;
+    const schemaCommand = `"${pgDumpPath}" "${databaseUrl}" --schema-only -f "${schemaFile}"`;
     
     try {
       await runCommand(schemaCommand, {
         env: { ...process.env, PGPASSWORD: password }
       });
       
-      if (await validateSqlFile(schemaFile)) {
-        files.push('schema.sql');
-        console.log(chalk.green('     ✅ Schema exportado com sucesso'));
+      const schemaValidation = await validateSqlFile(schemaFile);
+      if (schemaValidation.valid) {
+        files.push({
+          filename: 'schema.sql',
+          size: schemaValidation.size,
+          sizeKB: schemaValidation.sizeKB
+        });
+        console.log(chalk.green(`     ✅ Schema exportado: ${schemaValidation.sizeKB} KB`));
       } else {
-        console.log(chalk.yellow('     ⚠️ Arquivo schema.sql está vazio'));
+        console.log(chalk.red(`     ❌ Arquivo schema.sql inválido: ${schemaValidation.error}`));
         success = false;
       }
     } catch (error) {
@@ -169,25 +156,58 @@ async function backupDatabaseWithPgDump(databaseUrl, backupDir, pgDumpPath) {
       success = false;
     }
 
-    // 3. Backup dos dados usando pg_dump
+    // 2. Backup dos dados usando pg_dump (COMANDO VALIDADO)
     console.log(chalk.blue('   - Exportando dados...'));
     const dataFile = path.join(backupDir, 'data.sql');
-    const dataCommand = `"${pgDumpPath}" --host=${host} --port=${port} --username=${username} --data-only --use-copy -f "${dataFile}" ${database}`;
+    const dataCommand = `"${pgDumpPath}" "${databaseUrl}" --data-only -f "${dataFile}"`;
     
     try {
       await runCommand(dataCommand, {
         env: { ...process.env, PGPASSWORD: password }
       });
       
-      if (await validateSqlFile(dataFile)) {
-        files.push('data.sql');
-        console.log(chalk.green('     ✅ Dados exportados com sucesso'));
+      const dataValidation = await validateSqlFile(dataFile);
+      if (dataValidation.valid) {
+        files.push({
+          filename: 'data.sql',
+          size: dataValidation.size,
+          sizeKB: dataValidation.sizeKB
+        });
+        console.log(chalk.green(`     ✅ Dados exportados: ${dataValidation.sizeKB} KB`));
       } else {
-        console.log(chalk.yellow('     ⚠️ Arquivo data.sql está vazio'));
+        console.log(chalk.red(`     ❌ Arquivo data.sql inválido: ${dataValidation.error}`));
         success = false;
       }
     } catch (error) {
       console.log(chalk.red(`     ❌ Erro ao exportar dados: ${error.message}`));
+      success = false;
+    }
+
+    // 3. Backup dos roles usando pg_dumpall (COMANDO VALIDADO)
+    console.log(chalk.blue('   - Exportando roles...'));
+    const rolesFile = path.join(backupDir, 'roles.sql');
+    const pgDumpallPath = pgDumpPath.replace('pg_dump', 'pg_dumpall');
+    const rolesCommand = `"${pgDumpallPath}" --host=${host} --port=${port} --username=${username} --roles-only -f "${rolesFile}"`;
+    
+    try {
+      await runCommand(rolesCommand, {
+        env: { ...process.env, PGPASSWORD: password }
+      });
+      
+      const rolesValidation = await validateSqlFile(rolesFile);
+      if (rolesValidation.valid) {
+        files.push({
+          filename: 'roles.sql',
+          size: rolesValidation.size,
+          sizeKB: rolesValidation.sizeKB
+        });
+        console.log(chalk.green(`     ✅ Roles exportados: ${rolesValidation.sizeKB} KB`));
+      } else {
+        console.log(chalk.red(`     ❌ Arquivo roles.sql inválido: ${rolesValidation.error}`));
+        success = false;
+      }
+    } catch (error) {
+      console.log(chalk.red(`     ❌ Erro ao exportar roles: ${error.message}`));
       success = false;
     }
 
@@ -201,12 +221,14 @@ async function backupDatabaseWithPgDump(databaseUrl, backupDir, pgDumpPath) {
 async function validateSqlFile(filePath) {
   try {
     if (!fs.existsSync(filePath)) {
-      return false;
+      return { valid: false, error: 'Arquivo não existe', size: 0, sizeKB: '0.0' };
     }
 
     const stats = fs.statSync(filePath);
+    const sizeKB = (stats.size / 1024).toFixed(1);
+    
     if (stats.size === 0) {
-      return false;
+      return { valid: false, error: 'Arquivo vazio', size: 0, sizeKB: '0.0' };
     }
 
     const content = fs.readFileSync(filePath, 'utf8');
@@ -217,34 +239,17 @@ async function validateSqlFile(filePath) {
       content.toUpperCase().includes(keyword)
     );
 
-    return hasValidContent;
-  } catch (error) {
-    return false;
-  }
-}
-
-// Gerar inventário completo
-async function generateInventory(config, backupDir) {
-  try {
-    const introspection = new IntrospectionService(config);
-    const inventory = await introspection.generateFullInventory();
-
-    // Salvar inventário em arquivos separados
-    const inventoryDir = path.join(backupDir, 'inventory');
-    await ensureDir(inventoryDir);
-
-    for (const [component, data] of Object.entries(inventory.components)) {
-      const filePath = path.join(inventoryDir, `${component}.json`);
-      await writeJson(filePath, data);
+    if (!hasValidContent) {
+      return { valid: false, error: 'Sem conteúdo SQL válido', size: stats.size, sizeKB };
     }
 
-    console.log(chalk.green('✅ Inventário completo gerado'));
+    return { valid: true, error: null, size: stats.size, sizeKB };
   } catch (error) {
-    console.log(chalk.yellow(`⚠️ Erro ao gerar inventário: ${error.message}`));
+    return { valid: false, error: error.message, size: 0, sizeKB: '0.0' };
   }
 }
 
-// Backup das Edge Functions locais
+// Backup das Edge Functions locais (se existirem)
 async function backupLocalFunctions(backupDir) {
   const localFunctionsPath = 'supabase/functions';
   
@@ -267,17 +272,17 @@ async function generateBackupManifest(config, backupDir, sqlFiles) {
     created_at: new Date().toISOString(),
     project_id: config.supabase.projectId,
     smoonb_version: require('../../package.json').version,
-    backup_type: 'complete',
+    backup_type: 'postgresql_native',
     files: {
       roles: 'roles.sql',
       schema: 'schema.sql',
       data: 'data.sql'
     },
     hashes: {},
-    inventory: {},
     validation: {
       sql_files_created: sqlFiles.length,
-      sql_files_valid: sqlFiles.length === 3
+      sql_files_valid: sqlFiles.length === 3,
+      total_size_kb: sqlFiles.reduce((total, file) => total + parseFloat(file.sizeKB), 0).toFixed(1)
     }
   };
 
@@ -287,17 +292,6 @@ async function generateBackupManifest(config, backupDir, sqlFiles) {
     if (fs.existsSync(filePath)) {
       manifest.hashes[type] = await sha256(filePath);
     }
-  }
-
-  // Adicionar referências ao inventário
-  const inventoryDir = path.join(backupDir, 'inventory');
-  if (fs.existsSync(inventoryDir)) {
-    const inventoryFiles = fs.readdirSync(inventoryDir);
-    manifest.inventory = inventoryFiles.reduce((acc, file) => {
-      const component = path.basename(file, '.json');
-      acc[component] = `inventory/${file}`;
-      return acc;
-    }, {});
   }
 
   const manifestPath = path.join(backupDir, 'backup-manifest.json');
