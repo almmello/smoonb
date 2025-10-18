@@ -256,20 +256,27 @@ async function backupDatabaseWithPgDump(databaseUrl, backupDir, pgDumpPath) {
 // Backup das Edge Functions via Supabase API
 async function backupEdgeFunctions(config, backupDir) {
   try {
-    const supabase = createClient(config.supabase.url, config.supabase.serviceKey);
     const functionsDir = path.join(backupDir, 'edge-functions');
     await ensureDir(functionsDir);
 
-    console.log(chalk.gray('   - Listando Edge Functions...'));
+    console.log(chalk.gray('   - Listando Edge Functions via Management API...'));
     
-    // ✅ Descobrir dinamicamente quantas functions existem
-    const { data: functions, error } = await supabase.functions.list();
+    // ✅ Usar fetch direto para Management API
+    const functionsResponse = await fetch(`https://api.supabase.com/v1/projects/${config.supabase.projectId}/functions`, {
+      headers: { 
+        'Authorization': `Bearer ${config.supabase.serviceKey}`, 
+        'apikey': config.supabase.serviceKey,
+        'Content-Type': 'application/json'
+      }
+    });
     
-    if (error) {
-      console.log(chalk.yellow(`     ⚠️ Erro ao listar Edge Functions: ${error.message}`));
+    if (!functionsResponse.ok) {
+      console.log(chalk.yellow(`     ⚠️ Erro ao listar Edge Functions: ${functionsResponse.status} ${functionsResponse.statusText}`));
       return { success: false, functions: [] };
     }
 
+    const functions = await functionsResponse.json();
+    
     if (!functions || functions.length === 0) {
       console.log(chalk.gray('   - Nenhuma Edge Function encontrada'));
       await writeJson(path.join(functionsDir, 'README.md'), {
@@ -287,13 +294,21 @@ async function backupEdgeFunctions(config, backupDir) {
       try {
         console.log(chalk.gray(`   - Baixando: ${func.name}`));
         
-        // ✅ Baixar código da function
-        const { data: functionData, error: functionError } = await supabase.functions.get(func.slug);
+        // ✅ Baixar código da function via Management API
+        const functionResponse = await fetch(`https://api.supabase.com/v1/projects/${config.supabase.projectId}/functions/${func.name}`, {
+          headers: { 
+            'Authorization': `Bearer ${config.supabase.serviceKey}`, 
+            'apikey': config.supabase.serviceKey,
+            'Content-Type': 'application/json'
+          }
+        });
         
-        if (functionError) {
-          console.log(chalk.yellow(`     ⚠️ Erro ao baixar ${func.name}: ${functionError.message}`));
+        if (!functionResponse.ok) {
+          console.log(chalk.yellow(`     ⚠️ Erro ao baixar ${func.name}: ${functionResponse.status} ${functionResponse.statusText}`));
           continue;
         }
+
+        const functionData = await functionResponse.json();
 
         // ✅ Salvar arquivos dinamicamente
         const funcDir = path.join(functionsDir, func.name);
@@ -307,7 +322,7 @@ async function backupEdgeFunctions(config, backupDir) {
             await fs.promises.writeFile(filePath, file.content);
           }
         } else if (functionData && functionData.code) {
-          // Fallback para API antiga
+          // Fallback para estrutura simples
           const indexPath = path.join(funcDir, 'index.ts');
           await fs.promises.writeFile(indexPath, functionData.code);
           
@@ -315,11 +330,15 @@ async function backupEdgeFunctions(config, backupDir) {
             const denoPath = path.join(funcDir, 'deno.json');
             await writeJson(denoPath, functionData.deno_config);
           }
+        } else {
+          // Criar arquivo placeholder se não houver código
+          const indexPath = path.join(funcDir, 'index.ts');
+          await fs.promises.writeFile(indexPath, `// Edge Function: ${func.name}\n// Code not available via API\n`);
         }
 
         downloadedFunctions.push({
           name: func.name,
-          slug: func.slug,
+          slug: func.name,
           version: func.version || 'unknown',
           files: fs.existsSync(funcDir) ? fs.readdirSync(funcDir) : []
         });
@@ -332,8 +351,9 @@ async function backupEdgeFunctions(config, backupDir) {
 
     console.log(chalk.green(`✅ Edge Functions backupadas: ${downloadedFunctions.length} functions`));
     return { success: true, functions: downloadedFunctions };
+
   } catch (error) {
-    console.log(chalk.yellow(`⚠️ Erro no backup das Edge Functions: ${error.message}`));
+    console.log(chalk.yellow(`   ⚠️ Erro no backup das Edge Functions: ${error.message}`));
     return { success: false, functions: [] };
   }
 }
@@ -341,31 +361,37 @@ async function backupEdgeFunctions(config, backupDir) {
 // Backup das Auth Settings via Management API
 async function backupAuthSettings(config, backupDir) {
   try {
-    console.log(chalk.gray('   - Exportando configurações de Auth...'));
+    console.log(chalk.gray('   - Exportando configurações de Auth via Management API...'));
     
-    // Usar Management API para obter configurações de Auth
+    // ✅ Usar fetch direto para Management API
+    const authResponse = await fetch(`https://api.supabase.com/v1/projects/${config.supabase.projectId}/auth/settings`, {
+      headers: { 
+        'Authorization': `Bearer ${config.supabase.serviceKey}`, 
+        'apikey': config.supabase.serviceKey,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!authResponse.ok) {
+      console.log(chalk.yellow(`     ⚠️ Erro ao obter Auth Settings: ${authResponse.status} ${authResponse.statusText}`));
+      return { success: false };
+    }
+
+    const authSettings = await authResponse.json();
+    
+    // Salvar configurações de Auth
     const authSettingsPath = path.join(backupDir, 'auth-settings.json');
-    
-    const authSettings = {
+    await writeJson(authSettingsPath, {
       project_id: config.supabase.projectId,
       timestamp: new Date().toISOString(),
-      settings: {
-        // Configurações básicas que podemos obter
-        site_url: config.supabase.url,
-        jwt_secret: 'REDACTED', // Não expor secret
-        smtp_settings: null,
-        rate_limits: null,
-        email_templates: null
-      },
-      note: 'Configurações completas requerem acesso ao Management API'
-    };
+      settings: authSettings
+    });
 
-    await writeJson(authSettingsPath, authSettings);
-    console.log(chalk.green('     ✅ Auth Settings exportadas'));
-    
+    console.log(chalk.green(`✅ Auth Settings exportadas: ${path.basename(authSettingsPath)}`));
     return { success: true };
+
   } catch (error) {
-    console.log(chalk.yellow(`     ⚠️ Erro ao exportar Auth Settings: ${error.message}`));
+    console.log(chalk.yellow(`   ⚠️ Erro no backup das Auth Settings: ${error.message}`));
     return { success: false };
   }
 }
@@ -373,30 +399,54 @@ async function backupAuthSettings(config, backupDir) {
 // Backup do Storage via Supabase API
 async function backupStorage(config, backupDir) {
   try {
-    const supabase = createClient(config.supabase.url, config.supabase.serviceKey);
     const storageDir = path.join(backupDir, 'storage');
     await ensureDir(storageDir);
 
-    console.log(chalk.gray('   - Listando buckets de Storage...'));
+    console.log(chalk.gray('   - Listando buckets de Storage via Management API...'));
     
-    // Listar buckets
-    const { data: buckets, error } = await supabase.storage.listBuckets();
+    // ✅ Usar fetch direto para Management API
+    const storageResponse = await fetch(`https://api.supabase.com/v1/projects/${config.supabase.projectId}/storage/buckets`, {
+      headers: { 
+        'Authorization': `Bearer ${config.supabase.serviceKey}`, 
+        'apikey': config.supabase.serviceKey,
+        'Content-Type': 'application/json'
+      }
+    });
     
-    if (error) {
-      console.log(chalk.yellow(`     ⚠️ Erro ao listar buckets: ${error.message}`));
+    if (!storageResponse.ok) {
+      console.log(chalk.yellow(`     ⚠️ Erro ao listar buckets: ${storageResponse.status} ${storageResponse.statusText}`));
       return { success: false, buckets: [] };
     }
 
-    const processedBuckets = [];
+    const buckets = await storageResponse.json();
+
+    if (!buckets || buckets.length === 0) {
+      console.log(chalk.gray('   - Nenhum bucket encontrado'));
+      await writeJson(path.join(storageDir, 'README.md'), {
+        message: 'Nenhum bucket de Storage encontrado neste projeto'
+      });
+      return { success: true, buckets: [] };
+    }
+
+    console.log(chalk.gray(`   - Encontrados ${buckets.length} buckets`));
 
     for (const bucket of buckets || []) {
       try {
         console.log(chalk.gray(`   - Processando bucket: ${bucket.name}`));
         
-        // Listar objetos do bucket
-        const { data: objects, error: objectsError } = await supabase.storage
-          .from(bucket.name)
-          .list('', { limit: 1000 });
+        // ✅ Listar objetos do bucket via Management API
+        const objectsResponse = await fetch(`https://api.supabase.com/v1/projects/${config.supabase.projectId}/storage/buckets/${bucket.name}/objects`, {
+          headers: { 
+            'Authorization': `Bearer ${config.supabase.serviceKey}`, 
+            'apikey': config.supabase.serviceKey,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        let objects = [];
+        if (objectsResponse.ok) {
+          objects = await objectsResponse.json();
+        }
 
         const bucketInfo = {
           id: bucket.id,
@@ -422,7 +472,7 @@ async function backupStorage(config, backupDir) {
       }
     }
 
-    return { success: true, buckets: processedBuckets };
+    console.log(chalk.green(`✅ Storage backupado: ${processedBuckets.length} buckets`));
   } catch (error) {
     console.log(chalk.yellow(`⚠️ Erro no backup do Storage: ${error.message}`));
     return { success: false, buckets: [] };
