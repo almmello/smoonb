@@ -39,7 +39,8 @@ async function initializeConfig(configPath) {
       url: 'https://your-project-id.supabase.co',
       serviceKey: 'your-service-key-here',
       anonKey: 'your-anon-key-here',
-      databaseUrl: 'postgresql://postgres:[password]@db.your-project-id.supabase.co:5432/postgres'
+      databaseUrl: 'postgresql://postgres:[password]@db.your-project-id.supabase.co:5432/postgres',
+      accessToken: 'your-personal-access-token-here'
     },
     backup: {
       includeFunctions: true,
@@ -105,6 +106,12 @@ async function showConfig(configPath) {
       console.log(chalk.gray('   - Database URL: Configurada'));
     } else {
       console.log(chalk.yellow('   - Database URL: Não configurada'));
+    }
+    
+    if (config.supabase?.accessToken && config.supabase.accessToken !== 'your-personal-access-token-here') {
+      console.log(chalk.gray('   - Access Token: Configurado'));
+    } else {
+      console.log(chalk.yellow('   - Access Token: Não configurado (obrigatório para Management API)'));
     }
 
     console.log(chalk.blue('\n📊 Configurações de backup:'));

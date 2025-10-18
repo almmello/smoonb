@@ -85,8 +85,8 @@ function validateFor(config, action) {
       if (!config.supabase?.url) {
         errors.push('supabase.url é obrigatório');
       }
-      if (!config.supabase?.serviceKey) {
-        errors.push('supabase.serviceKey é obrigatório');
+      if (!config.supabase?.accessToken) {
+        errors.push('supabase.accessToken é obrigatório para Management API');
       }
       break;
   }

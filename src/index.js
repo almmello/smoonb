@@ -88,11 +88,19 @@ function showQuickHelp() {
      "supabase": {
        "projectId": "abc123def456",
        "url": "https://abc123def456.supabase.co",
-       "serviceKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-       "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-       "databaseUrl": "postgresql://postgres:[senha]@db.abc123def456.supabase.co:5432/postgres"
+       "serviceKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkXVCJ9...",
+       "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkXVCJ9...",
+       "databaseUrl": "postgresql://postgres:[senha]@db.abc123def456.supabase.co:5432/postgres",
+       "accessToken": "sbp_1234567890abcdef1234567890abcdef"
      }
    }
+
+🔑 PERSONAL ACCESS TOKEN (OBRIGATÓRIO):
+   Para Management API (Edge Functions, Auth Settings, Storage):
+   1. Acesse: https://supabase.com/dashboard/account/tokens
+   2. Clique em "Generate new token"
+   3. Copie o token (formato: sbp_...)
+   4. Adicione ao .smoonbrc como "accessToken"
 
 🔧 COMO CONFIGURAR:
    1. npx smoonb config --init

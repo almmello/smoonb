@@ -261,11 +261,10 @@ async function backupEdgeFunctions(config, backupDir) {
 
     console.log(chalk.gray('   - Listando Edge Functions via Management API...'));
     
-    // ✅ Usar fetch direto para Management API
+    // ✅ Usar fetch direto para Management API com Personal Access Token
     const functionsResponse = await fetch(`https://api.supabase.com/v1/projects/${config.supabase.projectId}/functions`, {
       headers: { 
-        'Authorization': `Bearer ${config.supabase.serviceKey}`, 
-        'apikey': config.supabase.serviceKey,
+        'Authorization': `Bearer ${config.supabase.accessToken}`,
         'Content-Type': 'application/json'
       }
     });
@@ -294,11 +293,10 @@ async function backupEdgeFunctions(config, backupDir) {
       try {
         console.log(chalk.gray(`   - Baixando: ${func.name}`));
         
-        // ✅ Baixar código da function via Management API
+        // ✅ Baixar código da function via Management API com Personal Access Token
         const functionResponse = await fetch(`https://api.supabase.com/v1/projects/${config.supabase.projectId}/functions/${func.name}`, {
           headers: { 
-            'Authorization': `Bearer ${config.supabase.serviceKey}`, 
-            'apikey': config.supabase.serviceKey,
+            'Authorization': `Bearer ${config.supabase.accessToken}`,
             'Content-Type': 'application/json'
           }
         });
@@ -363,11 +361,10 @@ async function backupAuthSettings(config, backupDir) {
   try {
     console.log(chalk.gray('   - Exportando configurações de Auth via Management API...'));
     
-    // ✅ Usar fetch direto para Management API
-    const authResponse = await fetch(`https://api.supabase.com/v1/projects/${config.supabase.projectId}/auth/settings`, {
+    // ✅ Usar fetch direto para Management API com Personal Access Token
+    const authResponse = await fetch(`https://api.supabase.com/v1/projects/${config.supabase.projectId}/config/auth`, {
       headers: { 
-        'Authorization': `Bearer ${config.supabase.serviceKey}`, 
-        'apikey': config.supabase.serviceKey,
+        'Authorization': `Bearer ${config.supabase.accessToken}`,
         'Content-Type': 'application/json'
       }
     });
@@ -404,11 +401,10 @@ async function backupStorage(config, backupDir) {
 
     console.log(chalk.gray('   - Listando buckets de Storage via Management API...'));
     
-    // ✅ Usar fetch direto para Management API
+    // ✅ Usar fetch direto para Management API com Personal Access Token
     const storageResponse = await fetch(`https://api.supabase.com/v1/projects/${config.supabase.projectId}/storage/buckets`, {
       headers: { 
-        'Authorization': `Bearer ${config.supabase.serviceKey}`, 
-        'apikey': config.supabase.serviceKey,
+        'Authorization': `Bearer ${config.supabase.accessToken}`,
         'Content-Type': 'application/json'
       }
     });
@@ -434,11 +430,10 @@ async function backupStorage(config, backupDir) {
       try {
         console.log(chalk.gray(`   - Processando bucket: ${bucket.name}`));
         
-        // ✅ Listar objetos do bucket via Management API
+        // ✅ Listar objetos do bucket via Management API com Personal Access Token
         const objectsResponse = await fetch(`https://api.supabase.com/v1/projects/${config.supabase.projectId}/storage/buckets/${bucket.name}/objects`, {
           headers: { 
-            'Authorization': `Bearer ${config.supabase.serviceKey}`, 
-            'apikey': config.supabase.serviceKey,
+            'Authorization': `Bearer ${config.supabase.accessToken}`,
             'Content-Type': 'application/json'
           }
         });
