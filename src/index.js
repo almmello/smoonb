@@ -10,7 +10,6 @@ const chalk = require('chalk');
 // Exportar comandos
 const backupCommand = require('./commands/backup');
 const restoreCommand = require('./commands/restore');
-const secretsCommand = require('./commands/secrets');
 const functionsCommand = require('./commands/functions');
 const checkCommand = require('./commands/check');
 const configCommand = require('./commands/config');
@@ -91,33 +90,26 @@ function showQuickHelp() {
 🚀 COMANDOS PRINCIPAIS:
 
 📊 Backup completo:
-   smoonb backup                    # Usa projectId da configuração
-   smoonb backup --project-id <id>  # Especifica projectId
+   npx smoonb backup                    # Usa configuração do .smoonbrc
 
 🔄 Restauração completa:
-   smoonb restore --backup-dir <dir>                    # Usa projectId da configuração
-   smoonb restore --project-id <id> --backup-dir <dir>  # Especifica projectId
-
-🔐 Gerenciamento de secrets:
-   smoonb secrets export
-   smoonb secrets import
+   npx smoonb restore --backup-dir <dir>  # Restaura backup usando psql
 
 ⚡ Edge Functions:
-   smoonb functions push
-   smoonb functions list
+   npx smoonb functions list
+   npx smoonb functions push
 
 🔍 Verificação pós-restore:
-   smoonb check                    # Usa projectId da configuração
-   smoonb check --project-id <id>  # Especifica projectId
+   npx smoonb check                     # Verifica integridade do projeto
 
 ⚙️  Configuração:
-   smoonb config --init           # Criar arquivo de configuração
-   smoonb config --show           # Mostrar configuração atual
+   npx smoonb config --init             # Criar arquivo de configuração
+   npx smoonb config --show             # Mostrar configuração atual
 
 📋 CONFIGURAÇÃO AUTOMÁTICA:
-   smoonb config --init           # Cria ~/.smoonbrc com projectId, URLs, etc.
+   npx smoonb config --init       # Cria .smoonbrc com projectId, URLs, etc.
    # Edite o arquivo com suas credenciais Supabase
-   smoonb backup                  # Funciona sem --project-id!
+   npx smoonb backup              # Funciona automaticamente!
 
 📝 EXEMPLO DE CONFIGURAÇÃO (.smoonbrc):
    {
@@ -131,9 +123,9 @@ function showQuickHelp() {
    }
 
 🔧 COMO CONFIGURAR:
-   1. smoonb config --init
-   2. Edite ~/.smoonbrc com suas credenciais
-   3. smoonb backup (funciona automaticamente!)
+   1. npx smoonb config --init
+   2. Edite .smoonbrc com suas credenciais
+   3. npx smoonb backup (funciona automaticamente!)
 `));
 }
 
@@ -270,7 +262,6 @@ module.exports = {
   commands: {
     backup: backupCommand,
     restore: restoreCommand,
-    secrets: secretsCommand,
     functions: functionsCommand,
     check: checkCommand,
     config: configCommand

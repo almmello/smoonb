@@ -1,232 +1,227 @@
-# smoonb 🚀
+# smoonb
 
-> **⚠️ VERSÃO EXPERIMENTAL - NÃO TESTADA - USE POR SUA CONTA E RISCO ⚠️**
+**Complete Supabase backup and migration tool**
 
-## 🚨 **AVISO IMPORTANTE - LEIA ANTES DE USAR**
+## ⚠️ EXPERIMENTAL VERSION - NÃO TESTADA - USE POR SUA CONTA E RISCO
 
-**Este software está em desenvolvimento inicial e NUNCA foi testado em produção.**
+**🚨 AVISO IMPORTANTE:**
+- Este software **NUNCA** foi testado em produção
+- **USE POR SUA CONTA E RISCO** - Pode causar perda irreparável de dados
+- **NÃO NOS RESPONSABILIZAMOS** por qualquer perda de dados
+- **NENHUM SUPORTE** é oferecido nesta fase - apenas aceitamos contribuições
 
-- ❌ **NÃO TESTE** este aplicativo em projetos importantes
-- ❌ **NÃO USE** em dados críticos ou produção
-- ⚠️ **RESULTADOS IMPREVISÍVEIS** - podem causar perdas irreparáveis de dados
-- ⚠️ **NÃO NOS RESPONSABILIZAMOS** por qualquer perda de dados
-- ⚠️ **USE POR SUA CONTA E RISCO** - você é o único responsável
+**Desenvolvido por:** Goalmoon Tecnologia LTDA (https://goalmoon.com)
 
-**Desenvolvido por:** [Goalmoon Tecnologia LTDA](https://goalmoon.com)
+## 🎯 Objetivo
 
-## 🎯 O Problema que Resolvemos
+O **smoonb** resolve o problema das ferramentas existentes que fazem backup apenas da database PostgreSQL, ignorando componentes críticos do Supabase:
 
-As ferramentas existentes fazem apenas backup da database PostgreSQL, ignorando componentes críticos:
+- ✅ **Database PostgreSQL** (roles, schema, data)
+- ✅ **Edge Functions** (código local)
+- ✅ **Auth Settings** (configurações de autenticação)
+- ✅ **Storage Objects** (buckets e metadados)
+- ✅ **Realtime Settings** (publicações e configurações)
+- ✅ **Inventário Completo** (extensões, políticas RLS, etc.)
 
-- ❌ **Edge Functions** - Código serverless perdido
-- ❌ **Auth Settings** - Configurações de autenticação perdidas  
-- ❌ **Storage Objects** - Arquivos e buckets perdidos
-- ❌ **Realtime Settings** - Configurações de tempo real perdidas
-
-**Resultado**: Falhas na restauração e perda de funcionalidades essenciais.
-
-## ✅ Nossa Solução
-
-smoonb é a **primeira ferramenta** que faz backup **COMPLETO** do Supabase:
-
-- ✅ **Database PostgreSQL** - Backup completo com pg_dump
-- ✅ **Edge Functions** - Código e configurações
-- ✅ **Auth Settings** - Políticas e configurações
-- ✅ **Storage Objects** - Arquivos e metadados
-- ✅ **Realtime Settings** - Configurações de tempo real
-- ✅ **Metadados** - Todas as configurações do projeto
-
-## 🚀 Comandos Principais
-
-```bash
-# Backup completo do projeto
-npx smoonb backup
-
-# Restauração completa
-npx smoonb restore
-
-# Gerenciamento de secrets
-npx smoonb secrets export
-npx smoonb secrets import
-
-# Deploy de Edge Functions
-npx smoonb functions push
-
-# Checklist pós-restore
-npx smoonb check
-```
-
-## 📊 Comparação: smoonb vs Outras Ferramentas
-
-| Funcionalidade | smoonb | Outras Ferramentas |
-|---|---|---|
-| Database PostgreSQL | ✅ Completo | ✅ Completo |
-| Edge Functions | ✅ Backup + Restore | ❌ Não suportado |
-| Auth Settings | ✅ Backup + Restore | ❌ Não suportado |
-| Storage Objects | ✅ Backup + Restore | ❌ Não suportado |
-| Realtime Settings | ✅ Backup + Restore | ❌ Não suportado |
-| Metadados | ✅ Completo | ❌ Parcial |
-| CLI Simples | ✅ Intuitivo | ⚠️ Complexo |
-| Restauração Confiável | ✅ 100% | ⚠️ Parcial |
-
-## 🛠️ Instalação
+## 🚀 Instalação
 
 ```bash
 # Instalar localmente no projeto
 npm install smoonb
 
 # Usar com npx
-npx smoonb --version
-
-# Ou adicionar script no package.json
-npm pkg set scripts.backup="npx smoonb backup"
-npm run backup
+npx smoonb --help
 ```
 
-## ⚡ Quick Start
+## 📋 Pré-requisitos
 
+### 1. Supabase CLI
 ```bash
-# 1. Instale o smoonb no projeto
-npm install smoonb
-
-# 2. Configure suas credenciais Supabase
-npx npx smoonb config --init
-
-# 3. Edite o arquivo .smoonbrc com suas credenciais
-# 4. Execute o backup completo
-npx npx smoonb backup
-
-# 5. Restaure em outro projeto
-npx npx smoonb restore --backup-dir ./backups/backup-2024-01-15T10-30-00Z
+npm install -g supabase
 ```
 
-## 📋 Exemplos de Uso
+### 2. PostgreSQL (psql)
+- **Windows**: https://www.postgresql.org/download/windows/
+- **macOS**: `brew install postgresql`
+- **Linux**: `sudo apt-get install postgresql-client`
 
-### Backup Completo
+## ⚙️ Configuração
+
+### 1. Inicializar configuração
 ```bash
-npx smoonb backup \
-  --project-id abc123def456 \
-  --output ./backup-$(date +%Y%m%d) \
-  --include-functions \
-  --include-storage \
-  --include-auth
+npx smoonb config --init
 ```
 
-### Restauração com Verificação
-```bash
-npx smoonb restore \
-  --project-id xyz789uvw012 \
-  --backup-dir ./backup-20241201 \
-  --verify \
-  --clean-restore
-```
-
-### Migração Entre Projetos
-```bash
-# 1. Backup do projeto origem
-npx smoonb backup --project-id source-project
-
-# 2. Export secrets (opcional)
-npx smoonb secrets export --project-id source-project
-
-# 3. Restore no projeto destino
-npx smoonb restore --project-id target-project
-
-# 4. Import secrets (opcional)
-npx smoonb secrets import --project-id target-project
-
-# 5. Verificação final
-npx smoonb check --project-id target-project
-```
-
-## 🔧 Configuração
-
-Crie um arquivo `.smoonbrc` na raiz do seu projeto:
-
+### 2. Editar `.smoonbrc`
 ```json
 {
   "supabase": {
-    "url": "https://your-project.supabase.co",
-    "serviceKey": "your-service-key"
+    "projectId": "seu-project-id",
+    "url": "https://seu-project-id.supabase.co",
+    "serviceKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "databaseUrl": "postgresql://postgres:[senha]@db.seu-project-id.supabase.co:5432/postgres"
   },
   "backup": {
     "includeFunctions": true,
     "includeStorage": true,
     "includeAuth": true,
+    "includeRealtime": true,
     "outputDir": "./backups"
+  },
+  "restore": {
+    "cleanRestore": true,
+    "verifyAfterRestore": true
   }
 }
 ```
 
-## 📝 Licenciamento
+### 3. Obter credenciais no Dashboard Supabase
 
-### 🆓 Versão Experimental Gratuita (Versões 0.x.x)
+1. **Project ID**: Settings → General → Reference ID
+2. **URL**: Settings → API → Project URL
+3. **Keys**: Settings → API → Project API keys
+4. **Database URL**: Settings → Database → Connection string
 
-- ✅ **Uso gratuito** para projetos pessoais e comerciais
-- ✅ **Sem restrições** de funcionalidades
-- ❌ **SEM SUPORTE** - apenas aceitamos contribuições
-- ⚠️ **USE POR SUA CONTA E RISCO** - software não testado
+## 🎯 Uso
 
-### 💼 Licença Comercial (Versões 1.0.0+)
+### Backup Completo
+```bash
+npx smoonb backup
+```
 
-**AVISO**: A partir da versão 1.0.0, o smoonb será licenciado comercialmente.
+**Resultado:**
+```
+backups/backup-2024-01-15T10-30-45-123Z/
+├── backup-manifest.json
+├── roles.sql
+├── schema.sql
+├── data.sql
+├── inventory/
+│   ├── extensions.json
+│   ├── tables.json
+│   ├── policies.json
+│   ├── realtime.json
+│   └── storage.json
+└── functions/
+    └── [código das Edge Functions locais]
+```
 
-- 📧 **Aviso prévio**: Mudanças serão anunciadas 90 dias antes
-- 💰 **Desconto especial**: Usuários experimentais terão condições preferenciais
-- 🔄 **Migração suave**: Processo transparente e bem comunicado
+### Restauração
+```bash
+npx smoonb restore --backup-dir backups/backup-2024-01-15T10-30-45-123Z
+```
 
-[📖 Leia a licença completa](./LICENSE.md)
+**Processo:**
+1. Verifica se database está vazia (clean restore)
+2. Executa `roles.sql` (roles e permissões)
+3. Executa `schema.sql` (estrutura das tabelas)
+4. Executa `data.sql` (dados com COPY)
+
+### Verificação Pós-Restore
+```bash
+npx smoonb check
+```
+
+**Verifica:**
+- ✅ Conexão com database
+- ✅ Extensões instaladas
+- ✅ Tabelas criadas
+- ✅ Políticas RLS
+- ✅ Publicações Realtime
+- ✅ Buckets de Storage
+
+### Edge Functions
+```bash
+# Listar functions
+npx smoonb functions list
+
+# Deploy functions
+npx smoonb functions push
+```
+
+## 🔧 Comandos Disponíveis
+
+| Comando | Descrição |
+|---------|-----------|
+| `npx smoonb backup` | Backup completo usando Supabase CLI |
+| `npx smoonb restore` | Restauração usando psql |
+| `npx smoonb check` | Verificação de integridade |
+| `npx smoonb functions` | Gerenciar Edge Functions |
+| `npx smoonb config` | Configurar credenciais |
+
+## 🏗️ Arquitetura Técnica
+
+### Backup Strategy
+- **Database**: `supabase db dump` → `roles.sql`, `schema.sql`, `data.sql`
+- **Inventário**: Queries SQL + Supabase API para metadados
+- **Edge Functions**: Cópia do código local (`supabase/functions/`)
+
+### Restore Strategy
+- **Clean Restore**: Verifica database vazia antes de restaurar
+- **Ordem**: roles → schema → data (com transação única para dados)
+- **Verificação**: Checklist automático pós-restore
+
+### Multiplataforma
+- **Windows/macOS/Linux**: Detecção automática de binários
+- **Cross-platform**: Usa `fs.promises.cp`, `path.join`, `spawn`
+- **Sem dependências específicas**: Funciona em qualquer SO
+
+## 📊 Fluxo Recomendado
+
+```bash
+# 1. Backup do projeto origem
+npx smoonb backup
+
+# 2. Criar novo projeto Supabase
+# (via Dashboard ou Supabase CLI)
+
+# 3. Configurar .smoonbrc com credenciais do novo projeto
+npx smoonb config --init
+
+# 4. Restaurar backup
+npx smoonb restore --backup-dir backups/backup-YYYY-MM-DDTHH-MM-SS-sssZ
+
+# 5. Verificar integridade
+npx smoonb check
+
+# 6. Deploy Edge Functions (se necessário)
+npx smoonb functions push
+```
+
+## 🐛 Troubleshooting
+
+### Supabase CLI não encontrado
+```bash
+npm install -g supabase
+```
+
+### psql não encontrado
+- **Windows**: Instalar PostgreSQL
+- **macOS**: `brew install postgresql`
+- **Linux**: `sudo apt-get install postgresql-client`
+
+### Database URL incorreta
+- Verificar senha na URL de conexão
+- Usar Connection string do Dashboard Supabase
+- Testar conexão: `psql "sua-database-url" -c "SELECT 1"`
+
+## 📝 Licença
+
+**Versões 0.x.x**: Uso gratuito (experimental)
+**Versões 1.0.0+**: Licença comercial (anúncio com 90 dias de antecedência)
 
 ## 🤝 Contribuição
 
-**Este é um projeto experimental - contribuições são bem-vindas!**
+Contribuições são bem-vindas! Este é um projeto experimental e precisamos de feedback da comunidade.
 
-1. Fork o projeto
-2. Crie uma branch (`git checkout -b feature/nova-funcionalidade`)
-3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
-4. Push para a branch (`git push origin feature/nova-funcionalidade`)
-5. Abra um Pull Request
+## ☕ Apoie o Projeto
 
-## 🐛 Reportar Bugs
-
-Encontrou um bug? [Abra uma issue](https://github.com/almmello/smoonb/issues) com:
-
-- Descrição detalhada do problema
-- Passos para reproduzir
-- Logs de erro (se houver)
-- Versão do smoonb e Node.js
-
-## 📞 Suporte e Contato
-
-- 🐛 **Bugs**: [GitHub Issues](https://github.com/almmello/smoonb/issues)
-- 💬 **Discussões**: [GitHub Discussions](https://github.com/almmello/smoonb/discussions)
-- 📧 **Licenciamento**: licensing@goalmoon.com
-- 🏢 **Empresa**: [Goalmoon Tecnologia LTDA](https://goalmoon.com)
-
-### ☕ Apoie o Desenvolvimento
-
-Se este projeto te ajudou e você gostaria de apoiar o desenvolvimento:
-
-- ☕ **Compre um café**: [Link de pagamento](https://buy.stripe.com/aFadR99XtbTNb18egpbfO02) 
-- ⭐ **Dê uma estrela** no GitHub
-- 🐛 **Reporte bugs** e contribua com melhorias
-- 📢 **Compartilhe** com outros desenvolvedores
-
-**⚠️ IMPORTANTE**: Este software está em desenvolvimento inicial e NUNCA foi testado em produção. Não oferecemos suporte técnico neste estágio - apenas aceitamos contribuições da comunidade.
-
-## 📄 Changelog
-
-### v0.0.1 (EXPERIMENTAL)
-- 🎉 Lançamento inicial da versão experimental
-- ⚠️ **NUNCA TESTADO EM PRODUÇÃO** - use por sua conta e risco
-- ✅ Backup completo de projetos Supabase (implementação inicial)
-- ✅ Restauração com verificação (implementação inicial)
-- ✅ Suporte a Edge Functions, Auth, Storage e Realtime (implementação inicial)
-- ✅ CLI intuitivo e documentação completa
-- 🏢 Desenvolvido por Goalmoon Tecnologia LTDA
+Se este projeto for útil para você, considere comprar um café:
+[Compre um café](https://pag.ae/7Yj8QjQjQ)
 
 ---
 
-**smoonb** - A ferramenta definitiva para backup e migração de projetos Supabase 🚀
-
-*Desenvolvido com ❤️ para a comunidade Supabase*
+**Desenvolvido por:** Goalmoon Tecnologia LTDA  
+**Website:** https://goalmoon.com  
+**GitHub:** https://github.com/almmello/smoonb

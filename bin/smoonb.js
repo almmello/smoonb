@@ -68,43 +68,27 @@ program
 // Comandos principais
 program
   .command('backup')
-  .description('Fazer backup completo do projeto Supabase')
-  .option('-p, --project-id <id>', 'ID do projeto Supabase')
-  .option('-o, --output <dir>', 'Diretório de saída do backup', './backups')
-  .option('--include-functions', 'Incluir Edge Functions no backup', true)
-  .option('--include-storage', 'Incluir Storage Objects no backup', true)
-  .option('--include-auth', 'Incluir Auth Settings no backup', true)
-  .option('--include-realtime', 'Incluir Realtime Settings no backup', true)
+  .description('Fazer backup completo do projeto Supabase usando Supabase CLI')
+  .option('-o, --output <dir>', 'Diretório de saída do backup')
   .action(commands.backup);
 
 program
   .command('restore')
-  .description('Restaurar backup completo no projeto Supabase')
-  .option('-p, --project-id <id>', 'ID do projeto Supabase destino')
+  .description('Restaurar backup completo usando psql')
   .option('-b, --backup-dir <dir>', 'Diretório do backup a ser restaurado')
-  .option('--clean-restore', 'Limpar projeto antes da restauração', false)
-  .option('--verify', 'Verificar restauração após completar', true)
+  .option('--db-url <url>', 'URL da database de destino (override)')
   .action(commands.restore);
 
-program
-  .command('secrets')
-  .description('Gerenciar secrets do projeto Supabase')
-  .option('export', 'Exportar secrets (sem commitar)')
-  .option('import', 'Importar secrets no projeto alvo')
-  .action(commands.secrets);
 
 program
   .command('functions')
-  .description('Gerenciar Edge Functions')
-  .option('push', 'Deploy de Edge Functions')
-  .option('pull', 'Baixar Edge Functions do projeto')
+  .description('Gerenciar Edge Functions do Supabase')
   .action(commands.functions);
 
 program
   .command('check')
-  .description('Checklist pós-restore - verificar integridade')
-  .option('-p, --project-id <id>', 'ID do projeto Supabase')
-  .option('--verbose', 'Saída detalhada', false)
+  .description('Verificar integridade do projeto Supabase após restauração')
+  .option('-o, --output <file>', 'Arquivo de saída do relatório', 'check-report.json')
   .action(commands.check);
 
 program

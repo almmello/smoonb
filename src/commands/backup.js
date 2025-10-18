@@ -1,286 +1,177 @@
-/**
- * Comando de backup completo do projeto Supabase
- * Implementação técnica real baseada em pesquisa extensiva
- */
-
+const { Command } = require('commander');
 const chalk = require('chalk');
-const { execSync } = require('child_process');
-const fs = require('fs');
 const path = require('path');
-const { createClient } = require('@supabase/supabase-js');
-const { getProjectId, getDatabaseUrl, findPgDumpPath, loadConfig } = require('../utils/supabase');
+const { ensureBin, runCommand } = require('../utils/cli');
+const { ensureDir, writeJson, copyDir } = require('../utils/fsx');
+const { sha256 } = require('../utils/hash');
+const { readConfig, validateFor } = require('../utils/config');
+const { IntrospectionService } = require('../services/introspect');
+const { showBetaBanner } = require('../index');
 
-/**
- * Backup completo do projeto Supabase
- * Resolve o problema: ferramentas existentes só fazem backup da database
- */
-async function backupCommand(options) {
-  console.log(chalk.red.bold('🚀 smoonb - EXPERIMENTAL VERSION'));
-  console.log(chalk.red.bold('⚠️  VERSÃO EXPERIMENTAL - NUNCA TESTADA EM PRODUÇÃO!'));
-  console.log(chalk.red.bold('🚨 USE POR SUA CONTA E RISCO - Pode causar perda de dados!'));
-  console.log(chalk.red.bold('❌ NÃO NOS RESPONSABILIZAMOS por qualquer perda de dados!\n'));
-  
-  console.log(chalk.cyan.bold('🚀 Iniciando backup COMPLETO do projeto Supabase...\n'));
-
-  try {
-    // Obter projectId (da opção ou da configuração)
-    const projectId = options.projectId || getProjectId();
+const backupCommand = new Command('backup')
+  .description('Backup completo do projeto Supabase usando Supabase CLI')
+  .option('-o, --output <dir>', 'Diretório de saída')
+  .action(async (options) => {
+    showBetaBanner();
     
-    if (!projectId) {
-      console.error(chalk.red.bold('❌ Erro: Project ID não encontrado'));
-      console.log(chalk.yellow('💡 Opções:'));
-      console.log(chalk.gray('   1. Use: npx smoonb backup --project-id <seu-project-id>'));
-      console.log(chalk.gray('   2. Configure: npx smoonb config --init'));
-      console.log(chalk.gray('   3. Ou defina SUPABASE_PROJECT_ID no ambiente'));
-      console.log(chalk.gray('   4. Ou edite .smoonbrc e configure o projectId'));
-      console.log(chalk.gray('   5. Substitua "your-project-id-here" por seu ID real'));
+    try {
+      // Verificar se Supabase CLI está disponível
+      const supabasePath = await ensureBin('supabase');
+      if (!supabasePath) {
+        console.error(chalk.red('❌ Supabase CLI não encontrado'));
+        console.log(chalk.yellow('💡 Instale o Supabase CLI:'));
+        console.log(chalk.yellow('  npm install -g supabase'));
+        console.log(chalk.yellow('  ou visite: https://supabase.com/docs/guides/cli'));
+        process.exit(1);
+      }
+
+      // Carregar e validar configuração
+      const config = await readConfig();
+      validateFor(config, 'backup');
+
+      const databaseUrl = config.supabase.databaseUrl;
+      if (!databaseUrl) {
+        console.error(chalk.red('❌ databaseUrl não configurada'));
+        console.log(chalk.yellow('💡 Configure databaseUrl no .smoonbrc'));
+        process.exit(1);
+      }
+
+      // Resolver diretório de saída
+      const outputDir = options.output || config.backup.outputDir;
+      
+      // Criar diretório de backup com timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupDir = path.join(outputDir, `backup-${timestamp}`);
+      await ensureDir(backupDir);
+
+      console.log(chalk.blue(`🚀 Iniciando backup do projeto: ${config.supabase.projectId}`));
+      console.log(chalk.blue(`📁 Diretório: ${backupDir}`));
+
+      // 1. Backup da Database usando Supabase CLI
+      console.log(chalk.blue('\n📊 1/3 - Backup da Database PostgreSQL...'));
+      await backupDatabaseWithSupabaseCLI(databaseUrl, backupDir);
+
+      // 2. Gerar inventário real
+      console.log(chalk.blue('\n🔍 2/3 - Gerando inventário completo...'));
+      await generateInventory(config, backupDir);
+
+      // 3. Backup das Edge Functions locais
+      console.log(chalk.blue('\n⚡ 3/3 - Backup das Edge Functions locais...'));
+      await backupLocalFunctions(backupDir);
+
+      // Gerar manifesto do backup
+      await generateBackupManifest(config, backupDir);
+
+      console.log(chalk.green('\n🎉 Backup completo finalizado!'));
+      console.log(chalk.blue(`📁 Localização: ${backupDir}`));
+
+    } catch (error) {
+      console.error(chalk.red(`❌ Erro no backup: ${error.message}`));
       process.exit(1);
     }
+  });
 
-    console.log(chalk.blue('🆔 Project ID:'), projectId);
-
-    // Obter diretório de backup da configuração ou usar opção
-    const config = loadConfig();
-    const outputDir = config?.backup?.outputDir || options.output;
+// Backup da database usando Supabase CLI
+async function backupDatabaseWithSupabaseCLI(databaseUrl, backupDir) {
+  try {
+    console.log(chalk.blue('   - Exportando roles...'));
+    const { stdout: rolesOutput } = await runCommand(
+      `supabase db dump --db-url "${databaseUrl}" -f roles.sql --role-only`
+    );
     
-    // Criar diretório de backup com timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupDir = path.resolve(outputDir, `backup-${timestamp}`);
-    await fs.promises.mkdir(backupDir, { recursive: true });
+    console.log(chalk.blue('   - Exportando schema...'));
+    const { stdout: schemaOutput } = await runCommand(
+      `supabase db dump --db-url "${databaseUrl}" -f schema.sql`
+    );
+    
+    console.log(chalk.blue('   - Exportando dados...'));
+    const { stdout: dataOutput } = await runCommand(
+      `supabase db dump --db-url "${databaseUrl}" -f data.sql --use-copy --data-only`
+    );
 
-    console.log(chalk.green('✅ Diretório de backup criado:'), backupDir);
+    console.log(chalk.green('✅ Database exportada com sucesso'));
+  } catch (error) {
+    throw new Error(`Falha no backup da database: ${error.message}`);
+  }
+}
 
-    // 1. BACKUP DA DATABASE (formato Custom - mais confiável)
-    console.log(chalk.blue.bold('\n📊 1/5 - Backup da Database PostgreSQL...'));
-    const dbBackupFile = await backupDatabase(projectId, backupDir);
-    if (dbBackupFile) {
-      console.log(chalk.green('✅ Database backupado:'), path.basename(dbBackupFile));
+// Gerar inventário completo
+async function generateInventory(config, backupDir) {
+  try {
+    const introspection = new IntrospectionService(config);
+    const inventory = await introspection.generateFullInventory();
+
+    // Salvar inventário em arquivos separados
+    const inventoryDir = path.join(backupDir, 'inventory');
+    await ensureDir(inventoryDir);
+
+    for (const [component, data] of Object.entries(inventory.components)) {
+      const filePath = path.join(inventoryDir, `${component}.json`);
+      await writeJson(filePath, data);
+    }
+
+    console.log(chalk.green('✅ Inventário completo gerado'));
+  } catch (error) {
+    console.log(chalk.yellow(`⚠️ Erro ao gerar inventário: ${error.message}`));
+  }
+}
+
+// Backup das Edge Functions locais
+async function backupLocalFunctions(backupDir) {
+  const localFunctionsPath = 'supabase/functions';
+  
+  try {
+    const fs = require('fs');
+    if (fs.existsSync(localFunctionsPath)) {
+      const functionsBackupDir = path.join(backupDir, 'functions');
+      await copyDir(localFunctionsPath, functionsBackupDir);
+      console.log(chalk.green('✅ Edge Functions locais copiadas'));
     } else {
-      console.log(chalk.yellow('⚠️  Database não foi backupada (credenciais não configuradas)'));
+      console.log(chalk.yellow('⚠️ Diretório supabase/functions não encontrado'));
     }
-
-    // 2. BACKUP DAS EDGE FUNCTIONS
-    if (options.includeFunctions) {
-      console.log(chalk.blue.bold('\n⚡ 2/5 - Backup das Edge Functions...'));
-      const functionsDir = await backupEdgeFunctions(projectId, backupDir);
-      console.log(chalk.green('✅ Edge Functions backupadas:'), functionsDir);
-    }
-
-    // 3. BACKUP DAS CONFIGURAÇÕES DE AUTH
-    if (options.includeAuth) {
-      console.log(chalk.blue.bold('\n🔐 3/5 - Backup das configurações de Auth...'));
-      const authConfig = await backupAuthSettings(projectId, backupDir);
-      console.log(chalk.green('✅ Auth settings backupadas:'), authConfig);
-    }
-
-    // 4. BACKUP DOS STORAGE OBJECTS
-    if (options.includeStorage) {
-      console.log(chalk.blue.bold('\n📁 4/5 - Backup dos Storage Objects...'));
-      const storageBackup = await backupStorageObjects(projectId, backupDir);
-      console.log(chalk.green('✅ Storage Objects backupados:'), storageBackup);
-    }
-
-    // 5. BACKUP DAS CONFIGURAÇÕES DE REALTIME
-    if (options.includeRealtime) {
-      console.log(chalk.blue.bold('\n🔄 5/5 - Backup das configurações de Realtime...'));
-      const realtimeConfig = await backupRealtimeSettings(projectId, backupDir);
-      console.log(chalk.green('✅ Realtime settings backupadas:'), realtimeConfig);
-    }
-
-    // Criar arquivo de manifesto do backup
-    const manifest = {
-      timestamp: new Date().toISOString(),
-      projectId: projectId,
-      version: '0.1.0-beta',
-      components: {
-        database: !!dbBackupFile,
-        functions: options.includeFunctions,
-        auth: options.includeAuth,
-        storage: options.includeStorage,
-        realtime: options.includeRealtime
-      },
-      files: {
-        database: dbBackupFile ? path.basename(dbBackupFile) : null,
-        functions: options.includeFunctions ? 'functions/' : null,
-        auth: options.includeAuth ? 'auth-config.json' : null,
-        storage: options.includeStorage ? 'storage/' : null,
-        realtime: options.includeRealtime ? 'realtime-config.json' : null
-      }
-    };
-
-    const manifestPath = path.join(backupDir, 'backup-manifest.json');
-    await fs.promises.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
-
-    console.log(chalk.green.bold('\n🎉 BACKUP COMPLETO FINALIZADO COM SUCESSO!'));
-    console.log(chalk.blue('📁 Diretório:'), backupDir);
-    console.log(chalk.blue('🆔 Project ID:'), options.projectId);
-    console.log(chalk.blue('📋 Manifesto:'), 'backup-manifest.json');
-    console.log(chalk.yellow('\n💡 Este backup inclui TODOS os componentes do Supabase!'));
-    console.log(chalk.yellow('🔄 Use "smoonb restore" para restaurar em outro projeto'));
-
   } catch (error) {
-    console.error(chalk.red.bold('❌ Erro durante o backup:'), error.message);
-    console.error(chalk.gray('Stack trace:'), error.stack);
-    process.exit(1);
+    console.log(chalk.yellow(`⚠️ Erro ao copiar Edge Functions: ${error.message}`));
   }
 }
 
-/**
- * Backup da database PostgreSQL usando pg_dump com formato Custom (-Fc)
- * Formato Custom é mais confiável para restauração
- */
-async function backupDatabase(projectId, outputDir) {
-  try {
-    // Obter URL de conexão da configuração
-    const dbUrl = getDatabaseUrl(projectId);
-    
-    if (!dbUrl) {
-      console.log(chalk.yellow('⚠️  Database URL não configurada'));
-      console.log(chalk.gray('   - Configure DATABASE_URL no ambiente'));
-      console.log(chalk.gray('   - Ou edite ~/.smoonbrc e configure databaseUrl'));
-      console.log(chalk.gray('   - Ou use smoonb config --init'));
-      return null;
+// Gerar manifesto do backup
+async function generateBackupManifest(config, backupDir) {
+  const manifest = {
+    created_at: new Date().toISOString(),
+    project_id: config.supabase.projectId,
+    smoonb_version: require('../../package.json').version,
+    backup_type: 'complete',
+    files: {
+      roles: 'roles.sql',
+      schema: 'schema.sql',
+      data: 'data.sql'
+    },
+    hashes: {},
+    inventory: {}
+  };
+
+  // Calcular hashes dos arquivos SQL
+  const fs = require('fs');
+  for (const [type, filename] of Object.entries(manifest.files)) {
+    const filePath = path.join(backupDir, filename);
+    if (fs.existsSync(filePath)) {
+      manifest.hashes[type] = await sha256(filePath);
     }
-    
-    // Verificar se a URL contém placeholder de senha
-    if (dbUrl.includes('[password]')) {
-      console.log(chalk.yellow('⚠️  Database URL contém placeholder [password]'));
-      console.log(chalk.gray('   - Substitua [password] pela senha real da database'));
-      console.log(chalk.gray('   - Ou configure DATABASE_URL completa no ambiente'));
-      return null;
-    }
-    
-    // Encontrar caminho do pg_dump (detecção automática no Windows)
-    const pgDumpPath = findPgDumpPath();
-    console.log(chalk.gray(`   - Usando pg_dump: ${pgDumpPath}`));
-    
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `database-${timestamp}.dump`;
-    const filepath = path.join(outputDir, filename);
-    
-    console.log(chalk.gray('   - Executando pg_dump com formato Custom (-Fc)...'));
-    
-    // Usar formato Custom (-Fc) para restauração mais segura
-    const command = `"${pgDumpPath}" "${dbUrl}" -Fc -f "${filepath}"`;
-    execSync(command, { stdio: 'pipe' });
-    
-    return filepath;
-  } catch (error) {
-    console.log(chalk.yellow('⚠️  Backup da database falhou:'), error.message);
-    console.log(chalk.gray('   - Verifique se DATABASE_URL está correta'));
-    console.log(chalk.gray('   - Verifique se pg_dump está instalado'));
-    console.log(chalk.gray('   - Verifique se as credenciais estão corretas'));
-    console.log(chalk.gray('   - Configure pgDumpPath no .smoonbrc se necessário'));
-    return null;
   }
-}
 
-/**
- * Backup das Edge Functions via Supabase CLI
- */
-async function backupEdgeFunctions(projectId, outputDir) {
-  try {
-    const functionsBackupDir = path.join(outputDir, 'functions');
-    await fs.promises.mkdir(functionsBackupDir, { recursive: true });
-    
-    // Verificar se existe pasta supabase/functions no projeto atual
-    if (fs.existsSync('supabase/functions')) {
-      console.log(chalk.gray('   - Copiando código das Edge Functions...'));
-      
-      // Copiar código das functions (Windows compatible)
-      const { execSync } = require('child_process');
-      execSync(`xcopy "supabase\\functions\\*" "${functionsBackupDir}\\" /E /I /Y`, { stdio: 'pipe' });
-    } else {
-      console.log(chalk.gray('   - Nenhuma Edge Function local encontrada'));
-      
-      // Criar arquivo placeholder
-      const placeholderPath = path.join(functionsBackupDir, 'README.md');
-      await fs.promises.writeFile(placeholderPath, 
-        '# Edge Functions Backup\n\nNenhuma Edge Function local foi encontrada.\nUse o Supabase CLI para fazer backup das functions remotas.'
-      );
-    }
-    
-    return functionsBackupDir;
-  } catch (error) {
-    console.log(chalk.yellow('⚠️  Backup das Edge Functions falhou:'), error.message);
-    return null;
+  // Adicionar referências ao inventário
+  const inventoryDir = path.join(backupDir, 'inventory');
+  if (fs.existsSync(inventoryDir)) {
+    const inventoryFiles = fs.readdirSync(inventoryDir);
+    manifest.inventory = inventoryFiles.reduce((acc, file) => {
+      const component = path.basename(file, '.json');
+      acc[component] = `inventory/${file}`;
+      return acc;
+    }, {});
   }
-}
 
-/**
- * Backup das configurações de Auth
- */
-async function backupAuthSettings(projectId, outputDir) {
-  try {
-    // TODO: Implementar busca real via Supabase API
-    const authConfig = {
-      timestamp: new Date().toISOString(),
-      projectId: projectId,
-      providers: [],
-      policies: [],
-      settings: {}
-    };
-    
-    const authConfigPath = path.join(outputDir, 'auth-config.json');
-    await fs.promises.writeFile(authConfigPath, JSON.stringify(authConfig, null, 2));
-    
-    console.log(chalk.gray('   - Configurações de Auth exportadas'));
-    return authConfigPath;
-  } catch (error) {
-    console.log(chalk.yellow('⚠️  Backup das configurações de Auth falhou:'), error.message);
-    return null;
-  }
-}
-
-/**
- * Backup dos Storage Objects
- */
-async function backupStorageObjects(projectId, outputDir) {
-  try {
-    const storageBackupDir = path.join(outputDir, 'storage');
-    await fs.promises.mkdir(storageBackupDir, { recursive: true });
-    
-    // TODO: Implementar backup real dos objetos de storage
-    const storageConfig = {
-      timestamp: new Date().toISOString(),
-      projectId: projectId,
-      buckets: [],
-      objects: []
-    };
-    
-    const storageConfigPath = path.join(storageBackupDir, 'storage-config.json');
-    await fs.promises.writeFile(storageConfigPath, JSON.stringify(storageConfig, null, 2));
-    
-    console.log(chalk.gray('   - Configurações de Storage exportadas'));
-    return storageBackupDir;
-  } catch (error) {
-    console.log(chalk.yellow('⚠️  Backup dos Storage Objects falhou:'), error.message);
-    return null;
-  }
-}
-
-/**
- * Backup das configurações de Realtime
- */
-async function backupRealtimeSettings(projectId, outputDir) {
-  try {
-    const realtimeConfig = {
-      timestamp: new Date().toISOString(),
-      projectId: projectId,
-      enabled: false,
-      channels: [],
-      settings: {}
-    };
-    
-    const realtimeConfigPath = path.join(outputDir, 'realtime-config.json');
-    await fs.promises.writeFile(realtimeConfigPath, JSON.stringify(realtimeConfig, null, 2));
-    
-    console.log(chalk.gray('   - Configurações de Realtime exportadas'));
-    return realtimeConfigPath;
-  } catch (error) {
-    console.log(chalk.yellow('⚠️  Backup das configurações de Realtime falhou:'), error.message);
-    return null;
-  }
+  const manifestPath = path.join(backupDir, 'backup-manifest.json');
+  await writeJson(manifestPath, manifest);
 }
 
 module.exports = backupCommand;
