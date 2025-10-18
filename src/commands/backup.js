@@ -5,7 +5,7 @@ const { ensureDir, writeJson, copyDir } = require('../utils/fsx');
 const { sha256 } = require('../utils/hash');
 const { readConfig, validateFor } = require('../utils/config');
 const { IntrospectionService } = require('../services/introspect');
-const { showBetaBanner } = require('../index');
+const { showBetaBanner } = require('../utils/banner');
 
 // Exportar FUNÇÃO em vez de objeto Command
 module.exports = async (options) => {

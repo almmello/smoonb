@@ -4,7 +4,7 @@ const fs = require('fs');
 const inquirer = require('inquirer');
 const { ensureBin, runCommand } = require('../utils/cli');
 const { readConfig, validateFor } = require('../utils/config');
-const { showBetaBanner } = require('../index');
+const { showBetaBanner } = require('../utils/banner');
 
 // Exportar FUNÇÃO em vez de objeto Command
 module.exports = async (options) => {

@@ -6,6 +6,7 @@
  */
 
 const chalk = require('chalk');
+const { showBetaBanner } = require('./utils/banner');
 
 // Exportar comandos
 const backupCommand = require('./commands/backup');
@@ -27,35 +28,6 @@ const packageInfo = {
   author: 'Goalmoon Tecnologia LTDA <https://goalmoon.com>',
   license: 'SEE LICENSE IN LICENSE.md'
 };
-
-/**
- * Banner da versão experimental
- */
-function showBetaBanner() {
-  console.log(chalk.red.bold(`
-╔══════════════════════════════════════════════════════════════╗
-║                    🚀 smoonb                                ║
-║                                                              ║
-║              ⚠️  EXPERIMENTAL VERSION - NÃO TESTADA!        ║
-║                                                              ║
-║  🚨 AVISO: Este software NUNCA foi testado em produção!     ║
-║  ⚠️  USE POR SUA CONTA E RISCO - Pode causar perda de dados ║
-║  ❌ NÃO NOS RESPONSABILIZAMOS por qualquer perda de dados   ║
-║                                                              ║
-║  A primeira ferramenta CLI completa para backup e migração  ║
-║  de projetos Supabase. Resolve o problema de backup        ║
-║  incompleto das ferramentas existentes.                     ║
-║                                                              ║
-║  ✅ Database PostgreSQL + Edge Functions + Auth Settings     ║
-║  ✅ Storage Objects + Realtime Settings + Metadados          ║
-║                                                              ║
-║  🏢 Desenvolvido por: Goalmoon Tecnologia LTDA              ║
-║  🌐 Website: https://goalmoon.com                           ║
-║  📖 Documentação: https://github.com/almmello/smoonb       ║
-║  🐛 Issues: https://github.com/almmello/smoonb/issues      ║
-╚══════════════════════════════════════════════════════════════╝
-`));
-}
 
 /**
  * Informações de licenciamento
