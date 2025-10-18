@@ -74,8 +74,7 @@ program
 
 program
   .command('restore')
-  .description('Restaurar backup completo usando psql')
-  .option('-b, --backup-dir <dir>', 'Diretório do backup a ser restaurado')
+  .description('Restaurar backup completo usando psql (modo interativo)')
   .option('--db-url <url>', 'URL da database de destino (override)')
   .action(commands.restore);
 

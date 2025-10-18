@@ -2,13 +2,13 @@ const { Command } = require('commander');
 const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs');
+const inquirer = require('inquirer');
 const { ensureBin, runCommand } = require('../utils/cli');
 const { readConfig, validateFor } = require('../utils/config');
 const { showBetaBanner } = require('../index');
 
 const restoreCommand = new Command('restore')
-  .description('Restaurar backup do projeto Supabase usando psql')
-  .option('-b, --backup-dir <dir>', 'Diretório do backup')
+  .description('Restaurar backup do projeto Supabase usando psql (modo interativo)')
   .option('--db-url <url>', 'URL da database de destino (override)')
   .action(async (options) => {
     showBetaBanner();
@@ -35,31 +35,21 @@ const restoreCommand = new Command('restore')
         process.exit(1);
       }
 
-      // Resolver diretório do backup
-      let backupDir = options.backupDir;
-      if (!backupDir) {
-        // Procurar backup mais recente
-        const backupsDir = config.backup.outputDir || './backups';
-        if (fs.existsSync(backupsDir)) {
-          const backups = fs.readdirSync(backupsDir)
-            .filter(dir => dir.startsWith('backup-'))
-            .sort()
-            .reverse();
-          
-          if (backups.length > 0) {
-            backupDir = path.join(backupsDir, backups[0]);
-            console.log(chalk.blue(`📁 Usando backup mais recente: ${backups[0]}`));
-          }
-        }
-      }
+      console.log(chalk.blue(`🔍 Procurando backups em: ${config.backup.outputDir || './backups'}`));
 
-      if (!backupDir || !fs.existsSync(backupDir)) {
-        console.error(chalk.red('❌ Diretório de backup não encontrado'));
-        console.log(chalk.yellow('💡 Use: npx smoonb restore --backup-dir <caminho>'));
+      // Listar backups disponíveis
+      const backups = await listAvailableBackups(config.backup.outputDir || './backups');
+      
+      if (backups.length === 0) {
+        console.error(chalk.red('❌ Nenhum backup encontrado'));
+        console.log(chalk.yellow('💡 Execute primeiro: npx smoonb backup'));
         process.exit(1);
       }
 
-      console.log(chalk.blue(`🚀 Iniciando restauração do backup: ${path.basename(backupDir)}`));
+      // Seleção interativa do backup
+      const selectedBackup = await selectBackup(backups);
+      
+      console.log(chalk.blue(`🚀 Iniciando restauração do backup: ${selectedBackup.name}`));
       console.log(chalk.blue(`🎯 Database destino: ${databaseUrl.replace(/:[^:]*@/, ':***@')}`));
 
       // Verificar se é clean restore
@@ -68,13 +58,11 @@ const restoreCommand = new Command('restore')
       }
 
       // Executar restauração
-      await performRestore(backupDir, databaseUrl);
+      await performRestore(selectedBackup.path, databaseUrl);
 
       // Verificação pós-restore
       if (config.restore.verifyAfterRestore) {
         console.log(chalk.blue('\n🔍 Executando verificação pós-restore...'));
-        // TODO: Implementar verificação automática
-        console.log(chalk.yellow('⚠️ Verificação automática não implementada ainda'));
         console.log(chalk.yellow('💡 Execute manualmente: npx smoonb check'));
       }
 
@@ -85,6 +73,112 @@ const restoreCommand = new Command('restore')
       process.exit(1);
     }
   });
+
+// Listar backups disponíveis
+async function listAvailableBackups(backupsDir) {
+  if (!fs.existsSync(backupsDir)) {
+    return [];
+  }
+
+  const items = fs.readdirSync(backupsDir, { withFileTypes: true });
+  const backups = [];
+
+  for (const item of items) {
+    if (item.isDirectory() && item.name.startsWith('backup-')) {
+      const backupPath = path.join(backupsDir, item.name);
+      const manifestPath = path.join(backupPath, 'backup-manifest.json');
+      
+      let manifest = null;
+      if (fs.existsSync(manifestPath)) {
+        try {
+          manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+        } catch (error) {
+          console.warn(chalk.yellow(`⚠️ Erro ao ler manifesto: ${item.name}`));
+        }
+      }
+
+      const stats = fs.statSync(backupPath);
+      
+      backups.push({
+        name: item.name,
+        path: backupPath,
+        created: manifest?.created_at || stats.birthtime.toISOString(),
+        projectId: manifest?.project_id || 'Desconhecido',
+        size: getDirectorySize(backupPath),
+        manifest: manifest
+      });
+    }
+  }
+
+  // Ordenar por data de criação (mais recente primeiro)
+  return backups.sort((a, b) => new Date(b.created) - new Date(a.created));
+}
+
+// Calcular tamanho do diretório
+function getDirectorySize(dirPath) {
+  let totalSize = 0;
+  
+  function calculateSize(itemPath) {
+    const stats = fs.statSync(itemPath);
+    
+    if (stats.isDirectory()) {
+      const items = fs.readdirSync(itemPath);
+      for (const item of items) {
+        calculateSize(path.join(itemPath, item));
+      }
+    } else {
+      totalSize += stats.size;
+    }
+  }
+  
+  try {
+    calculateSize(dirPath);
+  } catch (error) {
+    // Ignorar erros de acesso
+  }
+  
+  return formatBytes(totalSize);
+}
+
+// Formatar bytes em formato legível
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Seleção interativa do backup
+async function selectBackup(backups) {
+  console.log(chalk.blue('\n📋 Backups disponíveis:'));
+  console.log(chalk.blue('═'.repeat(80)));
+  
+  const choices = backups.map((backup, index) => {
+    const date = new Date(backup.created).toLocaleString('pt-BR');
+    const projectInfo = backup.projectId !== 'Desconhecido' ? ` (${backup.projectId})` : '';
+    
+    return {
+      name: `${index + 1}. ${backup.name}${projectInfo}\n   📅 ${date} | 📦 ${backup.size}`,
+      value: backup,
+      short: backup.name
+    };
+  });
+
+  const { selectedBackup } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'selectedBackup',
+      message: 'Selecione o backup para restaurar:',
+      choices: choices,
+      pageSize: 10
+    }
+  ]);
+
+  return selectedBackup;
+}
 
 // Verificar se é possível fazer clean restore
 async function checkCleanRestore(databaseUrl) {

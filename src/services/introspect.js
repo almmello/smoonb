@@ -1,5 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
-const { runCommand } = require('./cli');
+const { runCommand } = require('../utils/cli');
 
 /**
  * Serviço de introspecção do banco de dados Supabase

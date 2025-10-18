@@ -107,16 +107,18 @@ backups/backup-2024-01-15T10-30-45-123Z/
     └── [código das Edge Functions locais]
 ```
 
-### Restauração
+### Restauração Interativa
 ```bash
-npx smoonb restore --backup-dir backups/backup-2024-01-15T10-30-45-123Z
+npx smoonb restore
 ```
 
-**Processo:**
-1. Verifica se database está vazia (clean restore)
-2. Executa `roles.sql` (roles e permissões)
-3. Executa `schema.sql` (estrutura das tabelas)
-4. Executa `data.sql` (dados com COPY)
+**Processo interativo:**
+1. Lista todos os backups disponíveis
+2. Permite seleção numerada do backup desejado
+3. Verifica se database está vazia (clean restore)
+4. Executa `roles.sql` (roles e permissões)
+5. Executa `schema.sql` (estrutura das tabelas)
+6. Executa `data.sql` (dados com COPY)
 
 ### Verificação Pós-Restore
 ```bash
@@ -145,7 +147,7 @@ npx smoonb functions push
 | Comando | Descrição |
 |---------|-----------|
 | `npx smoonb backup` | Backup completo usando Supabase CLI |
-| `npx smoonb restore` | Restauração usando psql |
+| `npx smoonb restore` | Restauração interativa usando psql |
 | `npx smoonb check` | Verificação de integridade |
 | `npx smoonb functions` | Gerenciar Edge Functions |
 | `npx smoonb config` | Configurar credenciais |
@@ -179,8 +181,8 @@ npx smoonb backup
 # 3. Configurar .smoonbrc com credenciais do novo projeto
 npx smoonb config --init
 
-# 4. Restaurar backup
-npx smoonb restore --backup-dir backups/backup-YYYY-MM-DDTHH-MM-SS-sssZ
+# 4. Restaurar backup (modo interativo)
+npx smoonb restore
 
 # 5. Verificar integridade
 npx smoonb check

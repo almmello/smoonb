@@ -3,7 +3,8 @@ const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs');
 const { ensureBin, runCommand } = require('../utils/cli');
-const { readConfig, validateFor, writeJson } = require('../utils/config');
+const { readConfig, validateFor } = require('../utils/config');
+const { writeJson } = require('../utils/fsx');
 const { IntrospectionService } = require('../services/introspect');
 const { showBetaBanner } = require('../index');
 
