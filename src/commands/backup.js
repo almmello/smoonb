@@ -1,5 +1,6 @@
 const chalk = require('chalk');
 const path = require('path');
+const fs = require('fs');
 const { ensureBin, runCommand } = require('../utils/cli');
 const { ensureDir, writeJson, copyDir } = require('../utils/fsx');
 const { sha256 } = require('../utils/hash');
@@ -12,13 +13,12 @@ module.exports = async (options) => {
   showBetaBanner();
   
   try {
-    // Verificar se Supabase CLI está disponível
-    const supabasePath = await ensureBin('supabase');
-    if (!supabasePath) {
-      console.error(chalk.red('❌ Supabase CLI não encontrado'));
-      console.log(chalk.yellow('💡 Instale o Supabase CLI:'));
-      console.log(chalk.yellow('  npm install -g supabase'));
-      console.log(chalk.yellow('  ou visite: https://supabase.com/docs/guides/cli'));
+    // Verificar se pg_dump está disponível
+    const pgDumpPath = await findPgDumpPath();
+    if (!pgDumpPath) {
+      console.error(chalk.red('❌ pg_dump não encontrado'));
+      console.log(chalk.yellow('💡 Instale PostgreSQL:'));
+      console.log(chalk.yellow('  https://www.postgresql.org/download/'));
       process.exit(1);
     }
 
@@ -43,10 +43,20 @@ module.exports = async (options) => {
 
     console.log(chalk.blue(`🚀 Iniciando backup do projeto: ${config.supabase.projectId}`));
     console.log(chalk.blue(`📁 Diretório: ${backupDir}`));
+    console.log(chalk.gray(`🔧 Usando pg_dump: ${pgDumpPath}`));
 
-    // 1. Backup da Database usando Supabase CLI
+    // 1. Backup da Database usando pg_dump/pg_dumpall
     console.log(chalk.blue('\n📊 1/3 - Backup da Database PostgreSQL...'));
-    await backupDatabaseWithSupabaseCLI(databaseUrl, backupDir);
+    const dbBackupResult = await backupDatabaseWithPgDump(databaseUrl, backupDir, pgDumpPath);
+    
+    if (!dbBackupResult.success) {
+      console.error(chalk.red('❌ Falha crítica no backup da database'));
+      console.log(chalk.yellow('💡 Verifique:'));
+      console.log(chalk.yellow('  - Se DATABASE_URL está correta'));
+      console.log(chalk.yellow('  - Se as credenciais estão corretas'));
+      console.log(chalk.yellow('  - Se o banco está acessível'));
+      process.exit(1);
+    }
 
     // 2. Gerar inventário real
     console.log(chalk.blue('\n🔍 2/3 - Gerando inventário completo...'));
@@ -57,10 +67,11 @@ module.exports = async (options) => {
     await backupLocalFunctions(backupDir);
 
     // Gerar manifesto do backup
-    await generateBackupManifest(config, backupDir);
+    await generateBackupManifest(config, backupDir, dbBackupResult.files);
 
     console.log(chalk.green('\n🎉 Backup completo finalizado!'));
     console.log(chalk.blue(`📁 Localização: ${backupDir}`));
+    console.log(chalk.green(`✅ Database: ${dbBackupResult.files.length} arquivos SQL gerados`));
 
   } catch (error) {
     console.error(chalk.red(`❌ Erro no backup: ${error.message}`));
@@ -68,27 +79,147 @@ module.exports = async (options) => {
   }
 };
 
-// Backup da database usando Supabase CLI
-async function backupDatabaseWithSupabaseCLI(databaseUrl, backupDir) {
-  try {
-    console.log(chalk.blue('   - Exportando roles...'));
-    const { stdout: rolesOutput } = await runCommand(
-      `supabase db dump --db-url "${databaseUrl}" -f roles.sql --role-only`
-    );
-    
-    console.log(chalk.blue('   - Exportando schema...'));
-    const { stdout: schemaOutput } = await runCommand(
-      `supabase db dump --db-url "${databaseUrl}" -f schema.sql`
-    );
-    
-    console.log(chalk.blue('   - Exportando dados...'));
-    const { stdout: dataOutput } = await runCommand(
-      `supabase db dump --db-url "${databaseUrl}" -f data.sql --use-copy --data-only`
-    );
+// Encontrar caminho do pg_dump automaticamente
+async function findPgDumpPath() {
+  // Primeiro, tentar encontrar no PATH
+  const pgDumpPath = await ensureBin('pg_dump');
+  if (pgDumpPath) {
+    return pgDumpPath;
+  }
 
-    console.log(chalk.green('✅ Database exportada com sucesso'));
+  // No Windows, tentar caminhos comuns
+  if (process.platform === 'win32') {
+    const possiblePaths = [
+      'C:\\Program Files\\PostgreSQL\\17\\bin\\pg_dump.exe',
+      'C:\\Program Files\\PostgreSQL\\16\\bin\\pg_dump.exe',
+      'C:\\Program Files\\PostgreSQL\\15\\bin\\pg_dump.exe',
+      'C:\\Program Files\\PostgreSQL\\14\\bin\\pg_dump.exe',
+      'C:\\Program Files\\PostgreSQL\\13\\bin\\pg_dump.exe'
+    ];
+    
+    for (const pgDumpPath of possiblePaths) {
+      if (fs.existsSync(pgDumpPath)) {
+        return pgDumpPath;
+      }
+    }
+  }
+
+  return null;
+}
+
+// Backup da database usando pg_dump/pg_dumpall
+async function backupDatabaseWithPgDump(databaseUrl, backupDir, pgDumpPath) {
+  try {
+    // Parse da URL da database
+    const url = new URL(databaseUrl);
+    const host = url.hostname;
+    const port = url.port || '5432';
+    const username = url.username;
+    const password = url.password;
+    const database = url.pathname.slice(1);
+
+    console.log(chalk.gray(`   - Host: ${host}:${port}`));
+    console.log(chalk.gray(`   - Database: ${database}`));
+    console.log(chalk.gray(`   - Username: ${username}`));
+
+    const files = [];
+    let success = true;
+
+    // 1. Backup dos roles usando pg_dumpall
+    console.log(chalk.blue('   - Exportando roles...'));
+    const rolesFile = path.join(backupDir, 'roles.sql');
+    const rolesCommand = `"${pgDumpPath.replace('pg_dump', 'pg_dumpall')}" --host=${host} --port=${port} --username=${username} --roles-only -f "${rolesFile}"`;
+    
+    try {
+      await runCommand(rolesCommand, {
+        env: { ...process.env, PGPASSWORD: password }
+      });
+      
+      if (await validateSqlFile(rolesFile)) {
+        files.push('roles.sql');
+        console.log(chalk.green('     ✅ Roles exportados com sucesso'));
+      } else {
+        console.log(chalk.yellow('     ⚠️ Arquivo roles.sql está vazio'));
+        success = false;
+      }
+    } catch (error) {
+      console.log(chalk.red(`     ❌ Erro ao exportar roles: ${error.message}`));
+      success = false;
+    }
+
+    // 2. Backup do schema usando pg_dump
+    console.log(chalk.blue('   - Exportando schema...'));
+    const schemaFile = path.join(backupDir, 'schema.sql');
+    const schemaCommand = `"${pgDumpPath}" --host=${host} --port=${port} --username=${username} --schema-only -f "${schemaFile}" ${database}`;
+    
+    try {
+      await runCommand(schemaCommand, {
+        env: { ...process.env, PGPASSWORD: password }
+      });
+      
+      if (await validateSqlFile(schemaFile)) {
+        files.push('schema.sql');
+        console.log(chalk.green('     ✅ Schema exportado com sucesso'));
+      } else {
+        console.log(chalk.yellow('     ⚠️ Arquivo schema.sql está vazio'));
+        success = false;
+      }
+    } catch (error) {
+      console.log(chalk.red(`     ❌ Erro ao exportar schema: ${error.message}`));
+      success = false;
+    }
+
+    // 3. Backup dos dados usando pg_dump
+    console.log(chalk.blue('   - Exportando dados...'));
+    const dataFile = path.join(backupDir, 'data.sql');
+    const dataCommand = `"${pgDumpPath}" --host=${host} --port=${port} --username=${username} --data-only --use-copy -f "${dataFile}" ${database}`;
+    
+    try {
+      await runCommand(dataCommand, {
+        env: { ...process.env, PGPASSWORD: password }
+      });
+      
+      if (await validateSqlFile(dataFile)) {
+        files.push('data.sql');
+        console.log(chalk.green('     ✅ Dados exportados com sucesso'));
+      } else {
+        console.log(chalk.yellow('     ⚠️ Arquivo data.sql está vazio'));
+        success = false;
+      }
+    } catch (error) {
+      console.log(chalk.red(`     ❌ Erro ao exportar dados: ${error.message}`));
+      success = false;
+    }
+
+    return { success, files };
   } catch (error) {
     throw new Error(`Falha no backup da database: ${error.message}`);
+  }
+}
+
+// Validar arquivo SQL (não vazio e com conteúdo válido)
+async function validateSqlFile(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) {
+      return false;
+    }
+
+    const stats = fs.statSync(filePath);
+    if (stats.size === 0) {
+      return false;
+    }
+
+    const content = fs.readFileSync(filePath, 'utf8');
+    
+    // Verificar se contém conteúdo SQL válido
+    const sqlKeywords = ['CREATE', 'INSERT', 'COPY', 'ALTER', 'DROP', 'GRANT', 'REVOKE'];
+    const hasValidContent = sqlKeywords.some(keyword => 
+      content.toUpperCase().includes(keyword)
+    );
+
+    return hasValidContent;
+  } catch (error) {
+    return false;
   }
 }
 
@@ -118,7 +249,6 @@ async function backupLocalFunctions(backupDir) {
   const localFunctionsPath = 'supabase/functions';
   
   try {
-    const fs = require('fs');
     if (fs.existsSync(localFunctionsPath)) {
       const functionsBackupDir = path.join(backupDir, 'functions');
       await copyDir(localFunctionsPath, functionsBackupDir);
@@ -132,7 +262,7 @@ async function backupLocalFunctions(backupDir) {
 }
 
 // Gerar manifesto do backup
-async function generateBackupManifest(config, backupDir) {
+async function generateBackupManifest(config, backupDir, sqlFiles) {
   const manifest = {
     created_at: new Date().toISOString(),
     project_id: config.supabase.projectId,
@@ -144,11 +274,14 @@ async function generateBackupManifest(config, backupDir) {
       data: 'data.sql'
     },
     hashes: {},
-    inventory: {}
+    inventory: {},
+    validation: {
+      sql_files_created: sqlFiles.length,
+      sql_files_valid: sqlFiles.length === 3
+    }
   };
 
   // Calcular hashes dos arquivos SQL
-  const fs = require('fs');
   for (const [type, filename] of Object.entries(manifest.files)) {
     const filePath = path.join(backupDir, filename);
     if (fs.existsSync(filePath)) {
