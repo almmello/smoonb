@@ -262,7 +262,7 @@ async function backupEdgeFunctions(config, backupDir) {
 
     console.log(chalk.gray('   - Listando Edge Functions...'));
     
-    // Listar Edge Functions via API
+    // ✅ Descobrir dinamicamente quantas functions existem
     const { data: functions, error } = await supabase.functions.list();
     
     if (error) {
@@ -270,49 +270,67 @@ async function backupEdgeFunctions(config, backupDir) {
       return { success: false, functions: [] };
     }
 
+    if (!functions || functions.length === 0) {
+      console.log(chalk.gray('   - Nenhuma Edge Function encontrada'));
+      await writeJson(path.join(functionsDir, 'README.md'), {
+        message: 'Nenhuma Edge Function encontrada neste projeto'
+      });
+      return { success: true, functions: [] };
+    }
+
+    console.log(chalk.gray(`   - Encontradas ${functions.length} Edge Functions`));
+    
     const downloadedFunctions = [];
 
-    for (const func of functions || []) {
+    // ✅ Baixar todas as functions encontradas
+    for (const func of functions) {
       try {
-        console.log(chalk.gray(`   - Baixando function: ${func.name}`));
+        console.log(chalk.gray(`   - Baixando: ${func.name}`));
         
-        // Criar diretório para a function
-        const funcDir = path.join(functionsDir, func.name);
-        await ensureDir(funcDir);
-
-        // Baixar código da function via API
-        const { data: functionCode, error: codeError } = await supabase.functions.getEdgeFunction(func.name);
+        // ✅ Baixar código da function
+        const { data: functionData, error: functionError } = await supabase.functions.get(func.slug);
         
-        if (codeError) {
-          console.log(chalk.yellow(`     ⚠️ Erro ao baixar ${func.name}: ${codeError.message}`));
+        if (functionError) {
+          console.log(chalk.yellow(`     ⚠️ Erro ao baixar ${func.name}: ${functionError.message}`));
           continue;
         }
 
-        // Salvar arquivos da function
-        if (functionCode) {
-          // Salvar index.ts
-          const indexPath = path.join(funcDir, 'index.ts');
-          await fs.promises.writeFile(indexPath, functionCode.code || '// Function code not available');
+        // ✅ Salvar arquivos dinamicamente
+        const funcDir = path.join(functionsDir, func.name);
+        await ensureDir(funcDir);
 
-          // Salvar deno.json se disponível
-          if (functionCode.deno_config) {
-            const denoPath = path.join(funcDir, 'deno.json');
-            await writeJson(denoPath, functionCode.deno_config);
+        // ✅ Salvar cada arquivo da function
+        if (functionData && functionData.files) {
+          for (const file of functionData.files) {
+            const fileName = path.basename(file.name);
+            const filePath = path.join(funcDir, fileName);
+            await fs.promises.writeFile(filePath, file.content);
           }
-
-          downloadedFunctions.push({
-            name: func.name,
-            version: func.version,
-            files: ['index.ts', 'deno.json'].filter(file => fs.existsSync(path.join(funcDir, file)))
-          });
-
-          console.log(chalk.green(`     ✅ ${func.name} baixada`));
+        } else if (functionData && functionData.code) {
+          // Fallback para API antiga
+          const indexPath = path.join(funcDir, 'index.ts');
+          await fs.promises.writeFile(indexPath, functionData.code);
+          
+          if (functionData.deno_config) {
+            const denoPath = path.join(funcDir, 'deno.json');
+            await writeJson(denoPath, functionData.deno_config);
+          }
         }
+
+        downloadedFunctions.push({
+          name: func.name,
+          slug: func.slug,
+          version: func.version || 'unknown',
+          files: fs.existsSync(funcDir) ? fs.readdirSync(funcDir) : []
+        });
+
+        console.log(chalk.green(`     ✅ ${func.name} baixada`));
       } catch (error) {
-        console.log(chalk.yellow(`     ⚠️ Erro ao processar ${func.name}: ${error.message}`));
+        console.log(chalk.yellow(`     ⚠️ Erro ao baixar ${func.name}: ${error.message}`));
       }
     }
 
+    console.log(chalk.green(`✅ Edge Functions backupadas: ${downloadedFunctions.length} functions`));
     return { success: true, functions: downloadedFunctions };
   } catch (error) {
     console.log(chalk.yellow(`⚠️ Erro no backup das Edge Functions: ${error.message}`));
