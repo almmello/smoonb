@@ -1,4 +1,3 @@
-const { Command } = require('commander');
 const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs');
@@ -8,53 +7,51 @@ const { writeJson } = require('../utils/fsx');
 const { IntrospectionService } = require('../services/introspect');
 const { showBetaBanner } = require('../index');
 
-const checkCommand = new Command('check')
-  .description('Verificar integridade do projeto Supabase após restauração')
-  .option('-o, --output <file>', 'Arquivo de saída do relatório', 'check-report.json')
-  .action(async (options) => {
-    showBetaBanner();
-    
-    try {
-      // Verificar se psql está disponível
-      const psqlPath = await ensureBin('psql');
-      if (!psqlPath) {
-        console.error(chalk.red('❌ psql não encontrado'));
-        console.log(chalk.yellow('💡 Instale PostgreSQL:'));
-        console.log(chalk.yellow('  https://www.postgresql.org/download/'));
-        process.exit(1);
-      }
-
-      // Carregar configuração
-      const config = await readConfig();
-      validateFor(config, 'backup'); // Usar mesma validação do backup
-
-      const databaseUrl = config.supabase.databaseUrl;
-      if (!databaseUrl) {
-        console.error(chalk.red('❌ databaseUrl não configurada'));
-        console.log(chalk.yellow('💡 Configure databaseUrl no .smoonbrc'));
-        process.exit(1);
-      }
-
-      console.log(chalk.blue(`🔍 Verificando integridade do projeto: ${config.supabase.projectId}`));
-
-      // Executar verificações
-      const report = await performChecks(config, databaseUrl);
-
-      // Salvar relatório
-      const reportPath = path.resolve(options.output);
-      await writeJson(reportPath, report);
-
-      // Mostrar resumo
-      showCheckSummary(report);
-
-      console.log(chalk.green('\n🎉 Verificação concluída!'));
-      console.log(chalk.blue(`📋 Relatório salvo em: ${reportPath}`));
-
-    } catch (error) {
-      console.error(chalk.red(`❌ Erro na verificação: ${error.message}`));
+// Exportar FUNÇÃO em vez de objeto Command
+module.exports = async (options) => {
+  showBetaBanner();
+  
+  try {
+    // Verificar se psql está disponível
+    const psqlPath = await ensureBin('psql');
+    if (!psqlPath) {
+      console.error(chalk.red('❌ psql não encontrado'));
+      console.log(chalk.yellow('💡 Instale PostgreSQL:'));
+      console.log(chalk.yellow('  https://www.postgresql.org/download/'));
       process.exit(1);
     }
-  });
+
+    // Carregar configuração
+    const config = await readConfig();
+    validateFor(config, 'backup'); // Usar mesma validação do backup
+
+    const databaseUrl = config.supabase.databaseUrl;
+    if (!databaseUrl) {
+      console.error(chalk.red('❌ databaseUrl não configurada'));
+      console.log(chalk.yellow('💡 Configure databaseUrl no .smoonbrc'));
+      process.exit(1);
+    }
+
+    console.log(chalk.blue(`🔍 Verificando integridade do projeto: ${config.supabase.projectId}`));
+
+    // Executar verificações
+    const report = await performChecks(config, databaseUrl);
+
+    // Salvar relatório
+    const reportPath = path.resolve(options.output || 'check-report.json');
+    await writeJson(reportPath, report);
+
+    // Mostrar resumo
+    showCheckSummary(report);
+
+    console.log(chalk.green('\n🎉 Verificação concluída!'));
+    console.log(chalk.blue(`📋 Relatório salvo em: ${reportPath}`));
+
+  } catch (error) {
+    console.error(chalk.red(`❌ Erro na verificação: ${error.message}`));
+    process.exit(1);
+  }
+};
 
 // Executar todas as verificações
 async function performChecks(config, databaseUrl) {
@@ -269,5 +266,3 @@ function showCheckSummary(report) {
     console.log(chalk.yellow('⚠️ Algumas verificações falharam. Verifique o relatório completo.'));
   }
 }
-
-module.exports = checkCommand;

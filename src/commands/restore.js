@@ -1,4 +1,3 @@
-const { Command } = require('commander');
 const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs');
@@ -7,72 +6,70 @@ const { ensureBin, runCommand } = require('../utils/cli');
 const { readConfig, validateFor } = require('../utils/config');
 const { showBetaBanner } = require('../index');
 
-const restoreCommand = new Command('restore')
-  .description('Restaurar backup do projeto Supabase usando psql (modo interativo)')
-  .option('--db-url <url>', 'URL da database de destino (override)')
-  .action(async (options) => {
-    showBetaBanner();
-    
-    try {
-      // Verificar se psql está disponível
-      const psqlPath = await ensureBin('psql');
-      if (!psqlPath) {
-        console.error(chalk.red('❌ psql não encontrado'));
-        console.log(chalk.yellow('💡 Instale PostgreSQL:'));
-        console.log(chalk.yellow('  https://www.postgresql.org/download/'));
-        process.exit(1);
-      }
-
-      // Carregar configuração
-      const config = await readConfig();
-      validateFor(config, 'restore');
-
-      // Resolver URL da database
-      const databaseUrl = options.dbUrl || config.supabase.databaseUrl;
-      if (!databaseUrl) {
-        console.error(chalk.red('❌ databaseUrl não configurada'));
-        console.log(chalk.yellow('💡 Configure databaseUrl no .smoonbrc ou use --db-url'));
-        process.exit(1);
-      }
-
-      console.log(chalk.blue(`🔍 Procurando backups em: ${config.backup.outputDir || './backups'}`));
-
-      // Listar backups disponíveis
-      const backups = await listAvailableBackups(config.backup.outputDir || './backups');
-      
-      if (backups.length === 0) {
-        console.error(chalk.red('❌ Nenhum backup encontrado'));
-        console.log(chalk.yellow('💡 Execute primeiro: npx smoonb backup'));
-        process.exit(1);
-      }
-
-      // Seleção interativa do backup
-      const selectedBackup = await selectBackup(backups);
-      
-      console.log(chalk.blue(`🚀 Iniciando restauração do backup: ${selectedBackup.name}`));
-      console.log(chalk.blue(`🎯 Database destino: ${databaseUrl.replace(/:[^:]*@/, ':***@')}`));
-
-      // Verificar se é clean restore
-      if (config.restore.cleanRestore) {
-        await checkCleanRestore(databaseUrl);
-      }
-
-      // Executar restauração
-      await performRestore(selectedBackup.path, databaseUrl);
-
-      // Verificação pós-restore
-      if (config.restore.verifyAfterRestore) {
-        console.log(chalk.blue('\n🔍 Executando verificação pós-restore...'));
-        console.log(chalk.yellow('💡 Execute manualmente: npx smoonb check'));
-      }
-
-      console.log(chalk.green('\n🎉 Restauração concluída com sucesso!'));
-
-    } catch (error) {
-      console.error(chalk.red(`❌ Erro na restauração: ${error.message}`));
+// Exportar FUNÇÃO em vez de objeto Command
+module.exports = async (options) => {
+  showBetaBanner();
+  
+  try {
+    // Verificar se psql está disponível
+    const psqlPath = await ensureBin('psql');
+    if (!psqlPath) {
+      console.error(chalk.red('❌ psql não encontrado'));
+      console.log(chalk.yellow('💡 Instale PostgreSQL:'));
+      console.log(chalk.yellow('  https://www.postgresql.org/download/'));
       process.exit(1);
     }
-  });
+
+    // Carregar configuração
+    const config = await readConfig();
+    validateFor(config, 'restore');
+
+    // Resolver URL da database
+    const databaseUrl = options.dbUrl || config.supabase.databaseUrl;
+    if (!databaseUrl) {
+      console.error(chalk.red('❌ databaseUrl não configurada'));
+      console.log(chalk.yellow('💡 Configure databaseUrl no .smoonbrc ou use --db-url'));
+      process.exit(1);
+    }
+
+    console.log(chalk.blue(`🔍 Procurando backups em: ${config.backup.outputDir || './backups'}`));
+
+    // Listar backups disponíveis
+    const backups = await listAvailableBackups(config.backup.outputDir || './backups');
+    
+    if (backups.length === 0) {
+      console.error(chalk.red('❌ Nenhum backup encontrado'));
+      console.log(chalk.yellow('💡 Execute primeiro: npx smoonb backup'));
+      process.exit(1);
+    }
+
+    // Seleção interativa do backup
+    const selectedBackup = await selectBackup(backups);
+    
+    console.log(chalk.blue(`🚀 Iniciando restauração do backup: ${selectedBackup.name}`));
+    console.log(chalk.blue(`🎯 Database destino: ${databaseUrl.replace(/:[^:]*@/, ':***@')}`));
+
+    // Verificar se é clean restore
+    if (config.restore.cleanRestore) {
+      await checkCleanRestore(databaseUrl);
+    }
+
+    // Executar restauração
+    await performRestore(selectedBackup.path, databaseUrl);
+
+    // Verificação pós-restore
+    if (config.restore.verifyAfterRestore) {
+      console.log(chalk.blue('\n🔍 Executando verificação pós-restore...'));
+      console.log(chalk.yellow('💡 Execute manualmente: npx smoonb check'));
+    }
+
+    console.log(chalk.green('\n🎉 Restauração concluída com sucesso!'));
+
+  } catch (error) {
+    console.error(chalk.red(`❌ Erro na restauração: ${error.message}`));
+    process.exit(1);
+  }
+};
 
 // Listar backups disponíveis
 async function listAvailableBackups(backupsDir) {
@@ -253,5 +250,3 @@ async function performRestore(backupDir, databaseUrl) {
     }
   }
 }
-
-module.exports = restoreCommand;

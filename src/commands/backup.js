@@ -1,4 +1,3 @@
-const { Command } = require('commander');
 const chalk = require('chalk');
 const path = require('path');
 const { ensureBin, runCommand } = require('../utils/cli');
@@ -8,68 +7,66 @@ const { readConfig, validateFor } = require('../utils/config');
 const { IntrospectionService } = require('../services/introspect');
 const { showBetaBanner } = require('../index');
 
-const backupCommand = new Command('backup')
-  .description('Backup completo do projeto Supabase usando Supabase CLI')
-  .option('-o, --output <dir>', 'Diretório de saída')
-  .action(async (options) => {
-    showBetaBanner();
-    
-    try {
-      // Verificar se Supabase CLI está disponível
-      const supabasePath = await ensureBin('supabase');
-      if (!supabasePath) {
-        console.error(chalk.red('❌ Supabase CLI não encontrado'));
-        console.log(chalk.yellow('💡 Instale o Supabase CLI:'));
-        console.log(chalk.yellow('  npm install -g supabase'));
-        console.log(chalk.yellow('  ou visite: https://supabase.com/docs/guides/cli'));
-        process.exit(1);
-      }
-
-      // Carregar e validar configuração
-      const config = await readConfig();
-      validateFor(config, 'backup');
-
-      const databaseUrl = config.supabase.databaseUrl;
-      if (!databaseUrl) {
-        console.error(chalk.red('❌ databaseUrl não configurada'));
-        console.log(chalk.yellow('💡 Configure databaseUrl no .smoonbrc'));
-        process.exit(1);
-      }
-
-      // Resolver diretório de saída
-      const outputDir = options.output || config.backup.outputDir;
-      
-      // Criar diretório de backup com timestamp
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const backupDir = path.join(outputDir, `backup-${timestamp}`);
-      await ensureDir(backupDir);
-
-      console.log(chalk.blue(`🚀 Iniciando backup do projeto: ${config.supabase.projectId}`));
-      console.log(chalk.blue(`📁 Diretório: ${backupDir}`));
-
-      // 1. Backup da Database usando Supabase CLI
-      console.log(chalk.blue('\n📊 1/3 - Backup da Database PostgreSQL...'));
-      await backupDatabaseWithSupabaseCLI(databaseUrl, backupDir);
-
-      // 2. Gerar inventário real
-      console.log(chalk.blue('\n🔍 2/3 - Gerando inventário completo...'));
-      await generateInventory(config, backupDir);
-
-      // 3. Backup das Edge Functions locais
-      console.log(chalk.blue('\n⚡ 3/3 - Backup das Edge Functions locais...'));
-      await backupLocalFunctions(backupDir);
-
-      // Gerar manifesto do backup
-      await generateBackupManifest(config, backupDir);
-
-      console.log(chalk.green('\n🎉 Backup completo finalizado!'));
-      console.log(chalk.blue(`📁 Localização: ${backupDir}`));
-
-    } catch (error) {
-      console.error(chalk.red(`❌ Erro no backup: ${error.message}`));
+// Exportar FUNÇÃO em vez de objeto Command
+module.exports = async (options) => {
+  showBetaBanner();
+  
+  try {
+    // Verificar se Supabase CLI está disponível
+    const supabasePath = await ensureBin('supabase');
+    if (!supabasePath) {
+      console.error(chalk.red('❌ Supabase CLI não encontrado'));
+      console.log(chalk.yellow('💡 Instale o Supabase CLI:'));
+      console.log(chalk.yellow('  npm install -g supabase'));
+      console.log(chalk.yellow('  ou visite: https://supabase.com/docs/guides/cli'));
       process.exit(1);
     }
-  });
+
+    // Carregar e validar configuração
+    const config = await readConfig();
+    validateFor(config, 'backup');
+
+    const databaseUrl = config.supabase.databaseUrl;
+    if (!databaseUrl) {
+      console.error(chalk.red('❌ databaseUrl não configurada'));
+      console.log(chalk.yellow('💡 Configure databaseUrl no .smoonbrc'));
+      process.exit(1);
+    }
+
+    // Resolver diretório de saída
+    const outputDir = options.output || config.backup.outputDir;
+    
+    // Criar diretório de backup com timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupDir = path.join(outputDir, `backup-${timestamp}`);
+    await ensureDir(backupDir);
+
+    console.log(chalk.blue(`🚀 Iniciando backup do projeto: ${config.supabase.projectId}`));
+    console.log(chalk.blue(`📁 Diretório: ${backupDir}`));
+
+    // 1. Backup da Database usando Supabase CLI
+    console.log(chalk.blue('\n📊 1/3 - Backup da Database PostgreSQL...'));
+    await backupDatabaseWithSupabaseCLI(databaseUrl, backupDir);
+
+    // 2. Gerar inventário real
+    console.log(chalk.blue('\n🔍 2/3 - Gerando inventário completo...'));
+    await generateInventory(config, backupDir);
+
+    // 3. Backup das Edge Functions locais
+    console.log(chalk.blue('\n⚡ 3/3 - Backup das Edge Functions locais...'));
+    await backupLocalFunctions(backupDir);
+
+    // Gerar manifesto do backup
+    await generateBackupManifest(config, backupDir);
+
+    console.log(chalk.green('\n🎉 Backup completo finalizado!'));
+    console.log(chalk.blue(`📁 Localização: ${backupDir}`));
+
+  } catch (error) {
+    console.error(chalk.red(`❌ Erro no backup: ${error.message}`));
+    process.exit(1);
+  }
+};
 
 // Backup da database usando Supabase CLI
 async function backupDatabaseWithSupabaseCLI(databaseUrl, backupDir) {
@@ -173,5 +170,3 @@ async function generateBackupManifest(config, backupDir) {
   const manifestPath = path.join(backupDir, 'backup-manifest.json');
   await writeJson(manifestPath, manifest);
 }
-
-module.exports = backupCommand;
