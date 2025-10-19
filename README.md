@@ -25,25 +25,42 @@ O **smoonb** resolve o problema das ferramentas existentes que fazem backup apen
 
 ## 🚀 Instalação
 
+**⚠️ IMPORTANTE: Instale APENAS localmente no projeto!**
+
 ```bash
-# Instalar localmente no projeto
+# ✅ CORRETO - Instalar localmente no projeto
 npm install smoonb
 
-# Usar com npx
+# ✅ CORRETO - Usar com npx
 npx smoonb --help
+
+# ❌ ERRADO - NÃO instalar globalmente
+npm install -g smoonb  # ← Isso será bloqueado!
 ```
+
+**💡 Por que apenas local?**
+- **🔒 Segurança**: Evita conflitos de versão
+- **📦 Isolamento**: Cada projeto usa sua versão
+- **🔄 Atualizações**: Controle granular por projeto
+- **🛡️ Estabilidade**: Evita quebras em outros projetos
 
 ## 📋 Pré-requisitos
 
-### 1. Supabase CLI
+### 1. Docker Desktop
+```bash
+# Instalar Docker Desktop
+# Windows/macOS: https://docs.docker.com/desktop/install/
+# Linux: https://docs.docker.com/engine/install/
+
+# Verificar se está rodando
+docker --version
+docker ps
+```
+
+### 2. Supabase CLI
 ```bash
 npm install -g supabase
 ```
-
-### 2. PostgreSQL (psql)
-- **Windows**: https://www.postgresql.org/download/windows/
-- **macOS**: `brew install postgresql`
-- **Linux**: `sudo apt-get install postgresql-client`
 
 ## ⚙️ Configuração
 
