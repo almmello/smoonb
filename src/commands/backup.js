@@ -6,6 +6,7 @@ const { ensureDir, writeJson, copyDir } = require('../utils/fsx');
 const { sha256 } = require('../utils/hash');
 const { readConfig, validateFor } = require('../utils/config');
 const { showBetaBanner } = require('../utils/banner');
+const { detectDockerDependencies } = require('../utils/docker');
 const { createClient } = require('@supabase/supabase-js');
 
 // Exportar FUNÇÃO em vez de objeto Command
@@ -98,7 +99,14 @@ module.exports = async (options) => {
     console.log(chalk.green('\n🎉 BACKUP COMPLETO FINALIZADO!'));
     console.log(chalk.blue(`📁 Localização: ${backupDir}`));
     console.log(chalk.green(`✅ Database: ${dbBackupResult.files.length} arquivos SQL gerados`));
-    console.log(chalk.green(`✅ Edge Functions: ${edgeFunctionsResult.functions.length} functions baixadas`));
+    if (edgeFunctionsResult.success) {
+      console.log(chalk.green(`✅ Edge Functions: ${edgeFunctionsResult.successCount}/${edgeFunctionsResult.functionsCount} functions baixadas`));
+    } else {
+      console.log(chalk.yellow(`⚠️ Edge Functions: ${edgeFunctionsResult.reason === 'docker_not_installed' ? 'Docker não instalado' : 
+        edgeFunctionsResult.reason === 'docker_not_running' ? 'Docker não está rodando' : 
+        edgeFunctionsResult.reason === 'supabase_cli_not_found' ? 'Supabase CLI não encontrado' : 
+        'Erro no backup'}`));
+    }
     console.log(chalk.green(`✅ Auth Settings: ${authSettingsResult.success ? 'Exportadas' : 'Falharam'}`));
     console.log(chalk.green(`✅ Storage: ${storageResult.buckets.length} buckets verificados`));
     console.log(chalk.green(`✅ Custom Roles: ${customRolesResult.roles.length} roles exportados`));
@@ -109,8 +117,10 @@ module.exports = async (options) => {
     for (const file of dbBackupResult.files) {
       console.log(chalk.gray(`   - ${file.filename}: ${file.sizeKB} KB`));
     }
-    if (edgeFunctionsResult.functions.length > 0) {
-      console.log(chalk.gray(`   - Edge Functions: ${edgeFunctionsResult.functions.length} functions`));
+    if (edgeFunctionsResult.success && edgeFunctionsResult.functions.length > 0) {
+      console.log(chalk.gray(`   - Edge Functions: ${edgeFunctionsResult.successCount}/${edgeFunctionsResult.functionsCount} functions`));
+    } else if (!edgeFunctionsResult.success) {
+      console.log(chalk.gray(`   - Edge Functions: Pulado (${edgeFunctionsResult.reason})`));
     }
 
   } catch (error) {
@@ -253,9 +263,63 @@ async function backupDatabaseWithPgDump(databaseUrl, backupDir, pgDumpPath) {
   }
 }
 
-// Backup das Edge Functions via Supabase API
+// Backup das Edge Functions com detecção inteligente do Docker
 async function backupEdgeFunctions(config, backupDir) {
   try {
+    console.log('🔍 Verificando dependências para backup de Edge Functions...');
+    
+    // 1. Verificar se Docker está instalado e rodando
+    const dockerStatus = await detectDockerDependencies();
+    
+    if (!dockerStatus.dockerInstalled) {
+      console.log('⚠️  DOCKER DESKTOP NÃO ENCONTRADO');
+      console.log('');
+      console.log('📋 Para fazer backup das Edge Functions, você precisa:');
+      console.log('   1. Instalar Docker Desktop');
+      console.log('   2. Executar Docker Desktop');
+      console.log('   3. Repetir o comando de backup');
+      console.log('');
+      console.log('🔗 Download: https://docs.docker.com/desktop/install/');
+      console.log('');
+      console.log('⏭️  Pulando backup de Edge Functions...');
+      console.log('✅ Continuando com outros componentes do backup...');
+      return { success: false, reason: 'docker_not_installed', functions: [] };
+    }
+    
+    if (!dockerStatus.dockerRunning) {
+      console.log('⚠️  DOCKER DESKTOP NÃO ESTÁ EXECUTANDO');
+      console.log('');
+      console.log('📋 Para fazer backup das Edge Functions, você precisa:');
+      console.log('   1. Abrir Docker Desktop');
+      console.log('   2. Aguardar inicialização completa');
+      console.log('   3. Repetir o comando de backup');
+      console.log('');
+      console.log('💡 Dica: Docker Desktop deve estar rodando em segundo plano');
+      console.log('');
+      console.log('⏭️  Pulando backup de Edge Functions...');
+      console.log('✅ Continuando com outros componentes do backup...');
+      return { success: false, reason: 'docker_not_running', functions: [] };
+    }
+    
+    if (!dockerStatus.supabaseCLI) {
+      console.log('⚠️  SUPABASE CLI NÃO ENCONTRADO');
+      console.log('');
+      console.log('📋 Para fazer backup das Edge Functions, você precisa:');
+      console.log('   1. Instalar Supabase CLI');
+      console.log('   2. Repetir o comando de backup');
+      console.log('');
+      console.log('🔗 Instalação: npm install -g supabase');
+      console.log('');
+      console.log('⏭️  Pulando backup de Edge Functions...');
+      console.log('✅ Continuando com outros componentes do backup...');
+      return { success: false, reason: 'supabase_cli_not_found', functions: [] };
+    }
+    
+    // 3. Docker está OK, proceder com backup
+    console.log('✅ Docker Desktop detectado e funcionando');
+    console.log('✅ Supabase CLI detectado');
+    console.log('📥 Iniciando backup das Edge Functions...');
+    
     const functionsDir = path.join(backupDir, 'edge-functions');
     await ensureDir(functionsDir);
 
@@ -271,7 +335,7 @@ async function backupEdgeFunctions(config, backupDir) {
     
     if (!functionsResponse.ok) {
       console.log(chalk.yellow(`     ⚠️ Erro ao listar Edge Functions: ${functionsResponse.status} ${functionsResponse.statusText}`));
-      return { success: false, functions: [] };
+      return { success: false, reason: 'api_error', functions: [] };
     }
 
     const functions = await functionsResponse.json();
@@ -281,78 +345,68 @@ async function backupEdgeFunctions(config, backupDir) {
       await writeJson(path.join(functionsDir, 'README.md'), {
         message: 'Nenhuma Edge Function encontrada neste projeto'
       });
-      return { success: true, functions: [] };
+      return { success: true, reason: 'no_functions', functions: [] };
     }
 
-    console.log(chalk.gray(`   - Encontradas ${functions.length} Edge Functions`));
+    console.log(chalk.gray(`   - Encontradas ${functions.length} Edge Function(s)`));
     
     const downloadedFunctions = [];
+    let successCount = 0;
+    let errorCount = 0;
 
-    // ✅ Baixar todas as functions encontradas
+    // ✅ Baixar cada Edge Function usando Supabase CLI
     for (const func of functions) {
       try {
-        console.log(chalk.gray(`   - Baixando: ${func.name}`));
+        console.log(chalk.gray(`   - Baixando: ${func.name}...`));
         
-        // ✅ Baixar código da function via Management API com Personal Access Token
-        const functionResponse = await fetch(`https://api.supabase.com/v1/projects/${config.supabase.projectId}/functions/${func.name}`, {
-          headers: { 
-            'Authorization': `Bearer ${config.supabase.accessToken}`,
-            'Content-Type': 'application/json'
-          }
+        // Usar comando oficial do Supabase CLI
+        await runCommand(`supabase functions download ${func.name}`, {
+          cwd: process.cwd(),
+          timeout: 60000 // 60 segundos timeout
         });
         
-        if (!functionResponse.ok) {
-          console.log(chalk.yellow(`     ⚠️ Erro ao baixar ${func.name}: ${functionResponse.status} ${functionResponse.statusText}`));
-          continue;
-        }
-
-        const functionData = await functionResponse.json();
-
-        // ✅ Salvar arquivos dinamicamente
-        const funcDir = path.join(functionsDir, func.name);
-        await ensureDir(funcDir);
-
-        // ✅ Salvar cada arquivo da function
-        if (functionData && functionData.files) {
-          for (const file of functionData.files) {
-            const fileName = path.basename(file.name);
-            const filePath = path.join(funcDir, fileName);
-            await fs.promises.writeFile(filePath, file.content);
-          }
-        } else if (functionData && functionData.code) {
-          // Fallback para estrutura simples
-          const indexPath = path.join(funcDir, 'index.ts');
-          await fs.promises.writeFile(indexPath, functionData.code);
+        // Mover arquivos baixados para o diretório de backup
+        const sourceDir = path.join(process.cwd(), 'supabase', 'functions', func.name);
+        const targetDir = path.join(functionsDir, func.name);
+        
+        if (fs.existsSync(sourceDir)) {
+          await copyDir(sourceDir, targetDir);
+          console.log(chalk.green(`     ✅ ${func.name} baixada com sucesso`));
+          successCount++;
           
-          if (functionData.deno_config) {
-            const denoPath = path.join(funcDir, 'deno.json');
-            await writeJson(denoPath, functionData.deno_config);
-          }
+          downloadedFunctions.push({
+            name: func.name,
+            slug: func.name,
+            version: func.version || 'unknown',
+            files: fs.existsSync(targetDir) ? fs.readdirSync(targetDir) : []
+          });
         } else {
-          // Criar arquivo placeholder se não houver código
-          const indexPath = path.join(funcDir, 'index.ts');
-          await fs.promises.writeFile(indexPath, `// Edge Function: ${func.name}\n// Code not available via API\n`);
+          throw new Error('Diretório não encontrado após download');
         }
-
-        downloadedFunctions.push({
-          name: func.name,
-          slug: func.name,
-          version: func.version || 'unknown',
-          files: fs.existsSync(funcDir) ? fs.readdirSync(funcDir) : []
-        });
-
-        console.log(chalk.green(`     ✅ ${func.name} baixada`));
+        
       } catch (error) {
         console.log(chalk.yellow(`     ⚠️ Erro ao baixar ${func.name}: ${error.message}`));
+        errorCount++;
       }
     }
-
-    console.log(chalk.green(`✅ Edge Functions backupadas: ${downloadedFunctions.length} functions`));
-    return { success: true, functions: downloadedFunctions };
+    
+    console.log(chalk.green(`📊 Backup de Edge Functions concluído:`));
+    console.log(chalk.green(`   ✅ Sucessos: ${successCount}`));
+    console.log(chalk.green(`   ❌ Erros: ${errorCount}`));
+    
+    return { 
+      success: true, 
+      reason: 'success',
+      functions: downloadedFunctions,
+      functionsCount: functions.length,
+      successCount,
+      errorCount
+    };
 
   } catch (error) {
-    console.log(chalk.yellow(`   ⚠️ Erro no backup das Edge Functions: ${error.message}`));
-    return { success: false, functions: [] };
+    console.log(chalk.yellow(`   ⚠️ Erro durante backup de Edge Functions: ${error.message}`));
+    console.log('⏭️  Continuando com outros componentes...');
+    return { success: false, reason: 'download_error', error: error.message, functions: [] };
   }
 }
 
@@ -620,8 +674,12 @@ async function generateCompleteBackupManifest(config, backupDir, results) {
       },
       edge_functions: {
         success: results.edgeFunctions.success,
-        functions_count: results.edgeFunctions.functions.length,
-        functions: results.edgeFunctions.functions.map(f => f.name)
+        reason: results.edgeFunctions.reason || null,
+        functions_count: results.edgeFunctions.functionsCount || 0,
+        success_count: results.edgeFunctions.successCount || 0,
+        error_count: results.edgeFunctions.errorCount || 0,
+        functions: results.edgeFunctions.functions.map(f => f.name),
+        timestamp: new Date().toISOString()
       },
       auth_settings: {
         success: results.authSettings.success
