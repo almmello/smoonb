@@ -70,6 +70,7 @@ program
   .command('backup')
   .description('Fazer backup completo do projeto Supabase usando Supabase CLI')
   .option('-o, --output <dir>', 'Diretório de saída do backup')
+  .option('--skip-realtime', 'Pular captura interativa de Realtime Settings')
   .action(commands.backup);
 
 program

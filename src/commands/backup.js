@@ -8,6 +8,7 @@ const { sha256 } = require('../utils/hash');
 const { readConfig, validateFor } = require('../utils/config');
 const { showBetaBanner } = require('../utils/banner');
 const { canPerformCompleteBackup, getDockerVersion } = require('../utils/docker');
+const { captureRealtimeSettings } = require('../utils/realtime-settings');
 
 const execAsync = promisify(exec);
 
@@ -135,9 +136,9 @@ async function performFullBackup(config, options) {
   const rolesResult = await backupCustomRoles(config.supabase.databaseUrl, backupDir);
   manifest.components.custom_roles = rolesResult;
 
-  // 6. Backup Realtime Settings via SQL
-  console.log(chalk.blue('\n🔄 6/6 - Backup das Realtime Settings via SQL...'));
-  const realtimeResult = await backupRealtimeSettings(config.supabase.databaseUrl, backupDir);
+  // 6. Backup Realtime Settings via Captura Interativa
+  console.log(chalk.blue('\n🔄 6/6 - Backup das Realtime Settings via Captura Interativa...'));
+  const realtimeResult = await backupRealtimeSettings(config.supabase.projectId, backupDir, options.skipRealtime);
   manifest.components.realtime = realtimeResult;
 
   // Salvar manifest
@@ -551,37 +552,21 @@ async function backupCustomRoles(databaseUrl, backupDir) {
   }
 }
 
-// Backup das Realtime Settings via Management API (não via SQL)
-async function backupRealtimeSettings(databaseUrl, backupDir) {
+// Backup das Realtime Settings via Captura Interativa
+async function backupRealtimeSettings(projectId, backupDir, skipInteractive = false) {
   try {
-    console.log(chalk.gray('   - Exportando Realtime Settings via Management API...'));
+    console.log(chalk.gray('   - Capturando Realtime Settings interativamente...'));
     
-    const realtimeFile = path.join(backupDir, 'realtime-settings.json');
+    const result = await captureRealtimeSettings(projectId, backupDir, skipInteractive);
     
-    // ✅ Usar Management API para Realtime Settings
-    // Nota: Supabase CLI não tem comando específico para Realtime
-    // Vamos criar um arquivo placeholder com informações sobre Realtime
-    
-    const realtimeContent = {
-      project_id: databaseUrl.split('@')[1]?.split('.')[0] || 'unknown',
-      timestamp: new Date().toISOString(),
-      note: 'Realtime settings are managed via Supabase Dashboard',
-      message: 'Para configurar Realtime, acesse o Dashboard do Supabase',
-      url: 'https://supabase.com/dashboard/project/[PROJECT_ID]/settings/api',
-      documentation: 'https://supabase.com/docs/guides/realtime'
-    };
-
-    await writeJson(realtimeFile, realtimeContent);
-    
-    const stats = fs.statSync(realtimeFile);
+    const stats = fs.statSync(path.join(backupDir, 'realtime-settings.json'));
     const sizeKB = (stats.size / 1024).toFixed(1);
     
-    console.log(chalk.green(`     ✅ Realtime Settings documentados: ${sizeKB} KB`));
-    console.log(chalk.gray(`     ℹ️  Realtime é gerenciado via Dashboard do Supabase`));
+    console.log(chalk.green(`     ✅ Realtime Settings capturadas: ${sizeKB} KB`));
     
-    return { success: true };
+    return { success: true, settings: result };
   } catch (error) {
-    console.log(chalk.yellow(`     ⚠️ Erro ao documentar Realtime Settings: ${error.message}`));
+    console.log(chalk.yellow(`     ⚠️ Erro ao capturar Realtime Settings: ${error.message}`));
     return { success: false };
   }
 }
