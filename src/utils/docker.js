@@ -46,6 +46,45 @@ async function detectSupabaseCLI() {
 }
 
 /**
+ * Detecta Docker Desktop completo com versão
+ * @returns {Promise<{installed: boolean, running: boolean, version: string}>}
+ */
+async function detectDockerDesktop() {
+  try {
+    // Verificar se Docker está instalado
+    await execAsync('docker --version');
+    
+    // Verificar se Docker está rodando
+    await execAsync('docker ps');
+    
+    return { 
+      installed: true, 
+      running: true,
+      version: await getDockerVersion()
+    };
+  } catch (error) {
+    if (error.message.includes('not found') || error.message.includes('not recognized')) {
+      return { installed: false, running: false, version: 'Unknown' };
+    } else {
+      return { installed: true, running: false, version: await getDockerVersion() };
+    }
+  }
+}
+
+/**
+ * Obtém a versão do Docker
+ * @returns {Promise<string>}
+ */
+async function getDockerVersion() {
+  try {
+    const { stdout } = await execAsync('docker --version');
+    return stdout.trim();
+  } catch {
+    return 'Unknown';
+  }
+}
+
+/**
  * Função principal para detectar todas as dependências do Docker
  * @returns {Promise<{dockerInstalled: boolean, dockerRunning: boolean, supabaseCLI: boolean}>}
  */
@@ -63,9 +102,50 @@ async function detectDockerDependencies() {
   };
 }
 
+/**
+ * Detecta se é possível fazer backup completo via Docker
+ * @returns {Promise<{canBackupComplete: boolean, reason?: string, dockerStatus: any}>}
+ */
+async function canPerformCompleteBackup() {
+  const dockerStatus = await detectDockerDesktop();
+  
+  if (!dockerStatus.installed) {
+    return {
+      canBackupComplete: false,
+      reason: 'docker_not_installed',
+      dockerStatus
+    };
+  }
+  
+  if (!dockerStatus.running) {
+    return {
+      canBackupComplete: false,
+      reason: 'docker_not_running',
+      dockerStatus
+    };
+  }
+  
+  const supabaseCLI = await detectSupabaseCLI();
+  if (!supabaseCLI) {
+    return {
+      canBackupComplete: false,
+      reason: 'supabase_cli_not_found',
+      dockerStatus
+    };
+  }
+  
+  return {
+    canBackupComplete: true,
+    dockerStatus
+  };
+}
+
 module.exports = {
   detectDockerInstallation,
   detectDockerRunning,
   detectSupabaseCLI,
-  detectDockerDependencies
+  detectDockerDependencies,
+  detectDockerDesktop,
+  getDockerVersion,
+  canPerformCompleteBackup
 };
