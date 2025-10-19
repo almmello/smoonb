@@ -151,7 +151,7 @@ async function performFullBackup(config, options) {
   console.log(chalk.green(`🔐 Auth Settings: ${authResult.success ? 'Exportadas via API' : 'Falharam'}`));
   console.log(chalk.green(`📦 Storage: ${storageResult.buckets?.length || 0} buckets verificados via API`));
   console.log(chalk.green(`👥 Custom Roles: ${rolesResult.roles?.length || 0} roles exportados via SQL`));
-  console.log(chalk.green(`🔄 Realtime: ${realtimeResult.success ? 'Configurações exportadas via SQL' : 'Falharam'}`));
+  console.log(chalk.green(`🔄 Realtime: ${realtimeResult.success ? 'Configurações capturadas interativamente' : 'Falharam'}`));
 
   return { success: true, backupDir, manifest };
 }

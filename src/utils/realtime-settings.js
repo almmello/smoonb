@@ -161,7 +161,7 @@ async function captureSettingsInteractively(projectId, previousSettings) {
           allow_public_access: {
             label: "Allow public access",
             description: "If disabled, only private channels will be allowed",
-            value: allowPublicAccess === 'true'
+            value: allowPublicAccess === 'true' || allowPublicAccess === true
           },
           database_connection_pool_size: {
             label: "Database connection pool size",
