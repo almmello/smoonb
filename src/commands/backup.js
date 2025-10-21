@@ -108,32 +108,37 @@ async function performFullBackup(config, options) {
   };
 
   // 1. Backup Database via pg_dumpall Docker (idêntico ao Dashboard)
-  console.log(chalk.blue('\n📊 1/6 - Backup da Database PostgreSQL via pg_dumpall Docker...'));
+  console.log(chalk.blue('\n📊 1/7 - Backup da Database PostgreSQL via pg_dumpall Docker...'));
   const databaseResult = await backupDatabase(config.supabase.projectId, backupDir);
   manifest.components.database = databaseResult;
 
   // 2. Backup Edge Functions via Docker
-  console.log(chalk.blue('\n⚡ 2/6 - Backup das Edge Functions via Docker...'));
+  console.log(chalk.blue('\n⚡ 2/7 - Backup das Edge Functions via Docker...'));
   const functionsResult = await backupEdgeFunctionsWithDocker(config.supabase.projectId, config.supabase.accessToken, backupDir);
   manifest.components.edge_functions = functionsResult;
 
   // 3. Backup Auth Settings via API
-  console.log(chalk.blue('\n🔐 3/6 - Backup das Auth Settings via API...'));
+  console.log(chalk.blue('\n🔐 3/7 - Backup das Auth Settings via API...'));
   const authResult = await backupAuthSettings(config.supabase.projectId, config.supabase.accessToken, backupDir);
   manifest.components.auth_settings = authResult;
 
   // 4. Backup Storage via API
-  console.log(chalk.blue('\n📦 4/6 - Backup do Storage via API...'));
+  console.log(chalk.blue('\n📦 4/7 - Backup do Storage via API...'));
   const storageResult = await backupStorage(config.supabase.projectId, config.supabase.accessToken, backupDir);
   manifest.components.storage = storageResult;
 
   // 5. Backup Custom Roles via SQL
-  console.log(chalk.blue('\n👥 5/6 - Backup dos Custom Roles via SQL...'));
+  console.log(chalk.blue('\n👥 5/7 - Backup dos Custom Roles via SQL...'));
   const rolesResult = await backupCustomRoles(config.supabase.databaseUrl, backupDir);
   manifest.components.custom_roles = rolesResult;
 
-  // 6. Backup Realtime Settings via Captura Interativa
-  console.log(chalk.blue('\n🔄 6/6 - Backup das Realtime Settings via Captura Interativa...'));
+  // 6. Backup das Database Extensions and Settings via SQL
+  console.log(chalk.blue('\n🔧 6/7 - Backup das Database Extensions and Settings via SQL...'));
+  const databaseSettingsResult = await backupDatabaseSettings(config.supabase.projectId, backupDir);
+  manifest.components.database_settings = databaseSettingsResult;
+
+  // 7. Backup Realtime Settings via Captura Interativa
+  console.log(chalk.blue('\n🔄 7/7 - Backup das Realtime Settings via Captura Interativa...'));
   const realtimeResult = await backupRealtimeSettings(config.supabase.projectId, backupDir, options.skipRealtime);
   manifest.components.realtime = realtimeResult;
 
@@ -143,6 +148,7 @@ async function performFullBackup(config, options) {
   console.log(chalk.green('\n🎉 BACKUP COMPLETO FINALIZADO VIA DOCKER!'));
   console.log(chalk.blue(`📁 Localização: ${backupDir}`));
   console.log(chalk.green(`📊 Database: ${databaseResult.fileName} (${databaseResult.size} KB) - Idêntico ao Dashboard`));
+  console.log(chalk.green(`🔧 Database Settings: ${databaseSettingsResult.fileName} (${databaseSettingsResult.size} KB) - Extensions e Configurações`));
   console.log(chalk.green(`⚡ Edge Functions: ${functionsResult.success_count || 0}/${functionsResult.functions_count || 0} functions baixadas via Docker`));
   console.log(chalk.green(`🔐 Auth Settings: ${authResult.success ? 'Exportadas via API' : 'Falharam'}`));
   console.log(chalk.green(`📦 Storage: ${storageResult.buckets?.length || 0} buckets verificados via API`));
@@ -530,6 +536,187 @@ async function backupCustomRoles(databaseUrl, backupDir) {
   } catch (error) {
     console.log(chalk.yellow(`     ⚠️ Erro no backup dos Custom Roles: ${error.message}`));
     return { success: false, roles: [] };
+  }
+}
+
+// Backup das Database Extensions and Settings via SQL
+async function backupDatabaseSettings(projectId, backupDir) {
+  try {
+    console.log(chalk.gray('   - Capturando Database Extensions and Settings...'));
+    
+    const { execSync } = require('child_process');
+    const config = await readConfig();
+    
+    // Extrair credenciais da databaseUrl
+    const dbUrl = config.supabase.databaseUrl;
+    const urlMatch = dbUrl.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+    
+    if (!urlMatch) {
+      throw new Error('Database URL inválida');
+    }
+    
+    const [, username, password, host, port, database] = urlMatch;
+    
+    // Gerar nome do arquivo
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    
+    const fileName = `database-settings-${day}-${month}-${year}@${hours}-${minutes}-${seconds}.json`;
+    
+    // Usar caminho absoluto igual às outras funções
+    const backupDirAbs = path.resolve(backupDir);
+    
+    // Script SQL para capturar todas as configurações
+    const sqlScript = `
+-- Database Extensions and Settings Backup
+-- Generated at: ${new Date().toISOString()}
+
+-- 1. Capturar extensões instaladas
+SELECT json_agg(
+  json_build_object(
+    'name', extname,
+    'version', extversion,
+    'schema', extnamespace::regnamespace
+  )
+) as extensions
+FROM pg_extension
+ORDER BY extname;
+
+-- 2. Capturar configurações PostgreSQL importantes
+SELECT json_agg(
+  json_build_object(
+    'name', name,
+    'setting', setting,
+    'unit', unit,
+    'context', context,
+    'description', short_desc
+  )
+) as postgres_settings
+FROM pg_settings 
+WHERE name IN (
+  'statement_timeout',
+  'idle_in_transaction_session_timeout', 
+  'lock_timeout',
+  'shared_buffers',
+  'work_mem',
+  'maintenance_work_mem',
+  'effective_cache_size',
+  'max_connections',
+  'log_statement',
+  'log_min_duration_statement',
+  'timezone',
+  'log_timezone', 
+  'default_transaction_isolation',
+  'default_transaction_read_only',
+  'checkpoint_completion_target',
+  'wal_buffers',
+  'max_wal_size',
+  'min_wal_size'
+)
+ORDER BY name;
+
+-- 3. Capturar configurações específicas dos roles Supabase
+SELECT json_agg(
+  json_build_object(
+    'role', rolname,
+    'config', rolconfig
+  )
+) as role_configurations
+FROM pg_roles 
+WHERE rolname IN ('anon', 'authenticated', 'authenticator', 'postgres', 'service_role')
+AND rolconfig IS NOT NULL
+ORDER BY rolname;
+
+-- 4. Capturar configurações de PGAudit (se existir)
+SELECT json_agg(
+  json_build_object(
+    'role', rolname,
+    'config', rolconfig
+  )
+) as pgaudit_configurations
+FROM pg_roles 
+WHERE rolconfig IS NOT NULL 
+AND EXISTS (
+  SELECT 1 FROM unnest(rolconfig) AS config 
+  WHERE config LIKE '%pgaudit%'
+)
+ORDER BY rolname;
+`;
+
+    // Salvar script SQL temporário
+    const sqlFile = path.join(backupDir, 'temp_settings.sql');
+    await fs.writeFile(sqlFile, sqlScript);
+    
+    // Executar via Docker
+    const dockerCmd = [
+      'docker run --rm --network host',
+      `-v "${backupDirAbs}:/host"`,
+      `-e PGPASSWORD="${password}"`,
+      'postgres:17 psql',
+      `-h ${host}`,
+      `-p ${port}`,
+      `-U ${username}`,
+      `-d ${database}`,
+      '-f /host/temp_settings.sql',
+      '-t', // Tuples only
+      '-A', // Unaligned output
+      '-F', // Field separator
+      '|'
+    ].join(' ');
+    
+    console.log(chalk.gray('   - Executando queries de configurações via Docker...'));
+    const output = execSync(dockerCmd, { stdio: 'pipe', encoding: 'utf8' });
+    
+    // Processar output e criar JSON estruturado
+    const lines = output.trim().split('\n').filter(line => line.trim());
+    
+    const result = {
+      database_settings: {
+        note: "Configurações específicas do database Supabase capturadas via SQL",
+        captured_at: new Date().toISOString(),
+        project_id: projectId,
+        extensions: lines[0] ? JSON.parse(lines[0]) : [],
+        postgres_settings: lines[1] ? JSON.parse(lines[1]) : [],
+        role_configurations: lines[2] ? JSON.parse(lines[2]) : [],
+        pgaudit_configurations: lines[3] ? JSON.parse(lines[3]) : [],
+        restore_instructions: {
+          note: "Estas configurações precisam ser aplicadas manualmente após a restauração do database",
+          steps: [
+            "1. Restaurar o database usando o arquivo .backup.gz",
+            "2. Aplicar configurações de Postgres via SQL:",
+            "   ALTER DATABASE postgres SET setting_name TO 'value';",
+            "3. Aplicar configurações de roles via SQL:",
+            "   ALTER ROLE role_name SET setting_name TO 'value';",
+            "4. Habilitar extensões necessárias via Dashboard ou SQL:",
+            "   CREATE EXTENSION IF NOT EXISTS extension_name;",
+            "5. Verificar configurações aplicadas:",
+            "   SELECT name, setting FROM pg_settings WHERE name IN (...);"
+          ]
+        }
+      }
+    };
+    
+    // Salvar arquivo JSON
+    const jsonFile = path.join(backupDir, fileName);
+    await fs.writeFile(jsonFile, JSON.stringify(result, null, 2));
+    
+    // Limpar arquivo temporário
+    await fs.unlink(sqlFile);
+    
+    const stats = fs.statSync(jsonFile);
+    const sizeKB = (stats.size / 1024).toFixed(1);
+    
+    console.log(chalk.green(`     ✅ Database Settings: ${fileName} (${sizeKB} KB)`));
+    
+    return { success: true, size: sizeKB, fileName: fileName };
+  } catch (error) {
+    console.log(chalk.yellow(`     ⚠️ Erro no backup das Database Settings: ${error.message}`));
+    return { success: false };
   }
 }
 
