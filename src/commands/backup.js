@@ -358,7 +358,7 @@ async function backupEdgeFunctionsWithDocker(projectId, accessToken, backupDir) 
             name: func.name,
             slug: func.name,
             version: func.version || 'unknown',
-            files: await fs.access(targetDir).then(() => await fs.readdir(targetDir)).catch(() => [])
+            files: await fs.access(targetDir).then(() => fs.readdir(targetDir)).catch(() => [])
           });
         } else {
           throw new Error('Diretório não encontrado após download');
