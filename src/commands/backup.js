@@ -706,7 +706,7 @@ ORDER BY rolname;
     await fs.writeFile(jsonFile, JSON.stringify(result, null, 2));
     
     // Limpar arquivo temporário
-    await fs.unlink(sqlFile);
+    await fs.promises.unlink(sqlFile);
     
     const stats = fs.statSync(jsonFile);
     const sizeKB = (stats.size / 1024).toFixed(1);
