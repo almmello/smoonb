@@ -109,14 +109,8 @@ async function performFullBackup(config, options) {
 
   // 1. Backup Database via pg_dumpall Docker (idêntico ao Dashboard)
   console.log(chalk.blue('\n📊 1/6 - Backup da Database PostgreSQL via pg_dumpall Docker...'));
-  const dbResult = await backupDatabaseWithDocker(config.supabase.databaseUrl, backupDir);
-  manifest.components.database = {
-    success: dbResult.success,
-    method: 'pg_dumpall_docker',
-    fileName: dbResult.fileName,
-    size_kb: dbResult.size,
-    dashboard_compatible: true
-  };
+  const databaseResult = await backupDatabase(config.supabase.projectId, backupDir);
+  manifest.components.database = databaseResult;
 
   // 2. Backup Edge Functions via Docker
   console.log(chalk.blue('\n⚡ 2/6 - Backup das Edge Functions via Docker...'));
@@ -148,12 +142,21 @@ async function performFullBackup(config, options) {
 
   console.log(chalk.green('\n🎉 BACKUP COMPLETO FINALIZADO VIA DOCKER!'));
   console.log(chalk.blue(`📁 Localização: ${backupDir}`));
-  console.log(chalk.green(`📊 Database: ${dbResult.fileName} (${dbResult.size} KB) - Idêntico ao Dashboard`));
+  console.log(chalk.green(`📊 Database: ${databaseResult.fileName} (${databaseResult.size} KB) - Idêntico ao Dashboard`));
   console.log(chalk.green(`⚡ Edge Functions: ${functionsResult.success_count || 0}/${functionsResult.functions_count || 0} functions baixadas via Docker`));
   console.log(chalk.green(`🔐 Auth Settings: ${authResult.success ? 'Exportadas via API' : 'Falharam'}`));
   console.log(chalk.green(`📦 Storage: ${storageResult.buckets?.length || 0} buckets verificados via API`));
   console.log(chalk.green(`👥 Custom Roles: ${rolesResult.roles?.length || 0} roles exportados via SQL`));
-  console.log(chalk.green(`🔄 Realtime: ${realtimeResult.success ? 'Configurações capturadas interativamente' : 'Falharam'}`));
+  // Determinar mensagem correta baseada no método usado
+  let realtimeMessage = 'Falharam';
+  if (realtimeResult.success) {
+    if (options.skipRealtime) {
+      realtimeMessage = 'Configurações copiadas do backup anterior';
+    } else {
+      realtimeMessage = 'Configurações capturadas interativamente';
+    }
+  }
+  console.log(chalk.green(`🔄 Realtime: ${realtimeMessage}`));
 
   return { success: true, backupDir, manifest };
 }
@@ -220,12 +223,16 @@ function showDockerMessagesAndExit(reason) {
 }
 
 // Backup da database usando pg_dumpall via Docker (idêntico ao Supabase Dashboard)
-async function backupDatabaseWithDocker(databaseUrl, backupDir) {
+async function backupDatabase(projectId, backupDir) {
   try {
-    console.log(chalk.gray('🐳 Criando backup completo via pg_dumpall Docker...'));
+    console.log(chalk.gray('   - Criando backup completo via pg_dumpall...'));
+    
+    const { execSync } = require('child_process');
+    const config = await readConfig();
     
     // Extrair credenciais da databaseUrl
-    const urlMatch = databaseUrl.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+    const dbUrl = config.supabase.databaseUrl;
+    const urlMatch = dbUrl.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
     
     if (!urlMatch) {
       throw new Error('Database URL inválida');
@@ -233,7 +240,7 @@ async function backupDatabaseWithDocker(databaseUrl, backupDir) {
     
     const [, username, password, host, port, database] = urlMatch;
     
-    // Gerar nome do arquivo igual ao dashboard Supabase
+    // Gerar nome do arquivo igual ao dashboard
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -243,14 +250,14 @@ async function backupDatabaseWithDocker(databaseUrl, backupDir) {
     const seconds = String(now.getSeconds()).padStart(2, '0');
     
     const fileName = `db_cluster-${day}-${month}-${year}@${hours}-${minutes}-${seconds}.backup`;
-    const filePath = path.join(backupDir, fileName);
     
-    console.log(chalk.gray(`   - Arquivo: ${fileName}`));
+    // CORREÇÃO: Usar caminho absoluto igual às Edge Functions
+    const backupDirAbs = path.resolve(backupDir);
     
-    // Comando pg_dumpall via Docker (idêntico ao dashboard)
+    // Comando pg_dumpall via Docker (mesma abordagem das Edge Functions)
     const dockerCmd = [
       'docker run --rm --network host',
-      `-v "${backupDir}:/host"`,
+      `-v "${backupDirAbs}:/host"`,
       `-e PGPASSWORD="${password}"`,
       'postgres:17 pg_dumpall',
       `-h ${host}`,
@@ -259,43 +266,28 @@ async function backupDatabaseWithDocker(databaseUrl, backupDir) {
       `-f /host/${fileName}`
     ].join(' ');
     
-    console.log(chalk.gray('   - Executando pg_dumpall via Docker...'));
-    await execAsync(dockerCmd, { stdio: 'pipe' });
+    console.log(chalk.gray(`   - Executando pg_dumpall via Docker...`));
+    execSync(dockerCmd, { stdio: 'pipe' });
     
     // Compactar igual ao Supabase Dashboard
-    console.log(chalk.gray('   - Compactando arquivo...'));
     const gzipCmd = [
       'docker run --rm',
-      `-v "${backupDir}:/host"`,
-      'postgres:17 gzip /host/' + fileName
+      `-v "${backupDirAbs}:/host"`,
+      `postgres:17 gzip /host/${fileName}`
     ].join(' ');
     
-    await execAsync(gzipCmd, { stdio: 'pipe' });
+    execSync(gzipCmd, { stdio: 'pipe' });
     
     const finalFileName = `${fileName}.gz`;
-    const finalFilePath = path.join(backupDir, finalFileName);
-    
-    // Validar arquivo gerado
-    if (!fs.existsSync(finalFilePath)) {
-      throw new Error('Arquivo de backup não foi criado');
-    }
-    
-    const stats = fs.statSync(finalFilePath);
+    const stats = fs.statSync(path.join(backupDir, finalFileName));
     const sizeKB = (stats.size / 1024).toFixed(1);
     
     console.log(chalk.green(`     ✅ Database backup: ${finalFileName} (${sizeKB} KB)`));
     
-    return { 
-      success: true, 
-      fileName: finalFileName,
-      size: sizeKB,
-      method: 'pg_dumpall_docker',
-      dashboard_compatible: true
-    };
-
+    return { success: true, size: sizeKB, fileName: finalFileName };
   } catch (error) {
-    console.log(chalk.red(`     ❌ Erro no backup do database: ${error.message}`));
-    return { success: false, error: error.message };
+    console.log(chalk.yellow(`     ⚠️ Erro no backup do database: ${error.message}`));
+    return { success: false };
   }
 }
 

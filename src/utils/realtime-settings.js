@@ -17,7 +17,7 @@ async function captureRealtimeSettings(projectId, backupDir, skipInteractive = f
   const previousSettings = await getPreviousRealtimeSettings(backupDir);
   
   if (skipInteractive && previousSettings) {
-    console.log('📋 Usando configurações de Realtime Settings do backup anterior...');
+    console.log('📋 Copiando Realtime Settings do backup anterior...');
     await fs.writeFile(settingsFile, JSON.stringify(previousSettings, null, 2));
     return previousSettings;
   }
