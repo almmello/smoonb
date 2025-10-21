@@ -101,19 +101,21 @@ async function performFullBackup(config, options) {
     created_at: new Date().toISOString(),
     project_id: config.supabase.projectId,
     smoonb_version: require('../../package.json').version,
-    backup_type: 'complete_docker',
+    backup_type: 'pg_dumpall_docker_dashboard_compatible',
     docker_version: await getDockerVersion(),
+    dashboard_compatible: true,
     components: {}
   };
 
-  // 1. Backup Database via Docker
-  console.log(chalk.blue('\n📊 1/6 - Backup da Database PostgreSQL via Docker...'));
+  // 1. Backup Database via pg_dumpall Docker (idêntico ao Dashboard)
+  console.log(chalk.blue('\n📊 1/6 - Backup da Database PostgreSQL via pg_dumpall Docker...'));
   const dbResult = await backupDatabaseWithDocker(config.supabase.databaseUrl, backupDir);
   manifest.components.database = {
     success: dbResult.success,
-    method: 'docker',
-    files: dbResult.files?.length || 0,
-    total_size_kb: dbResult.totalSizeKB || '0.0'
+    method: 'pg_dumpall_docker',
+    fileName: dbResult.fileName,
+    size_kb: dbResult.size,
+    dashboard_compatible: true
   };
 
   // 2. Backup Edge Functions via Docker
@@ -146,7 +148,7 @@ async function performFullBackup(config, options) {
 
   console.log(chalk.green('\n🎉 BACKUP COMPLETO FINALIZADO VIA DOCKER!'));
   console.log(chalk.blue(`📁 Localização: ${backupDir}`));
-  console.log(chalk.green(`🐳 Database: ${dbResult.files?.length || 0} arquivos SQL gerados via Docker`));
+  console.log(chalk.green(`📊 Database: ${dbResult.fileName} (${dbResult.size} KB) - Idêntico ao Dashboard`));
   console.log(chalk.green(`⚡ Edge Functions: ${functionsResult.success_count || 0}/${functionsResult.functions_count || 0} functions baixadas via Docker`));
   console.log(chalk.green(`🔐 Auth Settings: ${authResult.success ? 'Exportadas via API' : 'Falharam'}`));
   console.log(chalk.green(`📦 Storage: ${storageResult.buckets?.length || 0} buckets verificados via API`));
@@ -217,95 +219,82 @@ function showDockerMessagesAndExit(reason) {
   process.exit(1);
 }
 
-// Backup da database usando Docker
+// Backup da database usando pg_dumpall via Docker (idêntico ao Supabase Dashboard)
 async function backupDatabaseWithDocker(databaseUrl, backupDir) {
   try {
-    console.log(chalk.gray('🐳 Iniciando backup de database via Docker...'));
+    console.log(chalk.gray('🐳 Criando backup completo via pg_dumpall Docker...'));
     
-    const files = [];
-    let success = true;
-    let totalSizeKB = 0;
-
-    // 1. Backup do Schema
-    console.log(chalk.gray('   - Exportando schema...'));
-    const schemaFile = path.join(backupDir, 'schema.sql');
+    // Extrair credenciais da databaseUrl
+    const urlMatch = databaseUrl.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
     
-    try {
-      await execAsync(`supabase db dump --db-url "${databaseUrl}" -f "${schemaFile}"`);
-      
-      const schemaValidation = await validateSqlFile(schemaFile);
-      if (schemaValidation.valid) {
-        files.push({
-          filename: 'schema.sql',
-          size: schemaValidation.size,
-          sizeKB: schemaValidation.sizeKB
-        });
-        totalSizeKB += parseFloat(schemaValidation.sizeKB);
-        console.log(chalk.green(`     ✅ Schema exportado: ${schemaValidation.sizeKB} KB`));
-      } else {
-        console.log(chalk.red(`     ❌ Arquivo schema.sql inválido: ${schemaValidation.error}`));
-        success = false;
-      }
-    } catch (error) {
-      console.log(chalk.red(`     ❌ Erro ao exportar schema: ${error.message}`));
-      success = false;
+    if (!urlMatch) {
+      throw new Error('Database URL inválida');
     }
-
-    // 2. Backup dos Dados
-    console.log(chalk.gray('   - Exportando dados...'));
-    const dataFile = path.join(backupDir, 'data.sql');
     
-    try {
-      await execAsync(`supabase db dump --db-url "${databaseUrl}" --data-only -f "${dataFile}"`);
-      
-      const dataValidation = await validateSqlFile(dataFile);
-      if (dataValidation.valid) {
-        files.push({
-          filename: 'data.sql',
-          size: dataValidation.size,
-          sizeKB: dataValidation.sizeKB
-        });
-        totalSizeKB += parseFloat(dataValidation.sizeKB);
-        console.log(chalk.green(`     ✅ Dados exportados: ${dataValidation.sizeKB} KB`));
-      } else {
-        console.log(chalk.red(`     ❌ Arquivo data.sql inválido: ${dataValidation.error}`));
-        success = false;
-      }
-    } catch (error) {
-      console.log(chalk.red(`     ❌ Erro ao exportar dados: ${error.message}`));
-      success = false;
-    }
-
-    // 3. Backup dos Roles
-    console.log(chalk.gray('   - Exportando roles...'));
-    const rolesFile = path.join(backupDir, 'roles.sql');
+    const [, username, password, host, port, database] = urlMatch;
     
-    try {
-      await execAsync(`supabase db dump --db-url "${databaseUrl}" --role-only -f "${rolesFile}"`);
-      
-      const rolesValidation = await validateSqlFile(rolesFile);
-      if (rolesValidation.valid) {
-        files.push({
-          filename: 'roles.sql',
-          size: rolesValidation.size,
-          sizeKB: rolesValidation.sizeKB
-        });
-        totalSizeKB += parseFloat(rolesValidation.sizeKB);
-        console.log(chalk.green(`     ✅ Roles exportados: ${rolesValidation.sizeKB} KB`));
-      } else {
-        console.log(chalk.red(`     ❌ Arquivo roles.sql inválido: ${rolesValidation.error}`));
-        success = false;
-      }
-    } catch (error) {
-      console.log(chalk.red(`     ❌ Erro ao exportar roles: ${error.message}`));
-      success = false;
+    // Gerar nome do arquivo igual ao dashboard Supabase
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    
+    const fileName = `db_cluster-${day}-${month}-${year}@${hours}-${minutes}-${seconds}.backup`;
+    const filePath = path.join(backupDir, fileName);
+    
+    console.log(chalk.gray(`   - Arquivo: ${fileName}`));
+    
+    // Comando pg_dumpall via Docker (idêntico ao dashboard)
+    const dockerCmd = [
+      'docker run --rm --network host',
+      `-v "${backupDir}:/host"`,
+      `-e PGPASSWORD="${password}"`,
+      'postgres:17 pg_dumpall',
+      `-h ${host}`,
+      `-p ${port}`,
+      `-U ${username}`,
+      `-f /host/${fileName}`
+    ].join(' ');
+    
+    console.log(chalk.gray('   - Executando pg_dumpall via Docker...'));
+    await execAsync(dockerCmd, { stdio: 'pipe' });
+    
+    // Compactar igual ao Supabase Dashboard
+    console.log(chalk.gray('   - Compactando arquivo...'));
+    const gzipCmd = [
+      'docker run --rm',
+      `-v "${backupDir}:/host"`,
+      'postgres:17 gzip /host/' + fileName
+    ].join(' ');
+    
+    await execAsync(gzipCmd, { stdio: 'pipe' });
+    
+    const finalFileName = `${fileName}.gz`;
+    const finalFilePath = path.join(backupDir, finalFileName);
+    
+    // Validar arquivo gerado
+    if (!fs.existsSync(finalFilePath)) {
+      throw new Error('Arquivo de backup não foi criado');
     }
-
-    console.log(chalk.green(`✅ Backup de database concluído via Docker`));
-    return { success, files, totalSizeKB: totalSizeKB.toFixed(1) };
+    
+    const stats = fs.statSync(finalFilePath);
+    const sizeKB = (stats.size / 1024).toFixed(1);
+    
+    console.log(chalk.green(`     ✅ Database backup: ${finalFileName} (${sizeKB} KB)`));
+    
+    return { 
+      success: true, 
+      fileName: finalFileName,
+      size: sizeKB,
+      method: 'pg_dumpall_docker',
+      dashboard_compatible: true
+    };
 
   } catch (error) {
-    console.log(chalk.red(`❌ Erro no backup de database: ${error.message}`));
+    console.log(chalk.red(`     ❌ Erro no backup do database: ${error.message}`));
     return { success: false, error: error.message };
   }
 }
@@ -571,33 +560,3 @@ async function backupRealtimeSettings(projectId, backupDir, skipInteractive = fa
   }
 }
 
-// Validar arquivo SQL
-async function validateSqlFile(filePath) {
-  try {
-    if (!fs.existsSync(filePath)) {
-      return { valid: false, error: 'Arquivo não existe', size: 0, sizeKB: '0.0' };
-    }
-
-    const stats = fs.statSync(filePath);
-    const sizeKB = (stats.size / 1024).toFixed(1);
-    
-    if (stats.size === 0) {
-      return { valid: false, error: 'Arquivo vazio', size: 0, sizeKB: '0.0' };
-    }
-
-    const content = fs.readFileSync(filePath, 'utf8');
-    
-    const sqlKeywords = ['CREATE', 'INSERT', 'COPY', 'ALTER', 'DROP', 'GRANT', 'REVOKE'];
-    const hasValidContent = sqlKeywords.some(keyword => 
-      content.toUpperCase().includes(keyword)
-    );
-
-    if (!hasValidContent) {
-      return { valid: false, error: 'Sem conteúdo SQL válido', size: stats.size, sizeKB };
-    }
-
-    return { valid: true, error: null, size: stats.size, sizeKB };
-  } catch (error) {
-    return { valid: false, error: error.message, size: 0, sizeKB: '0.0' };
-  }
-}
