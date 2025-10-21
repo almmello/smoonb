@@ -1,6 +1,6 @@
 const chalk = require('chalk');
 const path = require('path');
-const fs = require('fs');
+const fs = require('fs').promises;
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const { ensureDir, writeJson, copyDir } = require('../utils/fsx');
@@ -285,7 +285,7 @@ async function backupDatabase(projectId, backupDir) {
     execSync(gzipCmd, { stdio: 'pipe' });
     
     const finalFileName = `${fileName}.gz`;
-    const stats = fs.statSync(path.join(backupDir, finalFileName));
+    const stats = await fs.stat(path.join(backupDir, finalFileName));
     const sizeKB = (stats.size / 1024).toFixed(1);
     
     console.log(chalk.green(`     ✅ Database backup: ${finalFileName} (${sizeKB} KB)`));
@@ -349,7 +349,7 @@ async function backupEdgeFunctionsWithDocker(projectId, accessToken, backupDir) 
         const sourceDir = path.join(process.cwd(), 'supabase', 'functions', func.name);
         const targetDir = path.join(functionsDir, func.name);
         
-        if (fs.existsSync(sourceDir)) {
+        if (await fs.access(sourceDir).then(() => true).catch(() => false)) {
           await copyDir(sourceDir, targetDir);
           console.log(chalk.green(`     ✅ ${func.name} baixada com sucesso`));
           successCount++;
@@ -358,7 +358,7 @@ async function backupEdgeFunctionsWithDocker(projectId, accessToken, backupDir) 
             name: func.name,
             slug: func.name,
             version: func.version || 'unknown',
-            files: fs.existsSync(targetDir) ? fs.readdirSync(targetDir) : []
+            files: await fs.access(targetDir).then(() => await fs.readdir(targetDir)).catch(() => [])
           });
         } else {
           throw new Error('Diretório não encontrado após download');
@@ -523,7 +523,7 @@ async function backupCustomRoles(databaseUrl, backupDir) {
       // ✅ Usar Supabase CLI via Docker para roles
       await execAsync(`supabase db dump --db-url "${databaseUrl}" --role-only -f "${customRolesFile}"`);
       
-      const stats = fs.statSync(customRolesFile);
+      const stats = await fs.stat(customRolesFile);
       const sizeKB = (stats.size / 1024).toFixed(1);
       
       console.log(chalk.green(`     ✅ Custom Roles exportados via Docker: ${sizeKB} KB`));
@@ -706,9 +706,9 @@ ORDER BY rolname;
     await fs.writeFile(jsonFile, JSON.stringify(result, null, 2));
     
     // Limpar arquivo temporário
-    await fs.promises.unlink(sqlFile);
+    await fs.unlink(sqlFile);
     
-    const stats = fs.statSync(jsonFile);
+    const stats = await fs.stat(jsonFile);
     const sizeKB = (stats.size / 1024).toFixed(1);
     
     console.log(chalk.green(`     ✅ Database Settings: ${fileName} (${sizeKB} KB)`));
@@ -727,7 +727,7 @@ async function backupRealtimeSettings(projectId, backupDir, skipInteractive = fa
     
     const result = await captureRealtimeSettings(projectId, backupDir, skipInteractive);
     
-    const stats = fs.statSync(path.join(backupDir, 'realtime-settings.json'));
+    const stats = await fs.stat(path.join(backupDir, 'realtime-settings.json'));
     const sizeKB = (stats.size / 1024).toFixed(1);
     
     console.log(chalk.green(`     ✅ Realtime Settings capturadas: ${sizeKB} KB`));
