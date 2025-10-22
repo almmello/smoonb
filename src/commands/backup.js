@@ -584,8 +584,7 @@ SELECT json_agg(
     'schema', extnamespace::regnamespace
   )
 ) as extensions
-FROM pg_extension
-ORDER BY extname;
+FROM pg_extension;
 
 -- 2. Capturar configurações PostgreSQL importantes
 SELECT json_agg(
@@ -617,8 +616,7 @@ WHERE name IN (
   'wal_buffers',
   'max_wal_size',
   'min_wal_size'
-)
-ORDER BY name;
+);
 
 -- 3. Capturar configurações específicas dos roles Supabase
 SELECT json_agg(
@@ -629,8 +627,7 @@ SELECT json_agg(
 ) as role_configurations
 FROM pg_roles 
 WHERE rolname IN ('anon', 'authenticated', 'authenticator', 'postgres', 'service_role')
-AND rolconfig IS NOT NULL
-ORDER BY rolname;
+AND rolconfig IS NOT NULL;
 
 -- 4. Capturar configurações de PGAudit (se existir)
 SELECT json_agg(
@@ -644,8 +641,7 @@ WHERE rolconfig IS NOT NULL
 AND EXISTS (
   SELECT 1 FROM unnest(rolconfig) AS config 
   WHERE config LIKE '%pgaudit%'
-)
-ORDER BY rolname;
+);
 `;
 
     // Salvar script SQL temporário
