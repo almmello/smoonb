@@ -664,9 +664,7 @@ ORDER BY rolname;
       `-d ${database}`,
       '-f /host/temp_settings.sql',
       '-t', // Tuples only
-      '-A', // Unaligned output
-      '-F', // Field separator
-      '|'
+      '-A'  // Unaligned output
     ].join(' ');
     
     console.log(chalk.gray('   - Executando queries de configurações via Docker...'));
