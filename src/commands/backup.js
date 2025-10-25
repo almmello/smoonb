@@ -108,37 +108,47 @@ async function performFullBackup(config, options) {
   };
 
   // 1. Backup Database via pg_dumpall Docker (idêntico ao Dashboard)
-  console.log(chalk.blue('\n📊 1/7 - Backup da Database PostgreSQL via pg_dumpall Docker...'));
+  console.log(chalk.blue('\n📊 1/8 - Backup da Database PostgreSQL via pg_dumpall Docker...'));
   const databaseResult = await backupDatabase(config.supabase.projectId, backupDir);
   manifest.components.database = databaseResult;
 
+  // 1.5. Backup Database Separado (SQL files para troubleshooting)
+  console.log(chalk.blue('\n📊 1.5/8 - Backup da Database PostgreSQL (arquivos SQL separados)...'));
+  const dbSeparatedResult = await backupDatabaseSeparated(config.supabase.projectId, backupDir);
+  manifest.components.database_separated = {
+    success: dbSeparatedResult.success,
+    method: 'supabase-cli',
+    files: dbSeparatedResult.files || [],
+    total_size_kb: dbSeparatedResult.totalSizeKB || '0.0'
+  };
+
   // 2. Backup Edge Functions via Docker
-  console.log(chalk.blue('\n⚡ 2/7 - Backup das Edge Functions via Docker...'));
+  console.log(chalk.blue('\n⚡ 2/8 - Backup das Edge Functions via Docker...'));
   const functionsResult = await backupEdgeFunctionsWithDocker(config.supabase.projectId, config.supabase.accessToken, backupDir);
   manifest.components.edge_functions = functionsResult;
 
   // 3. Backup Auth Settings via API
-  console.log(chalk.blue('\n🔐 3/7 - Backup das Auth Settings via API...'));
+  console.log(chalk.blue('\n🔐 3/8 - Backup das Auth Settings via API...'));
   const authResult = await backupAuthSettings(config.supabase.projectId, config.supabase.accessToken, backupDir);
   manifest.components.auth_settings = authResult;
 
   // 4. Backup Storage via API
-  console.log(chalk.blue('\n📦 4/7 - Backup do Storage via API...'));
+  console.log(chalk.blue('\n📦 4/8 - Backup do Storage via API...'));
   const storageResult = await backupStorage(config.supabase.projectId, config.supabase.accessToken, backupDir);
   manifest.components.storage = storageResult;
 
   // 5. Backup Custom Roles via SQL
-  console.log(chalk.blue('\n👥 5/7 - Backup dos Custom Roles via SQL...'));
+  console.log(chalk.blue('\n👥 5/8 - Backup dos Custom Roles via SQL...'));
   const rolesResult = await backupCustomRoles(config.supabase.databaseUrl, backupDir);
   manifest.components.custom_roles = rolesResult;
 
   // 6. Backup das Database Extensions and Settings via SQL
-  console.log(chalk.blue('\n🔧 6/7 - Backup das Database Extensions and Settings via SQL...'));
+  console.log(chalk.blue('\n🔧 6/8 - Backup das Database Extensions and Settings via SQL...'));
   const databaseSettingsResult = await backupDatabaseSettings(config.supabase.projectId, backupDir);
   manifest.components.database_settings = databaseSettingsResult;
 
   // 7. Backup Realtime Settings via Captura Interativa
-  console.log(chalk.blue('\n🔄 7/7 - Backup das Realtime Settings via Captura Interativa...'));
+  console.log(chalk.blue('\n🔄 7/8 - Backup das Realtime Settings via Captura Interativa...'));
   const realtimeResult = await backupRealtimeSettings(config.supabase.projectId, backupDir, options.skipRealtime);
   manifest.components.realtime = realtimeResult;
 
@@ -148,6 +158,7 @@ async function performFullBackup(config, options) {
   console.log(chalk.green('\n🎉 BACKUP COMPLETO FINALIZADO VIA DOCKER!'));
   console.log(chalk.blue(`📁 Localização: ${backupDir}`));
   console.log(chalk.green(`📊 Database: ${databaseResult.fileName} (${databaseResult.size} KB) - Idêntico ao Dashboard`));
+  console.log(chalk.green(`📊 Database SQL: ${dbSeparatedResult.files?.length || 0} arquivos separados (${dbSeparatedResult.totalSizeKB} KB) - Para troubleshooting`));
   console.log(chalk.green(`🔧 Database Settings: ${databaseSettingsResult.fileName} (${databaseSettingsResult.size} KB) - Extensions e Configurações`));
   console.log(chalk.green(`⚡ Edge Functions: ${functionsResult.success_count || 0}/${functionsResult.functions_count || 0} functions baixadas via Docker`));
   console.log(chalk.green(`🔐 Auth Settings: ${authResult.success ? 'Exportadas via API' : 'Falharam'}`));
@@ -294,6 +305,75 @@ async function backupDatabase(projectId, backupDir) {
   } catch (error) {
     console.log(chalk.yellow(`     ⚠️ Erro no backup do database: ${error.message}`));
     return { success: false };
+  }
+}
+
+// Backup da database usando arquivos SQL separados via Supabase CLI (para troubleshooting)
+async function backupDatabaseSeparated(projectId, backupDir) {
+  try {
+    console.log(chalk.gray('   - Criando backups SQL separados via Supabase CLI...'));
+    
+    const { execSync } = require('child_process');
+    const config = await readConfig();
+    
+    const dbUrl = config.supabase.databaseUrl;
+    const files = [];
+    let totalSizeKB = 0;
+    
+    // 1. Backup do Schema
+    console.log(chalk.gray('   - Exportando schema...'));
+    const schemaFile = path.join(backupDir, 'schema.sql');
+    
+    try {
+      execSync(`supabase db dump --db-url "${dbUrl}" -f "${schemaFile}"`, { stdio: 'pipe' });
+      const stats = await fs.stat(schemaFile);
+      const sizeKB = (stats.size / 1024).toFixed(1);
+      files.push({ filename: 'schema.sql', sizeKB });
+      totalSizeKB += parseFloat(sizeKB);
+      console.log(chalk.green(`     ✅ Schema: ${sizeKB} KB`));
+    } catch (error) {
+      console.log(chalk.yellow(`     ⚠️ Erro no schema: ${error.message}`));
+    }
+    
+    // 2. Backup dos Dados
+    console.log(chalk.gray('   - Exportando dados...'));
+    const dataFile = path.join(backupDir, 'data.sql');
+    
+    try {
+      execSync(`supabase db dump --db-url "${dbUrl}" --data-only -f "${dataFile}"`, { stdio: 'pipe' });
+      const stats = await fs.stat(dataFile);
+      const sizeKB = (stats.size / 1024).toFixed(1);
+      files.push({ filename: 'data.sql', sizeKB });
+      totalSizeKB += parseFloat(sizeKB);
+      console.log(chalk.green(`     ✅ Data: ${sizeKB} KB`));
+    } catch (error) {
+      console.log(chalk.yellow(`     ⚠️ Erro nos dados: ${error.message}`));
+    }
+    
+    // 3. Backup dos Roles
+    console.log(chalk.gray('   - Exportando roles...'));
+    const rolesFile = path.join(backupDir, 'roles.sql');
+    
+    try {
+      execSync(`supabase db dump --db-url "${dbUrl}" --role-only -f "${rolesFile}"`, { stdio: 'pipe' });
+      const stats = await fs.stat(rolesFile);
+      const sizeKB = (stats.size / 1024).toFixed(1);
+      files.push({ filename: 'roles.sql', sizeKB });
+      totalSizeKB += parseFloat(sizeKB);
+      console.log(chalk.green(`     ✅ Roles: ${sizeKB} KB`));
+    } catch (error) {
+      console.log(chalk.yellow(`     ⚠️ Erro nos roles: ${error.message}`));
+    }
+    
+    return { 
+      success: files.length > 0, 
+      files, 
+      totalSizeKB: totalSizeKB.toFixed(1) 
+    };
+    
+  } catch (error) {
+    console.log(chalk.yellow(`     ⚠️ Erro nos backups SQL separados: ${error.message}`));
+    return { success: false, files: [], totalSizeKB: '0.0' };
   }
 }
 
