@@ -60,6 +60,4 @@ temp/
 backups/
 *.backup
 
-# Configuration files (keep example)
-.smoonbrc
-!.smoonbrc.example
+

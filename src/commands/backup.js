@@ -414,23 +414,40 @@ async function backupEdgeFunctionsWithDocker(projectId, accessToken, backupDir) 
     let successCount = 0;
     let errorCount = 0;
 
-    // ✅ Baixar cada Edge Function usando Supabase CLI via Docker
+    // ✅ Baixar cada Edge Function DIRETAMENTE para o backup (sem tocar em ./supabase/functions)
     for (const func of functions) {
       try {
         console.log(chalk.gray(`   - Baixando: ${func.name}...`));
         
-        // Usar comando oficial do Supabase CLI via Docker
-        await execAsync(`supabase functions download ${func.name}`, {
-          cwd: process.cwd(),
-          timeout: 60000 // 60 segundos timeout
+        // Criar diretório da função DIRETAMENTE no backup
+        const functionTargetDir = path.join(functionsDir, func.name);
+        await ensureDir(functionTargetDir);
+        
+        // Baixar Edge Function via Supabase CLI DIRETAMENTE para o backup
+        const { execSync } = require('child_process');
+        const tempBackupDir = path.join(backupDir, 'temp-supabase-download');
+        
+        // Criar estrutura temp para download sem contaminar ./supabase/
+        await ensureDir(tempBackupDir);
+        
+        // Download para diretório temporário
+        execSync(`supabase functions download ${func.name}`, {
+          cwd: tempBackupDir,
+          timeout: 60000,
+          stdio: 'pipe'
         });
         
-        // Mover arquivos baixados para o diretório de backup
-        const sourceDir = path.join(process.cwd(), 'supabase', 'functions', func.name);
-        const targetDir = path.join(functionsDir, func.name);
+        // Mover de temp para o backup final
+        const tempFunctionDir = path.join(tempBackupDir, 'supabase', 'functions', func.name);
         
-        if (await fs.access(sourceDir).then(() => true).catch(() => false)) {
-          await copyDir(sourceDir, targetDir);
+        // Verificar se existe usando fs.promises.access
+        try {
+          await fs.access(tempFunctionDir);
+          await copyDir(tempFunctionDir, functionTargetDir);
+          
+          // Limpar diretório temporário
+          await fs.rm(tempBackupDir, { recursive: true, force: true }).catch(() => {});
+          
           console.log(chalk.green(`     ✅ ${func.name} baixada com sucesso`));
           successCount++;
           
@@ -438,7 +455,7 @@ async function backupEdgeFunctionsWithDocker(projectId, accessToken, backupDir) 
             name: func.name,
             slug: func.name,
             version: func.version || 'unknown',
-            files: await fs.access(targetDir).then(() => fs.readdir(targetDir)).catch(() => [])
+            files: await fs.readdir(functionTargetDir).catch(() => [])
           });
         } else {
           throw new Error('Diretório não encontrado após download');
