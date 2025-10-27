@@ -414,24 +414,57 @@ async function backupEdgeFunctionsWithDocker(projectId, accessToken, backupDir) 
     let successCount = 0;
     let errorCount = 0;
 
-    // ✅ Baixar cada Edge Function DIRETAMENTE para o backup (sem tocar em ./supabase/functions)
+    // ✅ Baixar cada Edge Function via Supabase CLI
+    // Nota: O CLI ignora o cwd e sempre baixa para supabase/functions
     for (const func of functions) {
       try {
         console.log(chalk.gray(`   - Baixando: ${func.name}...`));
         
-        // Criar diretório da função DIRETAMENTE no backup
+        // Criar diretório da função NO BACKUP
         const functionTargetDir = path.join(functionsDir, func.name);
         await ensureDir(functionTargetDir);
         
-        // Baixar Edge Function via Supabase CLI DIRETAMENTE para o backup
+        // Diretório temporário onde o supabase CLI irá baixar (supabase/functions)
+        const tempDownloadDir = path.join(process.cwd(), 'supabase', 'functions', func.name);
+        
+        // Baixar Edge Function via Supabase CLI (sempre vai para supabase/functions)
         const { execSync } = require('child_process');
         
-        // Download DIRETO para o diretório de destino (sem intermediários)
         execSync(`supabase functions download ${func.name}`, {
-          cwd: functionTargetDir,
           timeout: 60000,
           stdio: 'pipe'
         });
+        
+        // ✅ COPIAR arquivos de supabase/functions para o backup
+        try {
+          const stat = await fs.stat(tempDownloadDir);
+          if (stat.isDirectory()) {
+            const files = await fs.readdir(tempDownloadDir);
+            for (const file of files) {
+              const srcPath = path.join(tempDownloadDir, file);
+              const dstPath = path.join(functionTargetDir, file);
+              
+              const fileStats = await fs.stat(srcPath);
+              if (fileStats.isDirectory()) {
+                // Copiar diretórios recursivamente
+                await fs.cp(srcPath, dstPath, { recursive: true });
+              } else {
+                // Copiar arquivos
+                await fs.copyFile(srcPath, dstPath);
+              }
+            }
+          }
+        } catch (copyError) {
+          // Arquivos não foram baixados, continuar
+          console.log(chalk.yellow(`     ⚠️ Nenhum arquivo encontrado em ${tempDownloadDir}`));
+        }
+        
+        // ✅ LIMPAR supabase/functions após copiar
+        try {
+          await fs.rm(tempDownloadDir, { recursive: true, force: true });
+        } catch (cleanError) {
+          // Ignorar erro de limpeza
+        }
         
         console.log(chalk.green(`     ✅ ${func.name} baixada com sucesso`));
         successCount++;
