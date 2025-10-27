@@ -15,7 +15,14 @@
     "pgDumpPath": "C:\\Program Files\\PostgreSQL\\17\\bin\\pg_dump.exe"
   },
   "restore": {
-    "cleanRestore": false,
-    "verifyAfterRestore": true
+    "verifyAfterRestore": true,
+    "targetProject": {
+      "targetProjectId": "target-project-id-here",
+      "targetUrl": "https://target-project.supabase.co",
+      "targetServiceKey": "target-service-key",
+      "targetAnonKey": "target-anon-key",
+      "targetDatabaseUrl": "postgresql://postgres:[password]@db.target-project.supabase.co:5432/postgres",
+      "targetAccessToken": "target-access-token"
+    }
   }
 }

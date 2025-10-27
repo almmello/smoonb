@@ -133,8 +133,37 @@ async function saveConfig(config, targetPath = null) {
   await fs.promises.writeFile(configPath, jsonContent, 'utf8');
 }
 
+/**
+ * Obtém configuração do projeto source
+ * @param {object} config - Configuração carregada
+ * @returns {object} - Configuração do projeto source
+ */
+function getSourceProject(config) {
+  if (config.projects && config.projects.source) {
+    return config.projects.source;
+  }
+  // Fallback para estrutura antiga
+  return config.supabase;
+}
+
+/**
+ * Obtém configuração do projeto target
+ * @param {object} config - Configuração carregada
+ * @returns {object} - Configuração do projeto target
+ */
+function getTargetProject(config) {
+  // Tenta restaurar.targetProject (nova estrutura)
+  if (config.restore?.targetProject) {
+    return config.restore.targetProject;
+  }
+  
+  throw new Error('Projeto destino não configurado. Configure "targetProject" em restore no .smoonbrc');
+}
+
 module.exports = {
   readConfig,
   validateFor,
-  saveConfig
+  saveConfig,
+  getSourceProject,
+  getTargetProject
 };
