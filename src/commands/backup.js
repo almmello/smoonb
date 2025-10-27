@@ -425,41 +425,23 @@ async function backupEdgeFunctionsWithDocker(projectId, accessToken, backupDir) 
         
         // Baixar Edge Function via Supabase CLI DIRETAMENTE para o backup
         const { execSync } = require('child_process');
-        const tempBackupDir = path.join(backupDir, 'temp-supabase-download');
         
-        // Criar estrutura temp para download sem contaminar ./supabase/
-        await ensureDir(tempBackupDir);
-        
-        // Download para diretório temporário
+        // Download DIRETO para o diretório de destino (sem intermediários)
         execSync(`supabase functions download ${func.name}`, {
-          cwd: tempBackupDir,
+          cwd: functionTargetDir,
           timeout: 60000,
           stdio: 'pipe'
         });
         
-        // Mover de temp para o backup final
-        const tempFunctionDir = path.join(tempBackupDir, 'supabase', 'functions', func.name);
+        console.log(chalk.green(`     ✅ ${func.name} baixada com sucesso`));
+        successCount++;
         
-        // Verificar se existe usando fs.promises.access
-        try {
-          await fs.access(tempFunctionDir);
-          await copyDir(tempFunctionDir, functionTargetDir);
-          
-          // Limpar diretório temporário
-          await fs.rm(tempBackupDir, { recursive: true, force: true }).catch(() => {});
-          
-          console.log(chalk.green(`     ✅ ${func.name} baixada com sucesso`));
-          successCount++;
-          
-          downloadedFunctions.push({
-            name: func.name,
-            slug: func.name,
-            version: func.version || 'unknown',
-            files: await fs.readdir(functionTargetDir).catch(() => [])
-          });
-        } catch (innerError) {
-          throw new Error('Diretório não encontrado após download');
-        }
+        downloadedFunctions.push({
+          name: func.name,
+          slug: func.name,
+          version: func.version || 'unknown',
+          files: await fs.readdir(functionTargetDir).catch(() => [])
+        });
         
       } catch (error) {
         console.log(chalk.yellow(`     ⚠️ Erro ao baixar ${func.name}: ${error.message}`));
