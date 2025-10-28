@@ -187,7 +187,7 @@ async function askRestoreComponents(backupPath) {
   questions.push({
     type: 'confirm',
     name: 'restoreDatabase',
-    message: 'Deseja restaurar Database?',
+    message: 'Deseja restaurar Database (S/n):',
     default: true
   });
   
@@ -197,7 +197,7 @@ async function askRestoreComponents(backupPath) {
     questions.push({
       type: 'confirm',
       name: 'restoreEdgeFunctions',
-      message: 'Deseja restaurar Edge Functions?',
+      message: 'Deseja restaurar Edge Functions (S/n):',
       default: true
     });
   }
@@ -207,8 +207,8 @@ async function askRestoreComponents(backupPath) {
     questions.push({
       type: 'confirm',
       name: 'restoreAuthSettings',
-      message: 'Deseja restaurar Auth Settings (interativo)?',
-      default: true
+      message: 'Deseja restaurar Auth Settings (s/N):',
+      default: false
     });
   }
   
@@ -218,7 +218,7 @@ async function askRestoreComponents(backupPath) {
     questions.push({
       type: 'confirm',
       name: 'restoreStorage',
-      message: 'Deseja ver informações de Storage Buckets?',
+      message: 'Deseja ver informações de Storage Buckets (s/N):',
       default: false
     });
   }
@@ -230,7 +230,7 @@ async function askRestoreComponents(backupPath) {
     questions.push({
       type: 'confirm',
       name: 'restoreDatabaseSettings',
-      message: 'Deseja restaurar Database Extensions and Settings?',
+      message: 'Deseja restaurar Database Extensions and Settings (s/N):',
       default: false
     });
   }
@@ -240,8 +240,8 @@ async function askRestoreComponents(backupPath) {
     questions.push({
       type: 'confirm',
       name: 'restoreRealtimeSettings',
-      message: 'Deseja restaurar Realtime Settings (interativo)?',
-      default: true
+      message: 'Deseja restaurar Realtime Settings (s/N):',
+      default: false
     });
   }
   
@@ -401,17 +401,25 @@ async function restoreEdgeFunctions(backupPath, targetProject) {
   console.log(chalk.blue('\n⚡ Restaurando Edge Functions...'));
   
   try {
+    const fs = require('fs').promises;
     const { execSync } = require('child_process');
     const edgeFunctionsDir = path.join(backupPath, 'edge-functions');
     
-    if (!fs.existsSync(edgeFunctionsDir)) {
+    if (!await fs.access(edgeFunctionsDir).then(() => true).catch(() => false)) {
       console.log(chalk.yellow('   ⚠️  Nenhuma Edge Function encontrada no backup'));
       return;
     }
     
-    const functions = fs.readdirSync(edgeFunctionsDir).filter(item => 
-      fs.statSync(path.join(edgeFunctionsDir, item)).isDirectory()
-    );
+    const items = await fs.readdir(edgeFunctionsDir);
+    const functions = [];
+    
+    for (const item of items) {
+      const itemPath = path.join(edgeFunctionsDir, item);
+      const stats = await fs.stat(itemPath);
+      if (stats.isDirectory()) {
+        functions.push(item);
+      }
+    }
     
     if (functions.length === 0) {
       console.log(chalk.yellow('   ⚠️  Nenhuma Edge Function encontrada no backup'));
@@ -420,29 +428,55 @@ async function restoreEdgeFunctions(backupPath, targetProject) {
     
     console.log(chalk.gray(`   - Encontradas ${functions.length} Edge Function(s)`));
     
-    // Link com projeto target
+    // ✅ COPIAR Edge Functions de backups/backup-XXX/edge-functions para supabase/functions
+    const supabaseFunctionsDir = path.join(process.cwd(), 'supabase', 'functions');
+    
+    // Criar diretório supabase/functions se não existir
+    await fs.mkdir(supabaseFunctionsDir, { recursive: true });
+    
+    // Limpar supabase/functions antes de copiar
+    console.log(chalk.gray('   - Limpando supabase/functions...'));
+    try {
+      await fs.rm(supabaseFunctionsDir, { recursive: true, force: true });
+      await fs.mkdir(supabaseFunctionsDir, { recursive: true });
+    } catch (cleanError) {
+      // Ignorar erro de limpeza se não existir
+    }
+    
+    // Copiar cada Edge Function para supabase/functions
+    for (const funcName of functions) {
+      const backupFuncPath = path.join(edgeFunctionsDir, funcName);
+      const targetFuncPath = path.join(supabaseFunctionsDir, funcName);
+      
+      console.log(chalk.gray(`   - Copiando ${funcName} para supabase/functions...`));
+      
+      // Copiar recursivamente
+      await copyDirectoryRecursive(backupFuncPath, targetFuncPath);
+    }
+    
     console.log(chalk.gray(`   - Linkando com projeto ${targetProject.targetProjectId}...`));
     
+    // Linkar com o projeto destino
     try {
       execSync(`supabase link --project-ref ${targetProject.targetProjectId}`, {
         stdio: 'pipe',
-        encoding: 'utf8'
+        encoding: 'utf8',
+        timeout: 10000
       });
     } catch (linkError) {
-      console.log(chalk.yellow(`   ⚠️  Link pode já existir, continuando...`));
+      console.log(chalk.yellow('   ⚠️  Link pode já existir, continuando...'));
     }
     
-    // Deploy de cada função
+    // Deploy das Edge Functions
     for (const funcName of functions) {
       console.log(chalk.gray(`   - Deployando ${funcName}...`));
       
       try {
-        const functionPath = path.join(edgeFunctionsDir, funcName);
-        
         execSync(`supabase functions deploy ${funcName}`, {
-          cwd: functionPath,
+          cwd: process.cwd(),
           stdio: 'pipe',
-          encoding: 'utf8'
+          encoding: 'utf8',
+          timeout: 120000
         });
         
         console.log(chalk.green(`   ✅ ${funcName} deployada com sucesso!`));
@@ -451,8 +485,38 @@ async function restoreEdgeFunctions(backupPath, targetProject) {
       }
     }
     
+    // Limpar supabase/functions após deploy
+    console.log(chalk.gray('   - Limpando supabase/functions após deploy...'));
+    try {
+      await fs.rm(supabaseFunctionsDir, { recursive: true, force: true });
+    } catch (cleanError) {
+      // Ignorar erro de limpeza
+    }
+    
+    console.log(chalk.green('   ✅ Edge Functions restauradas com sucesso!'));
+    
   } catch (error) {
     console.error(chalk.red(`   ❌ Erro ao restaurar Edge Functions: ${error.message}`));
+  }
+}
+
+// Função auxiliar para copiar diretório recursivamente
+async function copyDirectoryRecursive(src, dest) {
+  const fs = require('fs').promises;
+  
+  await fs.mkdir(dest, { recursive: true });
+  
+  const entries = await fs.readdir(src, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    
+    if (entry.isDirectory()) {
+      await copyDirectoryRecursive(srcPath, destPath);
+    } else {
+      await fs.copyFile(srcPath, destPath);
+    }
   }
 }
 
