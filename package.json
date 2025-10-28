@@ -1,6 +1,6 @@
 {
   "name": "smoonb",
-  "version": "0.0.41",
+  "version": "0.0.42",
   "description": "Complete Supabase backup and migration tool - EXPERIMENTAL VERSION - USE AT YOUR OWN RISK",
   "preferGlobal": false,
   "preventGlobalInstall": true,
