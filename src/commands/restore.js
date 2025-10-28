@@ -89,7 +89,7 @@ module.exports = async (options) => {
   }
 };
 
-// Listar backups válidos (apenas com .backup.gz)
+// Listar backups válidos (aceita .backup.gz e .backup)
 async function listValidBackups(backupsDir) {
   if (!fs.existsSync(backupsDir)) {
     return [];
@@ -102,7 +102,10 @@ async function listValidBackups(backupsDir) {
     if (item.isDirectory() && item.name.startsWith('backup-')) {
       const backupPath = path.join(backupsDir, item.name);
       const files = fs.readdirSync(backupPath);
-      const backupFile = files.find(file => file.endsWith('.backup.gz'));
+      // Aceitar tanto .backup.gz quanto .backup
+      const backupFile = files.find(file => 
+        file.endsWith('.backup.gz') || file.endsWith('.backup')
+      );
       
       if (backupFile) {
         const manifestPath = path.join(backupPath, 'backup-manifest.json');
@@ -313,9 +316,9 @@ async function confirmExecution() {
 }
 
 // Restaurar Database via psql (conforme documentação oficial Supabase: https://supabase.com/docs/guides/platform/migrating-within-supabase/dashboard-restore)
+// Aceita tanto arquivos .backup.gz quanto .backup já descompactados
 async function restoreDatabaseGz(backupFilePath, targetDatabaseUrl) {
   console.log(chalk.blue('📊 Restaurando Database...'));
-  console.log(chalk.gray('   - Descompactando backup (se necessário)...'));
   
   try {
     const { execSync } = require('child_process');
@@ -324,9 +327,11 @@ async function restoreDatabaseGz(backupFilePath, targetDatabaseUrl) {
     const fileName = path.basename(backupFilePath);
     let uncompressedFile = fileName;
     
-    // Descompactar .gz se necessário
-    if (fileName.endsWith('.gz')) {
+    // Verificar se é arquivo .backup.gz (compactado) ou .backup (descompactado)
+    if (fileName.endsWith('.backup.gz')) {
+      console.log(chalk.gray('   - Arquivo .backup.gz detectado'));
       console.log(chalk.gray('   - Extraindo arquivo .gz...'));
+      
       const unzipCmd = [
         'docker run --rm',
         `-v "${backupDirAbs}:/host"`,
@@ -336,6 +341,11 @@ async function restoreDatabaseGz(backupFilePath, targetDatabaseUrl) {
       execSync(unzipCmd, { stdio: 'pipe' });
       uncompressedFile = fileName.replace('.gz', '');
       console.log(chalk.gray('   - Arquivo descompactado: ' + uncompressedFile));
+    } else if (fileName.endsWith('.backup')) {
+      console.log(chalk.gray('   - Arquivo .backup detectado (já descompactado)'));
+      console.log(chalk.gray('   - Prosseguindo com restauração direta'));
+    } else {
+      throw new Error(`Formato de arquivo inválido. Esperado .backup.gz ou .backup, recebido: ${fileName}`);
     }
     
     // Extrair credenciais da URL de conexão
