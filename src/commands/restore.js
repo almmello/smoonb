@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { readConfig, getSourceProject, getTargetProject } = require('../utils/config');
 const { showBetaBanner } = require('../utils/banner');
+const inquirer = require('inquirer');
 
 module.exports = async (options) => {
   showBetaBanner();
@@ -28,6 +29,12 @@ module.exports = async (options) => {
     // 3. Perguntar quais componentes restaurar
     const components = await askRestoreComponents(selectedBackup.path);
     
+    // Validar que pelo menos um componente foi selecionado
+    if (!Object.values(components).some(Boolean)) {
+      console.error(chalk.red('\n❌ Nenhum componente selecionado para restauração!'));
+      process.exit(1);
+    }
+    
     // 4. Mostrar resumo
     showRestoreSummary(selectedBackup, components, targetProject);
     
@@ -41,25 +48,27 @@ module.exports = async (options) => {
     // 6. Executar restauração
     console.log(chalk.blue('\n🚀 Iniciando restauração...'));
     
-    // 6.1 Database
-    await restoreDatabaseGz(
-      path.join(selectedBackup.path, selectedBackup.backupFile),
-      targetProject.targetDatabaseUrl
-    );
+    // 6.1 Database (se selecionado)
+    if (components.database) {
+      await restoreDatabaseGz(
+        path.join(selectedBackup.path, selectedBackup.backupFile),
+        targetProject.targetDatabaseUrl
+      );
+    }
     
     // 6.2 Edge Functions (se selecionado)
     if (components.edgeFunctions) {
       await restoreEdgeFunctions(selectedBackup.path, targetProject);
     }
     
-    // 6.3 Storage Buckets (se selecionado)
-    if (components.storage) {
-      await restoreStorageBuckets(selectedBackup.path, targetProject);
-    }
-    
-    // 6.4 Auth Settings (se selecionado)
+    // 6.3 Auth Settings (se selecionado)
     if (components.authSettings) {
       await restoreAuthSettings(selectedBackup.path, targetProject);
+    }
+    
+    // 6.4 Storage Buckets (se selecionado)
+    if (components.storage) {
+      await restoreStorageBuckets(selectedBackup.path, targetProject);
     }
     
     // 6.5 Database Settings (se selecionado)
@@ -169,59 +178,80 @@ async function selectBackupInteractive(backups) {
 
 // Perguntar quais componentes restaurar
 async function askRestoreComponents(backupPath) {
-  const components = {
-    edgeFunctions: true,
-    storage: false,
-    authSettings: false,
-    databaseSettings: false,
-    realtimeSettings: false
-  };
+  const questions = [];
   
-  const readline = require('readline').createInterface({
-    input: process.stdin,
-    output: process.stdout
+  // Database
+  questions.push({
+    type: 'confirm',
+    name: 'restoreDatabase',
+    message: 'Deseja restaurar Database?',
+    default: true
   });
-  
-  const question = (query) => new Promise(resolve => readline.question(query, resolve));
-  
-  console.log(chalk.blue('\n📦 Selecione os componentes para restaurar:'));
   
   // Edge Functions
   const edgeFunctionsDir = path.join(backupPath, 'edge-functions');
   if (fs.existsSync(edgeFunctionsDir) && fs.readdirSync(edgeFunctionsDir).length > 0) {
-    const edgeChoice = await question('Deseja restaurar Edge Functions? (S/n): ');
-    components.edgeFunctions = edgeChoice.toLowerCase() !== 'n';
+    questions.push({
+      type: 'confirm',
+      name: 'restoreEdgeFunctions',
+      message: 'Deseja restaurar Edge Functions?',
+      default: true
+    });
+  }
+  
+  // Auth Settings
+  if (fs.existsSync(path.join(backupPath, 'auth-settings.json'))) {
+    questions.push({
+      type: 'confirm',
+      name: 'restoreAuthSettings',
+      message: 'Deseja restaurar Auth Settings (interativo)?',
+      default: true
+    });
   }
   
   // Storage Buckets
   const storageDir = path.join(backupPath, 'storage');
   if (fs.existsSync(storageDir) && fs.readdirSync(storageDir).length > 0) {
-    const storageChoice = await question('Deseja restaurar Storage Buckets? (s/N): ');
-    components.storage = storageChoice.toLowerCase() === 's';
+    questions.push({
+      type: 'confirm',
+      name: 'restoreStorage',
+      message: 'Deseja ver informações de Storage Buckets?',
+      default: false
+    });
   }
   
-  // Auth Settings
-  if (fs.existsSync(path.join(backupPath, 'auth-settings.json'))) {
-    const authChoice = await question('Deseja restaurar Auth Settings? (s/N): ');
-    components.authSettings = authChoice.toLowerCase() === 's';
-  }
-  
-  // Database Settings
+  // Database Extensions and Settings
   const dbSettingsFiles = fs.readdirSync(backupPath)
     .filter(file => file.startsWith('database-settings-') && file.endsWith('.json'));
   if (dbSettingsFiles.length > 0) {
-    const dbChoice = await question('Deseja restaurar Database Extensions and Settings? (s/N): ');
-    components.databaseSettings = dbChoice.toLowerCase() === 's';
+    questions.push({
+      type: 'confirm',
+      name: 'restoreDatabaseSettings',
+      message: 'Deseja restaurar Database Extensions and Settings?',
+      default: false
+    });
   }
   
   // Realtime Settings
   if (fs.existsSync(path.join(backupPath, 'realtime-settings.json'))) {
-    const realtimeChoice = await question('Deseja restaurar Realtime Settings? (s/N): ');
-    components.realtimeSettings = realtimeChoice.toLowerCase() === 's';
+    questions.push({
+      type: 'confirm',
+      name: 'restoreRealtimeSettings',
+      message: 'Deseja restaurar Realtime Settings (interativo)?',
+      default: true
+    });
   }
   
-  readline.close();
-  return components;
+  const answers = await inquirer.prompt(questions);
+  
+  return {
+    database: answers.restoreDatabase,
+    edgeFunctions: answers.restoreEdgeFunctions || false,
+    storage: answers.restoreStorage || false,
+    authSettings: answers.restoreAuthSettings || false,
+    databaseSettings: answers.restoreDatabaseSettings || false,
+    realtimeSettings: answers.restoreRealtimeSettings || false
+  };
 }
 
 // Mostrar resumo da restauração
@@ -235,7 +265,9 @@ function showRestoreSummary(backup, components, targetProject) {
   console.log(chalk.cyan('Componentes que serão restaurados:'));
   console.log('');
   
-  console.log('✅ Database (psql -f via Docker)');
+  if (components.database) {
+    console.log('✅ Database (psql -f via Docker)');
+  }
   
   if (components.edgeFunctions) {
     const edgeFunctionsDir = path.join(backup.path, 'edge-functions');
@@ -246,20 +278,20 @@ function showRestoreSummary(backup, components, targetProject) {
     functions.forEach(func => console.log(`   - ${func}`));
   }
   
-  if (components.storage) {
-    console.log('📦 Storage Buckets: Restaurar buckets e objetos');
+  if (components.authSettings) {
+    console.log('🔐 Auth Settings: Exibir URL e valores para configuração manual');
   }
   
-  if (components.authSettings) {
-    console.log('🔐 Auth Settings: Restaurar configurações de autenticação');
+  if (components.storage) {
+    console.log('📦 Storage Buckets: Exibir informações e instruções do Google Colab');
   }
   
   if (components.databaseSettings) {
-    console.log('🔧 Database Settings: Restaurar extensões e configurações');
+    console.log('🔧 Database Extensions and Settings: Restaurar via SQL');
   }
   
   if (components.realtimeSettings) {
-    console.log('🔄 Realtime Settings: Restaurar configurações do Realtime');
+    console.log('🔄 Realtime Settings: Exibir URL e valores para configuração manual');
   }
   
   console.log('');
@@ -354,37 +386,251 @@ async function restoreDatabaseGz(backupFilePath, targetDatabaseUrl) {
   }
 }
 
-// Restaurar Edge Functions (placeholder - implementar via Management API)
+// Restaurar Edge Functions via supabase functions deploy
 async function restoreEdgeFunctions(backupPath, targetProject) {
-  console.log(chalk.blue('⚡ Restaurando Edge Functions...'));
-  console.log(chalk.yellow('   ℹ️ Deploy de Edge Functions via Management API ainda não implementado'));
-  // TODO: Implementar deploy via Supabase Management API
+  console.log(chalk.blue('\n⚡ Restaurando Edge Functions...'));
+  
+  try {
+    const { execSync } = require('child_process');
+    const edgeFunctionsDir = path.join(backupPath, 'edge-functions');
+    
+    if (!fs.existsSync(edgeFunctionsDir)) {
+      console.log(chalk.yellow('   ⚠️  Nenhuma Edge Function encontrada no backup'));
+      return;
+    }
+    
+    const functions = fs.readdirSync(edgeFunctionsDir).filter(item => 
+      fs.statSync(path.join(edgeFunctionsDir, item)).isDirectory()
+    );
+    
+    if (functions.length === 0) {
+      console.log(chalk.yellow('   ⚠️  Nenhuma Edge Function encontrada no backup'));
+      return;
+    }
+    
+    console.log(chalk.gray(`   - Encontradas ${functions.length} Edge Function(s)`));
+    
+    // Link com projeto target
+    console.log(chalk.gray(`   - Linkando com projeto ${targetProject.targetProjectId}...`));
+    
+    try {
+      execSync(`supabase link --project-ref ${targetProject.targetProjectId}`, {
+        stdio: 'pipe',
+        encoding: 'utf8'
+      });
+    } catch (linkError) {
+      console.log(chalk.yellow(`   ⚠️  Link pode já existir, continuando...`));
+    }
+    
+    // Deploy de cada função
+    for (const funcName of functions) {
+      console.log(chalk.gray(`   - Deployando ${funcName}...`));
+      
+      try {
+        const functionPath = path.join(edgeFunctionsDir, funcName);
+        
+        execSync(`supabase functions deploy ${funcName}`, {
+          cwd: functionPath,
+          stdio: 'pipe',
+          encoding: 'utf8'
+        });
+        
+        console.log(chalk.green(`   ✅ ${funcName} deployada com sucesso!`));
+      } catch (deployError) {
+        console.log(chalk.yellow(`   ⚠️  ${funcName} - deploy falhou: ${deployError.message}`));
+      }
+    }
+    
+  } catch (error) {
+    console.error(chalk.red(`   ❌ Erro ao restaurar Edge Functions: ${error.message}`));
+  }
 }
 
-// Restaurar Storage Buckets (placeholder)
+// Restaurar Storage Buckets (interativo - exibir informações)
 async function restoreStorageBuckets(backupPath, targetProject) {
-  console.log(chalk.blue('📦 Restaurando Storage Buckets...'));
-  console.log(chalk.yellow('   ℹ️ Restauração de Storage Buckets ainda não implementado'));
-  // TODO: Implementar restauração via Management API
+  console.log(chalk.blue('\n📦 Restaurando Storage Buckets...'));
+  
+  try {
+    const storageDir = path.join(backupPath, 'storage');
+    
+    if (!fs.existsSync(storageDir)) {
+      console.log(chalk.yellow('   ⚠️  Nenhum bucket de Storage encontrado no backup'));
+      return;
+    }
+    
+    const manifestPath = path.join(backupPath, 'backup-manifest.json');
+    let manifest = null;
+    
+    if (fs.existsSync(manifestPath)) {
+      manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    }
+    
+    const buckets = manifest?.components?.storage?.buckets || [];
+    
+    if (buckets.length === 0) {
+      console.log(chalk.gray('   ℹ️  Nenhum bucket para restaurar'));
+      return;
+    }
+    
+    console.log(chalk.green(`\n   ✅ ${buckets.length} bucket(s) encontrado(s) no backup`));
+    buckets.forEach(bucket => {
+      console.log(chalk.gray(`   - ${bucket.name} (${bucket.public ? 'público' : 'privado'})`));
+    });
+    
+    const colabUrl = 'https://colab.research.google.com/github/PLyn/supabase-storage-migrate/blob/main/Supabase_Storage_migration.ipynb';
+    
+    console.log(chalk.yellow('\n   ⚠️  Migração de objetos de Storage requer processo manual'));
+    console.log(chalk.cyan(`   ℹ️  Use o script do Google Colab: ${colabUrl}`));
+    console.log(chalk.gray('\n   📋 Instruções:'));
+    console.log(chalk.gray('   1. Execute o script no Google Colab'));
+    console.log(chalk.gray('   2. Configure as credenciais dos projetos (origem e destino)'));
+    console.log(chalk.gray('   3. Execute a migração'));
+    
+    await inquirer.prompt([{
+      type: 'input',
+      name: 'continue',
+      message: 'Pressione Enter para continuar'
+    }]);
+    
+  } catch (error) {
+    console.error(chalk.red(`   ❌ Erro ao processar Storage: ${error.message}`));
+  }
 }
 
-// Restaurar Auth Settings (placeholder)
+// Restaurar Auth Settings (interativo - exibir URL e valores)
 async function restoreAuthSettings(backupPath, targetProject) {
-  console.log(chalk.blue('🔐 Restaurando Auth Settings...'));
-  console.log(chalk.yellow('   ℹ️ Restauração de Auth Settings ainda não implementado'));
-  // TODO: Implementar via Management API
+  console.log(chalk.blue('\n🔐 Restaurando Auth Settings...'));
+  
+  try {
+    const authSettingsPath = path.join(backupPath, 'auth-settings.json');
+    
+    if (!fs.existsSync(authSettingsPath)) {
+      console.log(chalk.yellow('   ⚠️  Nenhuma configuração de Auth encontrada no backup'));
+      return;
+    }
+    
+    const authSettings = JSON.parse(fs.readFileSync(authSettingsPath, 'utf8'));
+    const dashboardUrl = `https://supabase.com/dashboard/project/${targetProject.targetProjectId}/auth/url-config`;
+    
+    console.log(chalk.green('\n   ✅ URL para configuração manual:'));
+    console.log(chalk.cyan(`   ${dashboardUrl}`));
+    console.log(chalk.yellow('\n   📋 Configure manualmente as seguintes opções:'));
+    
+    if (authSettings.auth_url_config) {
+      Object.entries(authSettings.auth_url_config).forEach(([key, value]) => {
+        console.log(chalk.gray(`   - ${key}: ${value}`));
+      });
+    }
+    
+    console.log(chalk.yellow('\n   ⚠️  Após configurar, pressione Enter para continuar...'));
+    
+    await inquirer.prompt([{
+      type: 'input',
+      name: 'continue',
+      message: 'Pressione Enter para continuar'
+    }]);
+    
+    console.log(chalk.green('   ✅ Auth Settings processados'));
+    
+  } catch (error) {
+    console.error(chalk.red(`   ❌ Erro ao processar Auth Settings: ${error.message}`));
+  }
 }
 
-// Restaurar Database Settings (placeholder)
+// Restaurar Database Settings (via SQL)
 async function restoreDatabaseSettings(backupPath, targetProject) {
-  console.log(chalk.blue('🔧 Restaurando Database Settings...'));
-  console.log(chalk.yellow('   ℹ️ Restauração de Database Settings ainda não implementado'));
-  // TODO: Aplicar extensões e configurações via SQL
+  console.log(chalk.blue('\n🔧 Restaurando Database Settings...'));
+  
+  try {
+    const files = fs.readdirSync(backupPath);
+    const dbSettingsFile = files.find(f => f.startsWith('database-settings-') && f.endsWith('.json'));
+    
+    if (!dbSettingsFile) {
+      console.log(chalk.yellow('   ⚠️  Nenhuma configuração de Database encontrada no backup'));
+      return;
+    }
+    
+    const dbSettings = JSON.parse(fs.readFileSync(path.join(backupPath, dbSettingsFile), 'utf8'));
+    const { execSync } = require('child_process');
+    
+    if (dbSettings.extensions && dbSettings.extensions.length > 0) {
+      console.log(chalk.gray(`   - Habilitando ${dbSettings.extensions.length} extension(s)...`));
+      
+      for (const ext of dbSettings.extensions) {
+        console.log(chalk.gray(`     - ${ext}`));
+        
+        const sqlCommand = `CREATE EXTENSION IF NOT EXISTS ${ext};`;
+        
+        const urlMatch = targetProject.targetDatabaseUrl.match(/postgresql:\/\/([^@:]+):([^@]+)@(.+)$/);
+        
+        if (!urlMatch) {
+          console.log(chalk.yellow(`     ⚠️  URL inválida para ${ext}`));
+          continue;
+        }
+        
+        const dockerCmd = [
+          'docker run --rm',
+          '--network host',
+          `-e PGPASSWORD="${encodeURIComponent(urlMatch[2])}"`,
+          'postgres:17 psql',
+          `-d "${targetProject.targetDatabaseUrl}"`,
+          `-c "${sqlCommand}"`
+        ].join(' ');
+        
+        try {
+          execSync(dockerCmd, { stdio: 'pipe', encoding: 'utf8' });
+        } catch (sqlError) {
+          console.log(chalk.yellow(`     ⚠️  ${ext} - extension já existe ou não pode ser habilitada`));
+        }
+      }
+    }
+    
+    console.log(chalk.green('   ✅ Database Settings restaurados com sucesso!'));
+    
+  } catch (error) {
+    console.error(chalk.red(`   ❌ Erro ao restaurar Database Settings: ${error.message}`));
+  }
 }
 
-// Restaurar Realtime Settings (placeholder)
+// Restaurar Realtime Settings (interativo - exibir URL e valores)
 async function restoreRealtimeSettings(backupPath, targetProject) {
-  console.log(chalk.blue('🔄 Restaurando Realtime Settings...'));
-  console.log(chalk.yellow('   ℹ️ Realtime Settings requerem configuração manual no Dashboard'));
-  // TODO: Adicionar instruções de configuração manual
+  console.log(chalk.blue('\n🔄 Restaurando Realtime Settings...'));
+  
+  try {
+    const realtimeSettingsPath = path.join(backupPath, 'realtime-settings.json');
+    
+    if (!fs.existsSync(realtimeSettingsPath)) {
+      console.log(chalk.yellow('   ⚠️  Nenhuma configuração de Realtime encontrada no backup'));
+      return;
+    }
+    
+    const realtimeSettings = JSON.parse(fs.readFileSync(realtimeSettingsPath, 'utf8'));
+    const dashboardUrl = `https://supabase.com/dashboard/project/${targetProject.targetProjectId}/realtime/settings`;
+    
+    console.log(chalk.green('\n   ✅ URL para configuração manual:'));
+    console.log(chalk.cyan(`   ${dashboardUrl}`));
+    console.log(chalk.yellow('\n   📋 Configure manualmente as seguintes opções:'));
+    
+    if (realtimeSettings.realtime_settings?.settings) {
+      Object.entries(realtimeSettings.realtime_settings.settings).forEach(([key, setting]) => {
+        console.log(chalk.gray(`   - ${setting.label}: ${setting.value}`));
+        if (setting.description) {
+          console.log(chalk.gray(`     ${setting.description}`));
+        }
+      });
+    }
+    
+    console.log(chalk.yellow('\n   ⚠️  Após configurar, pressione Enter para continuar...'));
+    
+    await inquirer.prompt([{
+      type: 'input',
+      name: 'continue',
+      message: 'Pressione Enter para continuar'
+    }]);
+    
+    console.log(chalk.green('   ✅ Realtime Settings processados'));
+    
+  } catch (error) {
+    console.error(chalk.red(`   ❌ Erro ao processar Realtime Settings: ${error.message}`));
+  }
 }
