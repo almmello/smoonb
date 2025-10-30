@@ -63,3 +63,13 @@ development/
 # Temporary files
 tmp/
 temp/
+
+# Project-specific sensitive paths
+backups/
+supabase/
+**/*.backup
+**/*.backup.gz
+**/*.dump
+**/*.sql
+.smoonbrc
+.smoonbrc.example

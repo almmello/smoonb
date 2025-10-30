@@ -12,7 +12,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node bin/smoonb.js",
     "preinstall": "node -e \"if(process.env.npm_config_global) { console.error('\\n❌ SMOONB NÃO DEVE SER INSTALADO GLOBALMENTE!\\n\\n📋 Para usar o smoonb, instale localmente no seu projeto:\\n   npm install smoonb\\n\\n💡 Depois execute com:\\n   npx smoonb backup\\n\\n🚫 Instalação global cancelada!\\n'); process.exit(1); }\"",
-    "postinstall": "echo '\\n✅ smoonb instalado com sucesso!\\n💡 Execute: npx smoonb backup\\n📖 Documentação: https://github.com/almmello/smoonb\\n'"
+    "postinstall": "echo '\\n✅ smoonb instalado com sucesso!\\n💡 Execute: npx smoonb backup\\n📖 Documentação: https://github.com/almmello/smoonb\\n'",
+    "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix",
+    "build": "npm run lint"
   },
   "keywords": [
     "supabase",
@@ -36,6 +39,9 @@
     "inquirer": "^8.2.7"
   },
   "type": "commonjs",
+  "devDependencies": {
+    "eslint": "^9.38.0"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/almmello/smoonb.git"
@@ -44,4 +50,11 @@
     "url": "https://github.com/almmello/smoonb/issues"
   },
   "homepage": "https://github.com/almmello/smoonb#readme"
+  ,
+  "files": [
+    "bin/",
+    "src/",
+    "README.md",
+    "LICENSE.md"
+  ]
 }

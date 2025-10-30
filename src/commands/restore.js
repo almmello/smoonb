@@ -4,18 +4,72 @@ const fs = require('fs');
 const { readConfig, getSourceProject, getTargetProject } = require('../utils/config');
 const { showBetaBanner } = require('../utils/banner');
 const inquirer = require('inquirer');
+const { readEnvFile, writeEnvFile, backupEnvFile } = require('../utils/env');
+const { saveEnvMap } = require('../utils/envMap');
+const { mapEnvVariablesInteractively } = require('../interactive/envMapper');
 
 module.exports = async (options) => {
   showBetaBanner();
   
   try {
-    const config = await readConfig();
-    const targetProject = getTargetProject(config);
+    // Consentimento para leitura e escrita do .env.local
+    console.log(chalk.yellow('⚠️  O smoonb irá ler e escrever o arquivo .env.local localmente.'));
+    console.log(chalk.yellow('   Um backup automático do .env.local será criado antes de qualquer alteração.'));
+    const consent = await inquirer.prompt([{ type: 'confirm', name: 'ok', message: 'Você consente em prosseguir (S/n):', default: true }]);
+    if (!consent.ok) {
+      console.log(chalk.red('🚫 Operação cancelada pelo usuário.'));
+      process.exit(1);
+    }
+
+    // Preparar diretório de processo restore-YYYY-...
+    const rootBackupsDir = path.join(process.cwd(), 'backups');
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}-${String(now.getSeconds()).padStart(2,'0')}`;
+    const processDir = path.join(rootBackupsDir, `restore-${ts}`);
+    fs.mkdirSync(path.join(processDir, 'env'), { recursive: true });
+
+    // Backup do .env.local
+    const envPath = path.join(process.cwd(), '.env.local');
+    const envBackupPath = path.join(processDir, 'env', '.env.local');
+    await backupEnvFile(envPath, envBackupPath);
+    console.log(chalk.blue(`📁 Backup do .env.local: ${path.relative(process.cwd(), envBackupPath)}`));
+
+    // Leitura e mapeamento interativo
+    const currentEnv = await readEnvFile(envPath);
+    const expectedKeys = [
+      'NEXT_PUBLIC_SUPABASE_URL',
+      'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+      'SUPABASE_SERVICE_ROLE_KEY',
+      'SUPABASE_DB_URL',
+      'SUPABASE_PROJECT_ID',
+      'SUPABASE_ACCESS_TOKEN',
+      'SMOONB_OUTPUT_DIR'
+    ];
+    const { finalEnv, dePara } = await mapEnvVariablesInteractively(currentEnv, expectedKeys);
+    await writeEnvFile(envPath, finalEnv);
+    await saveEnvMap(dePara, path.join(processDir, 'env', 'env-map.json'));
+    console.log(chalk.green('✅ .env.local atualizado com sucesso. Nenhuma chave renomeada; valores sincronizados.'));
+
+    // Resolver valores esperados a partir do de-para
+    function getValue(expectedKey) {
+      const clientKey = Object.keys(dePara).find(k => dePara[k] === expectedKey);
+      return clientKey ? finalEnv[clientKey] : '';
+    }
+
+    // Construir targetProject a partir do .env.local mapeado
+    const targetProject = {
+      targetProjectId: getValue('SUPABASE_PROJECT_ID'),
+      targetUrl: getValue('NEXT_PUBLIC_SUPABASE_URL'),
+      targetAnonKey: getValue('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+      targetServiceKey: getValue('SUPABASE_SERVICE_ROLE_KEY'),
+      targetDatabaseUrl: getValue('SUPABASE_DB_URL'),
+      targetAccessToken: getValue('SUPABASE_ACCESS_TOKEN')
+    };
     
-    console.log(chalk.blue(`📁 Buscando backups em: ${config.backup.outputDir || './backups'}`));
+    console.log(chalk.blue(`📁 Buscando backups em: ${getValue('SMOONB_OUTPUT_DIR') || './backups'}`));
     
     // 1. Listar backups válidos (.backup.gz)
-    const validBackups = await listValidBackups(config.backup.outputDir || './backups');
+    const validBackups = await listValidBackups(getValue('SMOONB_OUTPUT_DIR') || './backups');
     
     if (validBackups.length === 0) {
       console.error(chalk.red('❌ Nenhum backup válido encontrado'));
@@ -81,6 +135,26 @@ module.exports = async (options) => {
       await restoreRealtimeSettings(selectedBackup.path, targetProject);
     }
     
+    // report.json de restauração
+    const report = {
+      process: 'restore',
+      created_at: new Date().toISOString(),
+      target_project_id: targetProject.targetProjectId,
+      assets: {
+        env: path.join(processDir, 'env', '.env.local'),
+        env_map: path.join(processDir, 'env', 'env-map.json')
+      },
+      components: components,
+      notes: [
+        'supabase/functions limpo antes e depois do deploy (se Edge Functions selecionado)'
+      ]
+    };
+    try {
+      require('fs').writeFileSync(path.join(processDir, 'report.json'), JSON.stringify(report, null, 2));
+    } catch (e) {
+      // silencioso
+    }
+
     console.log(chalk.green('\n🎉 Restauração completa finalizada!'));
     
   } catch (error) {
@@ -461,7 +535,8 @@ async function restoreEdgeFunctions(backupPath, targetProject) {
       execSync(`supabase link --project-ref ${targetProject.targetProjectId}`, {
         stdio: 'pipe',
         encoding: 'utf8',
-        timeout: 10000
+        timeout: 10000,
+        env: { ...process.env, SUPABASE_ACCESS_TOKEN: targetProject.targetAccessToken || '' }
       });
     } catch (linkError) {
       console.log(chalk.yellow('   ⚠️  Link pode já existir, continuando...'));
@@ -476,7 +551,8 @@ async function restoreEdgeFunctions(backupPath, targetProject) {
           cwd: process.cwd(),
           stdio: 'pipe',
           encoding: 'utf8',
-          timeout: 120000
+          timeout: 120000,
+          env: { ...process.env, SUPABASE_ACCESS_TOKEN: targetProject.targetAccessToken || '' }
         });
         
         console.log(chalk.green(`   ✅ ${funcName} deployada com sucesso!`));

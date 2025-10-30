@@ -281,8 +281,8 @@ async function getProjectInfo(projectId) {
  * Listar tabelas da database
  */
 async function listTables() {
+  const client = getSupabaseClient();
   try {
-    const client = getSupabaseClient();
     
     // Usar RPC para listar tabelas
     const { data, error } = await client.rpc('get_tables');
@@ -315,8 +315,8 @@ async function listTables() {
  * Listar extensões instaladas
  */
 async function listExtensions() {
+  const client = getSupabaseClient();
   try {
-    const client = getSupabaseClient();
     
     // Usar RPC para listar extensões
     const { data, error } = await client.rpc('get_extensions');

@@ -9,6 +9,9 @@ const { readConfig, validateFor } = require('../utils/config');
 const { showBetaBanner } = require('../utils/banner');
 const { canPerformCompleteBackup, getDockerVersion } = require('../utils/docker');
 const { captureRealtimeSettings } = require('../utils/realtime-settings');
+const { readEnvFile, writeEnvFile, backupEnvFile } = require('../utils/env');
+const { saveEnvMap } = require('../utils/envMap');
+const { mapEnvVariablesInteractively, askComponentsFlags } = require('../interactive/envMapper');
 
 const execAsync = promisify(exec);
 
@@ -17,16 +20,82 @@ module.exports = async (options) => {
   showBetaBanner();
   
   try {
-    // Carregar e validar configuração
-    const config = await readConfig();
+    // Consentimento para leitura e escrita do .env.local
+    console.log(chalk.yellow('⚠️  O smoonb irá ler e escrever o arquivo .env.local localmente.'));
+    console.log(chalk.yellow('   Um backup automático do .env.local será criado antes de qualquer alteração.'));
+    const consent = await require('inquirer').prompt([{ type: 'confirm', name: 'ok', message: 'Você consente em prosseguir (S/n):', default: true }]);
+    if (!consent.ok) {
+      console.log(chalk.red('🚫 Operação cancelada pelo usuário.'));
+      process.exit(1);
+    }
+
+    // Carregar configuração existente apenas para defaults de diretório
+    const config = await readConfig().catch(() => ({ backup: { outputDir: './backups' }, supabase: {} }));
     validateFor(config, 'backup');
 
     // Validação adicional para pré-requisitos obrigatórios
-    if (!config.supabase.databaseUrl) {
+    // Pré-passo de ENV: criar diretório de backup com timestamp já no início
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hour = String(now.getHours()).padStart(2, '0');
+    const minute = String(now.getMinutes()).padStart(2, '0');
+    const second = String(now.getSeconds()).padStart(2, '0');
+
+    // Resolver diretório de saída (prioriza .env.local mapeado depois, por ora usa default)
+    const defaultOutput = options.output || config.backup?.outputDir || './backups';
+    const backupDir = path.join(defaultOutput, `backup-${year}-${month}-${day}-${hour}-${minute}-${second}`);
+    await ensureDir(backupDir);
+
+    // Backup e mapeamento do .env.local
+    const envPath = path.join(process.cwd(), '.env.local');
+    const envBackupPath = path.join(backupDir, 'env', '.env.local');
+    await ensureDir(path.dirname(envBackupPath));
+    await backupEnvFile(envPath, envBackupPath);
+    console.log(chalk.blue(`📁 Backup do .env.local: ${path.relative(process.cwd(), envBackupPath)}`));
+
+    const expectedKeys = [
+      'NEXT_PUBLIC_SUPABASE_URL',
+      'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+      'SUPABASE_SERVICE_ROLE_KEY',
+      'SUPABASE_DB_URL',
+      'SUPABASE_PROJECT_ID',
+      'SUPABASE_ACCESS_TOKEN',
+      'SMOONB_OUTPUT_DIR'
+    ];
+    const currentEnv = await readEnvFile(envPath);
+    const { finalEnv, dePara } = await mapEnvVariablesInteractively(currentEnv, expectedKeys);
+    await writeEnvFile(envPath, finalEnv);
+    await saveEnvMap(dePara, path.join(backupDir, 'env', 'env-map.json'));
+    console.log(chalk.green('✅ .env.local atualizado com sucesso. Nenhuma chave renomeada; valores sincronizados.'));
+
+    function getValue(expectedKey) {
+      const clientKey = Object.keys(dePara).find(k => dePara[k] === expectedKey);
+      return clientKey ? finalEnv[clientKey] : '';
+    }
+
+    // Recalcular outputDir a partir do ENV mapeado
+    const resolvedOutputDir = options.output || getValue('SMOONB_OUTPUT_DIR') || config.backup?.outputDir || './backups';
+
+    // Se mudou o outputDir, movemos o backupDir inicial para o novo local mantendo timestamp
+    const finalBackupDir = backupDir.startsWith(path.resolve(resolvedOutputDir))
+      ? backupDir
+      : path.join(resolvedOutputDir, path.basename(backupDir));
+    if (finalBackupDir !== backupDir) {
+      await ensureDir(resolvedOutputDir);
+      await fs.rename(backupDir, finalBackupDir);
+    }
+
+    const projectId = getValue('SUPABASE_PROJECT_ID');
+    const accessToken = getValue('SUPABASE_ACCESS_TOKEN');
+    const databaseUrl = getValue('SUPABASE_DB_URL');
+
+    if (!databaseUrl) {
       console.log(chalk.red('❌ DATABASE_URL NÃO CONFIGURADA'));
       console.log('');
       console.log(chalk.yellow('📋 Para fazer backup completo do Supabase, você precisa:'));
-      console.log(chalk.yellow('   1. Configurar databaseUrl no .smoonbrc'));
+      console.log(chalk.yellow('   1. Configurar SUPABASE_DB_URL no .env.local'));
       console.log(chalk.yellow('   2. Repetir o comando de backup'));
       console.log('');
       console.log(chalk.blue('💡 Exemplo de configuração:'));
@@ -36,12 +105,12 @@ module.exports = async (options) => {
       process.exit(1);
     }
 
-    if (!config.supabase.accessToken) {
+    if (!accessToken) {
       console.log(chalk.red('❌ ACCESS_TOKEN NÃO CONFIGURADO'));
       console.log('');
       console.log(chalk.yellow('📋 Para fazer backup completo do Supabase, você precisa:'));
       console.log(chalk.yellow('   1. Obter Personal Access Token do Supabase'));
-      console.log(chalk.yellow('   2. Configurar accessToken no .smoonbrc'));
+      console.log(chalk.yellow('   2. Configurar SUPABASE_ACCESS_TOKEN no .env.local'));
       console.log(chalk.yellow('   3. Repetir o comando de backup'));
       console.log('');
       console.log(chalk.blue('🔗 Como obter o token:'));
@@ -53,7 +122,7 @@ module.exports = async (options) => {
       process.exit(1);
     }
 
-    console.log(chalk.blue(`🚀 Iniciando backup do projeto: ${config.supabase.projectId}`));
+    console.log(chalk.blue(`🚀 Iniciando backup do projeto: ${projectId}`));
     console.log(chalk.gray(`🔍 Verificando dependências Docker...`));
 
     // Verificar se é possível fazer backup completo via Docker
@@ -65,7 +134,9 @@ module.exports = async (options) => {
       console.log('');
       
       // Proceder com backup completo via Docker
-      return await performFullBackup(config, options);
+      // Flags de componentes (não afetam Database)
+      const flags = await askComponentsFlags();
+      return await performFullBackup({ projectId, accessToken, databaseUrl }, { ...options, flags, backupDir: finalBackupDir, outputDir: resolvedOutputDir });
     } else {
       // Mostrar mensagens educativas e encerrar elegantemente
       showDockerMessagesAndExit(backupCapability.reason);
@@ -78,28 +149,17 @@ module.exports = async (options) => {
 };
 
 // Função para backup completo via Docker
-async function performFullBackup(config, options) {
-  // Resolver diretório de saída
-  const outputDir = options.output || config.backup.outputDir;
-  
-  // Criar diretório de backup com timestamp humanizado
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hour = String(now.getHours()).padStart(2, '0');
-  const minute = String(now.getMinutes()).padStart(2, '0');
-  const second = String(now.getSeconds()).padStart(2, '0');
-  
-  const backupDir = path.join(outputDir, `backup-${year}-${month}-${day}-${hour}-${minute}-${second}`);
-  await ensureDir(backupDir);
+async function performFullBackup(envCfg, options) {
+  const { projectId, accessToken, databaseUrl } = envCfg;
+  const outputDir = options.outputDir;
+  const backupDir = options.backupDir;
 
   console.log(chalk.blue(`📁 Diretório: ${backupDir}`));
   console.log(chalk.gray(`🐳 Backup via Docker Desktop`));
 
   const manifest = {
     created_at: new Date().toISOString(),
-    project_id: config.supabase.projectId,
+    project_id: projectId,
     smoonb_version: require('../../package.json').version,
     backup_type: 'pg_dumpall_docker_dashboard_compatible',
     docker_version: await getDockerVersion(),
@@ -109,12 +169,12 @@ async function performFullBackup(config, options) {
 
   // 1. Backup Database via pg_dumpall Docker (idêntico ao Dashboard)
   console.log(chalk.blue('\n📊 1/8 - Backup da Database PostgreSQL via pg_dumpall Docker...'));
-  const databaseResult = await backupDatabase(config.supabase.projectId, backupDir);
+  const databaseResult = await backupDatabase(databaseUrl, backupDir);
   manifest.components.database = databaseResult;
 
   // 1.5. Backup Database Separado (SQL files para troubleshooting)
   console.log(chalk.blue('\n📊 1.5/8 - Backup da Database PostgreSQL (arquivos SQL separados)...'));
-  const dbSeparatedResult = await backupDatabaseSeparated(config.supabase.projectId, backupDir);
+  const dbSeparatedResult = await backupDatabaseSeparated(databaseUrl, backupDir, accessToken);
   manifest.components.database_separated = {
     success: dbSeparatedResult.success,
     method: 'supabase-cli',
@@ -123,34 +183,42 @@ async function performFullBackup(config, options) {
   };
 
   // 2. Backup Edge Functions via Docker
-  console.log(chalk.blue('\n⚡ 2/8 - Backup das Edge Functions via Docker...'));
-  const functionsResult = await backupEdgeFunctionsWithDocker(config.supabase.projectId, config.supabase.accessToken, backupDir);
-  manifest.components.edge_functions = functionsResult;
+  if (options.flags?.includeFunctions) {
+    console.log(chalk.blue('\n⚡ 2/8 - Backup das Edge Functions via Docker...'));
+    const functionsResult = await backupEdgeFunctionsWithDocker(projectId, accessToken, backupDir);
+    manifest.components.edge_functions = functionsResult;
+  }
 
   // 3. Backup Auth Settings via API
-  console.log(chalk.blue('\n🔐 3/8 - Backup das Auth Settings via API...'));
-  const authResult = await backupAuthSettings(config.supabase.projectId, config.supabase.accessToken, backupDir);
-  manifest.components.auth_settings = authResult;
+  if (options.flags?.includeAuth) {
+    console.log(chalk.blue('\n🔐 3/8 - Backup das Auth Settings via API...'));
+    const authResult = await backupAuthSettings(projectId, accessToken, backupDir);
+    manifest.components.auth_settings = authResult;
+  }
 
   // 4. Backup Storage via API
-  console.log(chalk.blue('\n📦 4/8 - Backup do Storage via API...'));
-  const storageResult = await backupStorage(config.supabase.projectId, config.supabase.accessToken, backupDir);
-  manifest.components.storage = storageResult;
+  if (options.flags?.includeStorage) {
+    console.log(chalk.blue('\n📦 4/8 - Backup do Storage via API...'));
+    const storageResult = await backupStorage(projectId, accessToken, backupDir);
+    manifest.components.storage = storageResult;
+  }
 
   // 5. Backup Custom Roles via SQL
   console.log(chalk.blue('\n👥 5/8 - Backup dos Custom Roles via SQL...'));
-  const rolesResult = await backupCustomRoles(config.supabase.databaseUrl, backupDir);
+  const rolesResult = await backupCustomRoles(databaseUrl, backupDir, accessToken);
   manifest.components.custom_roles = rolesResult;
 
   // 6. Backup das Database Extensions and Settings via SQL
   console.log(chalk.blue('\n🔧 6/8 - Backup das Database Extensions and Settings via SQL...'));
-  const databaseSettingsResult = await backupDatabaseSettings(config.supabase.projectId, backupDir);
+  const databaseSettingsResult = await backupDatabaseSettings(databaseUrl, projectId, backupDir);
   manifest.components.database_settings = databaseSettingsResult;
 
   // 7. Backup Realtime Settings via Captura Interativa
-  console.log(chalk.blue('\n🔄 7/8 - Backup das Realtime Settings via Captura Interativa...'));
-  const realtimeResult = await backupRealtimeSettings(config.supabase.projectId, backupDir, options.skipRealtime);
-  manifest.components.realtime = realtimeResult;
+  if (options.flags?.includeRealtime) {
+    console.log(chalk.blue('\n🔄 7/8 - Backup das Realtime Settings via Captura Interativa...'));
+    const realtimeResult = await backupRealtimeSettings(projectId, backupDir, options.skipRealtime);
+    manifest.components.realtime = realtimeResult;
+  }
 
   // Salvar manifest
   await writeJson(path.join(backupDir, 'backup-manifest.json'), manifest);
@@ -160,20 +228,50 @@ async function performFullBackup(config, options) {
   console.log(chalk.green(`📊 Database: ${databaseResult.fileName} (${databaseResult.size} KB) - Idêntico ao Dashboard`));
   console.log(chalk.green(`📊 Database SQL: ${dbSeparatedResult.files?.length || 0} arquivos separados (${dbSeparatedResult.totalSizeKB} KB) - Para troubleshooting`));
   console.log(chalk.green(`🔧 Database Settings: ${databaseSettingsResult.fileName} (${databaseSettingsResult.size} KB) - Extensions e Configurações`));
-  console.log(chalk.green(`⚡ Edge Functions: ${functionsResult.success_count || 0}/${functionsResult.functions_count || 0} functions baixadas via Docker`));
-  console.log(chalk.green(`🔐 Auth Settings: ${authResult.success ? 'Exportadas via API' : 'Falharam'}`));
-  console.log(chalk.green(`📦 Storage: ${storageResult.buckets?.length || 0} buckets verificados via API`));
+  if (options.flags?.includeFunctions && manifest.components.edge_functions) {
+    const functionsResult = manifest.components.edge_functions;
+    console.log(chalk.green(`⚡ Edge Functions: ${functionsResult.success_count || 0}/${functionsResult.functions_count || 0} functions baixadas via Docker`));
+  }
+  if (options.flags?.includeAuth && manifest.components.auth_settings) {
+    const authResult = manifest.components.auth_settings;
+    console.log(chalk.green(`🔐 Auth Settings: ${authResult.success ? 'Exportadas via API' : 'Falharam'}`));
+  }
+  if (options.flags?.includeStorage && manifest.components.storage) {
+    const storageResult = manifest.components.storage;
+    console.log(chalk.green(`📦 Storage: ${storageResult.buckets?.length || 0} buckets verificados via API`));
+  }
   console.log(chalk.green(`👥 Custom Roles: ${rolesResult.roles?.length || 0} roles exportados via SQL`));
   // Determinar mensagem correta baseada no método usado
-  let realtimeMessage = 'Falharam';
-  if (realtimeResult.success) {
-    if (options.skipRealtime) {
-      realtimeMessage = 'Configurações copiadas do backup anterior';
-    } else {
-      realtimeMessage = 'Configurações capturadas interativamente';
+  if (options.flags?.includeRealtime && manifest.components.realtime) {
+    const realtimeResult = manifest.components.realtime;
+    let realtimeMessage = 'Falharam';
+    if (realtimeResult.success) {
+      if (options.skipRealtime) {
+        realtimeMessage = 'Configurações copiadas do backup anterior';
+      } else {
+        realtimeMessage = 'Configurações capturadas interativamente';
+      }
     }
+    console.log(chalk.green(`🔄 Realtime: ${realtimeMessage}`));
   }
-  console.log(chalk.green(`🔄 Realtime: ${realtimeMessage}`));
+
+  // report.json
+  await writeJson(path.join(backupDir, 'report.json'), {
+    process: 'backup',
+    created_at: manifest.created_at,
+    project_id: manifest.project_id,
+    assets: {
+      env: path.join(backupDir, 'env', '.env.local'),
+      env_map: path.join(backupDir, 'env', 'env-map.json'),
+      manifest: path.join(backupDir, 'backup-manifest.json')
+    },
+    components: {
+      includeFunctions: !!options.flags?.includeFunctions,
+      includeStorage: !!options.flags?.includeStorage,
+      includeAuth: !!options.flags?.includeAuth,
+      includeRealtime: !!options.flags?.includeRealtime
+    }
+  });
 
   return { success: true, backupDir, manifest };
 }
@@ -240,16 +338,14 @@ function showDockerMessagesAndExit(reason) {
 }
 
 // Backup da database usando pg_dumpall via Docker (idêntico ao Supabase Dashboard)
-async function backupDatabase(projectId, backupDir) {
+async function backupDatabase(databaseUrl, backupDir) {
   try {
     console.log(chalk.gray('   - Criando backup completo via pg_dumpall...'));
     
     const { execSync } = require('child_process');
-    const config = await readConfig();
     
     // Extrair credenciais da databaseUrl
-    const dbUrl = config.supabase.databaseUrl;
-    const urlMatch = dbUrl.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+    const urlMatch = databaseUrl.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
     
     if (!urlMatch) {
       throw new Error('Database URL inválida');
@@ -309,14 +405,12 @@ async function backupDatabase(projectId, backupDir) {
 }
 
 // Backup da database usando arquivos SQL separados via Supabase CLI (para troubleshooting)
-async function backupDatabaseSeparated(projectId, backupDir) {
+async function backupDatabaseSeparated(databaseUrl, backupDir, accessToken) {
   try {
     console.log(chalk.gray('   - Criando backups SQL separados via Supabase CLI...'));
     
     const { execSync } = require('child_process');
-    const config = await readConfig();
-    
-    const dbUrl = config.supabase.databaseUrl;
+    const dbUrl = databaseUrl;
     const files = [];
     let totalSizeKB = 0;
     
@@ -325,7 +419,7 @@ async function backupDatabaseSeparated(projectId, backupDir) {
     const schemaFile = path.join(backupDir, 'schema.sql');
     
     try {
-      execSync(`supabase db dump --db-url "${dbUrl}" -f "${schemaFile}"`, { stdio: 'pipe' });
+      execSync(`supabase db dump --db-url "${dbUrl}" -f "${schemaFile}"`, { stdio: 'pipe', env: { ...process.env, SUPABASE_ACCESS_TOKEN: accessToken || '' } });
       const stats = await fs.stat(schemaFile);
       const sizeKB = (stats.size / 1024).toFixed(1);
       files.push({ filename: 'schema.sql', sizeKB });
@@ -340,7 +434,7 @@ async function backupDatabaseSeparated(projectId, backupDir) {
     const dataFile = path.join(backupDir, 'data.sql');
     
     try {
-      execSync(`supabase db dump --db-url "${dbUrl}" --data-only -f "${dataFile}"`, { stdio: 'pipe' });
+      execSync(`supabase db dump --db-url "${dbUrl}" --data-only -f "${dataFile}"`, { stdio: 'pipe', env: { ...process.env, SUPABASE_ACCESS_TOKEN: accessToken || '' } });
       const stats = await fs.stat(dataFile);
       const sizeKB = (stats.size / 1024).toFixed(1);
       files.push({ filename: 'data.sql', sizeKB });
@@ -355,7 +449,7 @@ async function backupDatabaseSeparated(projectId, backupDir) {
     const rolesFile = path.join(backupDir, 'roles.sql');
     
     try {
-      execSync(`supabase db dump --db-url "${dbUrl}" --role-only -f "${rolesFile}"`, { stdio: 'pipe' });
+      execSync(`supabase db dump --db-url "${dbUrl}" --role-only -f "${rolesFile}"`, { stdio: 'pipe', env: { ...process.env, SUPABASE_ACCESS_TOKEN: accessToken || '' } });
       const stats = await fs.stat(rolesFile);
       const sizeKB = (stats.size / 1024).toFixed(1);
       files.push({ filename: 'roles.sql', sizeKB });
@@ -625,7 +719,7 @@ async function backupStorage(projectId, accessToken, backupDir) {
 }
 
 // Backup dos Custom Roles via Docker
-async function backupCustomRoles(databaseUrl, backupDir) {
+async function backupCustomRoles(databaseUrl, backupDir, accessToken) {
   try {
     console.log(chalk.gray('   - Exportando Custom Roles via Docker...'));
     
@@ -633,7 +727,7 @@ async function backupCustomRoles(databaseUrl, backupDir) {
     
     try {
       // ✅ Usar Supabase CLI via Docker para roles
-      await execAsync(`supabase db dump --db-url "${databaseUrl}" --role-only -f "${customRolesFile}"`);
+      await execAsync(`supabase db dump --db-url "${databaseUrl}" --role-only -f "${customRolesFile}"`, { env: { ...process.env, SUPABASE_ACCESS_TOKEN: accessToken || '' } });
       
       const stats = await fs.stat(customRolesFile);
       const sizeKB = (stats.size / 1024).toFixed(1);
@@ -652,16 +746,14 @@ async function backupCustomRoles(databaseUrl, backupDir) {
 }
 
 // Backup das Database Extensions and Settings via SQL
-async function backupDatabaseSettings(projectId, backupDir) {
+async function backupDatabaseSettings(databaseUrl, projectId, backupDir) {
   try {
     console.log(chalk.gray('   - Capturando Database Extensions and Settings...'));
     
     const { execSync } = require('child_process');
-    const config = await readConfig();
     
     // Extrair credenciais da databaseUrl
-    const dbUrl = config.supabase.databaseUrl;
-    const urlMatch = dbUrl.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+    const urlMatch = databaseUrl.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
     
     if (!urlMatch) {
       throw new Error('Database URL inválida');
