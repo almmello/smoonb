@@ -8,7 +8,7 @@ const { execSync } = require('child_process');
  */
 module.exports = async ({ databaseUrl, backupDir }) => {
   try {
-    console.log(chalk.gray('   - Criando backup completo via pg_dumpall...'));
+    console.log(chalk.white('   - Criando backup completo via pg_dumpall...'));
     
     // Extrair credenciais da databaseUrl
     const urlMatch = databaseUrl.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
@@ -45,7 +45,7 @@ module.exports = async ({ databaseUrl, backupDir }) => {
       `-f /host/${fileName}`
     ].join(' ');
     
-    console.log(chalk.gray('   - Executando pg_dumpall via Docker...'));
+    console.log(chalk.white('   - Executando pg_dumpall via Docker...'));
     execSync(dockerCmd, { stdio: 'pipe' });
     
     // Compactar igual ao Supabase Dashboard

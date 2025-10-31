@@ -25,9 +25,9 @@ module.exports = async ({ backupPath, targetProject }) => {
     
     if (realtimeSettings.realtime_settings?.settings) {
       Object.values(realtimeSettings.realtime_settings.settings).forEach((setting) => {
-        console.log(chalk.gray(`   - ${setting.label}: ${setting.value}`));
+        console.log(chalk.white(`   - ${setting.label}: ${setting.value}`));
         if (setting.description) {
-          console.log(chalk.gray(`     ${setting.description}`));
+          console.log(chalk.white(`     ${setting.description}`));
         }
       });
     }

@@ -32,7 +32,7 @@ module.exports = async ({ backupPath, targetProject }) => {
       return { success: false, functions_count: 0, success_count: 0 };
     }
     
-    console.log(chalk.gray(`   - Encontradas ${functions.length} Edge Function(s)`));
+    console.log(chalk.white(`   - Encontradas ${functions.length} Edge Function(s)`));
     
     // COPIAR Edge Functions de backups/backup-XXX/edge-functions para supabase/functions
     const supabaseFunctionsDir = path.join(process.cwd(), 'supabase', 'functions');
@@ -54,13 +54,13 @@ module.exports = async ({ backupPath, targetProject }) => {
       const backupFuncPath = path.join(edgeFunctionsDir, funcName);
       const targetFuncPath = path.join(supabaseFunctionsDir, funcName);
       
-      console.log(chalk.gray(`   - Copiando ${funcName} para supabase/functions...`));
+      console.log(chalk.white(`   - Copiando ${funcName} para supabase/functions...`));
       
       // Copiar recursivamente
       await copyDirectoryRecursive(backupFuncPath, targetFuncPath);
     }
     
-    console.log(chalk.gray(`   - Linkando com projeto ${targetProject.targetProjectId}...`));
+    console.log(chalk.white(`   - Linkando com projeto ${targetProject.targetProjectId}...`));
     
     // Linkar com o projeto destino
     try {
@@ -77,7 +77,7 @@ module.exports = async ({ backupPath, targetProject }) => {
     // Deploy das Edge Functions
     let successCount = 0;
     for (const funcName of functions) {
-      console.log(chalk.gray(`   - Deployando ${funcName}...`));
+      console.log(chalk.white(`   - Deployando ${funcName}...`));
       
       try {
         execSync(`supabase functions deploy ${funcName}`, {

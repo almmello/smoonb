@@ -17,7 +17,7 @@ module.exports = async () => {
   }
   
   console.log(chalk.green('✅ Docker Desktop detectado e funcionando'));
-  console.log(chalk.gray(`🐳 Versão: ${backupCapability.dockerStatus.version}`));
+  console.log(chalk.white(`🐳 Versão: ${backupCapability.dockerStatus.version}`));
   
   return { success: true };
 };

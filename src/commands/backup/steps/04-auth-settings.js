@@ -7,7 +7,7 @@ const { writeJson } = require('../../../utils/fsx');
  */
 module.exports = async ({ projectId, accessToken, backupDir }) => {
   try {
-    console.log(chalk.gray('   - Exportando configurações de Auth via Management API...'));
+    console.log(chalk.white('   - Exportando configurações de Auth via Management API...'));
     
     // Usar fetch direto para Management API com Personal Access Token
     const authResponse = await fetch(`https://api.supabase.com/v1/projects/${projectId}/config/auth`, {

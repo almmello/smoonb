@@ -25,11 +25,11 @@ module.exports = async ({ backupPath, targetProject }) => {
     
     if (authSettings.settings?.auth_url_config) {
       Object.entries(authSettings.settings.auth_url_config).forEach(([key, value]) => {
-        console.log(chalk.gray(`   - ${key}: ${value}`));
+        console.log(chalk.white(`   - ${key}: ${value}`));
       });
     } else if (authSettings.auth_url_config) {
       Object.entries(authSettings.auth_url_config).forEach(([key, value]) => {
-        console.log(chalk.gray(`   - ${key}: ${value}`));
+        console.log(chalk.white(`   - ${key}: ${value}`));
       });
     }
     

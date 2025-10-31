@@ -8,7 +8,7 @@ const { execSync } = require('child_process');
  */
 module.exports = async ({ databaseUrl, projectId, backupDir }) => {
   try {
-    console.log(chalk.gray('   - Capturando Database Extensions and Settings...'));
+    console.log(chalk.white('   - Capturando Database Extensions and Settings...'));
     
     // Extrair credenciais da databaseUrl
     const urlMatch = databaseUrl.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
@@ -125,7 +125,7 @@ AND EXISTS (
       '-A'  // Unaligned output
     ].join(' ');
     
-    console.log(chalk.gray('   - Executando queries de configurações via Docker...'));
+    console.log(chalk.white('   - Executando queries de configurações via Docker...'));
     const output = execSync(dockerCmd, { stdio: 'pipe', encoding: 'utf8' });
     
     // Processar output e criar JSON estruturado

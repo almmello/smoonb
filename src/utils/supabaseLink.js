@@ -28,7 +28,7 @@ async function ensureCleanLink(projectRef, accessToken, dbPassword) {
   const tempDir = path.join(process.cwd(), 'supabase', '.temp');
   
   // Remover supabase/.temp completamente
-  console.log(chalk.gray(`   - Zerando vínculo e linkando projeto: ${projectRef}...`));
+  console.log(chalk.white(`   - Zerando vínculo e linkando projeto: ${projectRef}...`));
   
   try {
     await fs.rm(tempDir, { recursive: true, force: true });
@@ -66,7 +66,7 @@ async function ensureCleanLink(projectRef, accessToken, dbPassword) {
       );
     }
     
-    console.log(chalk.gray(`   - Validação: linked-ref = ${linkedRefTrimmed} (esperado = ${projectRef})`));
+    console.log(chalk.white(`   - Validação: linked-ref = ${linkedRefTrimmed} (esperado = ${projectRef})`));
   } catch (error) {
     if (error.message.includes('Validação falhou')) {
       throw error;

@@ -8,14 +8,14 @@ const { execSync } = require('child_process');
  */
 module.exports = async ({ databaseUrl, backupDir, accessToken }) => {
   try {
-    console.log(chalk.gray('   - Criando backups SQL separados via Supabase CLI...'));
+    console.log(chalk.white('   - Criando backups SQL separados via Supabase CLI...'));
     
     const dbUrl = databaseUrl;
     const files = [];
     let totalSizeKB = 0;
     
     // 1. Backup do Schema
-    console.log(chalk.gray('   - Exportando schema...'));
+    console.log(chalk.white('   - Exportando schema...'));
     const schemaFile = path.join(backupDir, 'schema.sql');
     
     try {
@@ -33,7 +33,7 @@ module.exports = async ({ databaseUrl, backupDir, accessToken }) => {
     }
     
     // 2. Backup dos Dados
-    console.log(chalk.gray('   - Exportando dados...'));
+    console.log(chalk.white('   - Exportando dados...'));
     const dataFile = path.join(backupDir, 'data.sql');
     
     try {
@@ -51,7 +51,7 @@ module.exports = async ({ databaseUrl, backupDir, accessToken }) => {
     }
     
     // 3. Backup dos Roles
-    console.log(chalk.gray('   - Exportando roles...'));
+    console.log(chalk.white('   - Exportando roles...'));
     const rolesFile = path.join(backupDir, 'roles.sql');
     
     try {

@@ -139,22 +139,22 @@ module.exports = async (options) => {
 
     // Mostrar resumo e pedir confirmação final
     console.log(chalk.cyan('\n📋 RESUMO DAS CONFIGURAÇÕES:\n'));
-    console.log(chalk.gray(`   ✅ Edge Functions: ${flags.includeFunctions ? 'Sim' : 'Não'}`));
+    console.log(chalk.white(`   ✅ Edge Functions: ${flags.includeFunctions ? 'Sim' : 'Não'}`));
     if (flags.includeFunctions) {
-      console.log(chalk.gray(`      🗑️  Limpar após backup: ${flags.cleanFunctions ? 'Sim' : 'Não'}`));
+      console.log(chalk.white(`      🗑️  Limpar após backup: ${flags.cleanFunctions ? 'Sim' : 'Não'}`));
     }
-    console.log(chalk.gray(`   ✅ Supabase .temp: ${flags.includeTemp ? 'Sim' : 'Não'}`));
+    console.log(chalk.white(`   ✅ Supabase .temp: ${flags.includeTemp ? 'Sim' : 'Não'}`));
     if (flags.includeTemp) {
-      console.log(chalk.gray(`      🗑️  Apagar após backup: ${flags.cleanTemp ? 'Sim' : 'Não'}`));
+      console.log(chalk.white(`      🗑️  Apagar após backup: ${flags.cleanTemp ? 'Sim' : 'Não'}`));
     }
-    console.log(chalk.gray(`   ✅ Migrations: ${flags.includeMigrations ? 'Sim' : 'Não'}`));
+    console.log(chalk.white(`   ✅ Migrations: ${flags.includeMigrations ? 'Sim' : 'Não'}`));
     if (flags.includeMigrations) {
-      console.log(chalk.gray(`      🗑️  Apagar após backup: ${flags.cleanMigrations ? 'Sim' : 'Não'}`));
+      console.log(chalk.white(`      🗑️  Apagar após backup: ${flags.cleanMigrations ? 'Sim' : 'Não'}`));
     }
-    console.log(chalk.gray(`   ✅ Storage: ${flags.includeStorage ? 'Sim' : 'Não'}`));
-    console.log(chalk.gray(`   ✅ Auth: ${flags.includeAuth ? 'Sim' : 'Não'}`));
-    console.log(chalk.gray(`   ✅ Realtime: ${flags.includeRealtime ? 'Sim' : 'Não'}`));
-    console.log(chalk.gray(`   📁 Diretório de backup: ${finalBackupDir}\n`));
+    console.log(chalk.white(`   ✅ Storage: ${flags.includeStorage ? 'Sim' : 'Não'}`));
+    console.log(chalk.white(`   ✅ Auth: ${flags.includeAuth ? 'Sim' : 'Não'}`));
+    console.log(chalk.white(`   ✅ Realtime: ${flags.includeRealtime ? 'Sim' : 'Não'}`));
+    console.log(chalk.white(`   📁 Diretório de backup: ${finalBackupDir}\n`));
 
     const finalOk = await confirm('Deseja iniciar o backup com estas configurações?', true);
 
@@ -193,7 +193,7 @@ module.exports = async (options) => {
 
     // Executar todas as etapas na ordem
     console.log(chalk.blue(`📁 Diretório: ${finalBackupDir}`));
-    console.log(chalk.gray(`🐳 Backup via Docker Desktop`));
+    console.log(chalk.white(`🐳 Backup via Docker Desktop`));
 
     // Contar etapas totais para numeração
     // Etapas fixas: Database, Database Separado, Database Settings, Custom Roles (4)

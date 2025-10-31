@@ -45,18 +45,18 @@ module.exports = async (context) => {
     if (shouldCleanAfter) {
       // Limpar antes se o usuário escolheu limpar após (garante ambiente limpo)
       await cleanDir(supabaseFunctionsDir);
-      console.log(chalk.gray('   - Pasta supabase/functions limpa antes do backup.'));
+      console.log(chalk.white('   - Pasta supabase/functions limpa antes do backup.'));
     } else {
       // Apenas garantir que o diretório existe
       await fs.mkdir(supabaseFunctionsDir, { recursive: true });
       if (existingFunctionsBefore.length > 0) {
-        console.log(chalk.gray(`   - Preservando ${existingFunctionsBefore.length} função(ões) existente(s) na pasta supabase/functions.`));
+        console.log(chalk.white(`   - Preservando ${existingFunctionsBefore.length} função(ões) existente(s) na pasta supabase/functions.`));
       } else {
-        console.log(chalk.gray('   - Pasta supabase/functions preparada (será preservada após backup).'));
+        console.log(chalk.white('   - Pasta supabase/functions preparada (será preservada após backup).'));
       }
     }
 
-    console.log(chalk.gray('   - Listando Edge Functions via Management API...'));
+    console.log(chalk.white('   - Listando Edge Functions via Management API...'));
     
     // Usar fetch direto para Management API com Personal Access Token
     const functionsResponse = await fetch(`https://api.supabase.com/v1/projects/${projectId}/functions`, {
@@ -74,14 +74,14 @@ module.exports = async (context) => {
     const functions = await functionsResponse.json();
     
     if (!functions || functions.length === 0) {
-      console.log(chalk.gray('   - Nenhuma Edge Function encontrada'));
+      console.log(chalk.white('   - Nenhuma Edge Function encontrada'));
       await writeJson(path.join(functionsDir, 'README.md'), {
         message: 'Nenhuma Edge Function encontrada neste projeto'
       });
       return { success: true, reason: 'no_functions', functions: [] };
     }
 
-    console.log(chalk.gray(`   - Encontradas ${functions.length} Edge Function(s)`));
+    console.log(chalk.white(`   - Encontradas ${functions.length} Edge Function(s)`));
     
     const downloadedFunctions = [];
     let successCount = 0;
@@ -91,7 +91,7 @@ module.exports = async (context) => {
     // Nota: O CLI ignora o cwd e sempre baixa para supabase/functions
     for (const func of functions) {
       try {
-        console.log(chalk.gray(`   - Baixando: ${func.name}...`));
+        console.log(chalk.white(`   - Baixando: ${func.name}...`));
         
         // Criar diretório da função NO BACKUP
         const functionTargetDir = path.join(functionsDir, func.name);
@@ -167,11 +167,11 @@ module.exports = async (context) => {
     // Nota: shouldCleanAfter já foi definido acima
     if (shouldCleanAfter) {
       await cleanDir(supabaseFunctionsDir);
-      console.log(chalk.gray('   - supabase/functions limpo após o backup.'));
+      console.log(chalk.white('   - supabase/functions limpo após o backup.'));
     } else {
       // Preservar tudo: tanto as funções que já existiam quanto as que foram baixadas
       // As funções baixadas não foram removidas individualmente (linha acima foi ajustada)
-      console.log(chalk.gray('   - supabase/functions preservada conforme solicitado.'));
+      console.log(chalk.white('   - supabase/functions preservada conforme solicitado.'));
     }
     
     return { 

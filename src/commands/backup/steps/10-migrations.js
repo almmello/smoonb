@@ -17,10 +17,10 @@ module.exports = async (context) => {
     // Limpar migrations local (opcional, mas recomendado para garantir servidor como fonte da verdade)
     const migrationsDir = path.join(process.cwd(), 'supabase', 'migrations');
     await cleanDir(migrationsDir);
-    console.log(chalk.gray('   - Limpando supabase/migrations...'));
+    console.log(chalk.white('   - Limpando supabase/migrations...'));
     
     // Baixar todas as migrations do servidor usando migration fetch
-    console.log(chalk.gray('   - Baixando todas as migrations do servidor usando migration fetch...'));
+    console.log(chalk.white('   - Baixando todas as migrations do servidor usando migration fetch...'));
     
     const env = {
       ...process.env,
@@ -43,12 +43,12 @@ module.exports = async (context) => {
     
     // Contar arquivos baixados
     const fileCount = await countFiles(migrationsDir);
-    console.log(chalk.gray(`   - Arquivos baixados: ${fileCount} migrations`));
+    console.log(chalk.white(`   - Arquivos baixados: ${fileCount} migrations`));
     
     // Copiar migrations para o backup
     const backupMigrationsDir = path.join(backupDir, 'migrations');
     const copiedCount = await copyDirSafe(migrationsDir, backupMigrationsDir);
-    console.log(chalk.gray(`   - Copiando supabase/migrations → backups/backup-${path.basename(backupDir)}/migrations (${copiedCount} arquivos)...`));
+    console.log(chalk.white(`   - Copiando supabase/migrations → backups/backup-${path.basename(backupDir)}/migrations (${copiedCount} arquivos)...`));
     
     if (copiedCount > 0) {
       console.log(chalk.green(`   ✅ ${copiedCount} migration(s) copiada(s)`));

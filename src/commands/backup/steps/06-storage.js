@@ -10,7 +10,7 @@ module.exports = async ({ projectId, accessToken, backupDir }) => {
     const storageDir = path.join(backupDir, 'storage');
     await ensureDir(storageDir);
 
-    console.log(chalk.gray('   - Listando buckets de Storage via Management API...'));
+    console.log(chalk.white('   - Listando buckets de Storage via Management API...'));
     
     // Usar fetch direto para Management API com Personal Access Token
     const storageResponse = await fetch(`https://api.supabase.com/v1/projects/${projectId}/storage/buckets`, {
@@ -28,20 +28,20 @@ module.exports = async ({ projectId, accessToken, backupDir }) => {
     const buckets = await storageResponse.json();
 
     if (!buckets || buckets.length === 0) {
-      console.log(chalk.gray('   - Nenhum bucket encontrado'));
+      console.log(chalk.white('   - Nenhum bucket encontrado'));
       await writeJson(path.join(storageDir, 'README.md'), {
         message: 'Nenhum bucket de Storage encontrado neste projeto'
       });
       return { success: true, buckets: [] };
     }
 
-    console.log(chalk.gray(`   - Encontrados ${buckets.length} buckets`));
+    console.log(chalk.white(`   - Encontrados ${buckets.length} buckets`));
 
     const processedBuckets = [];
 
     for (const bucket of buckets || []) {
       try {
-        console.log(chalk.gray(`   - Processando bucket: ${bucket.name}`));
+        console.log(chalk.white(`   - Processando bucket: ${bucket.name}`));
         
         // Listar objetos do bucket via Management API com Personal Access Token
         const objectsResponse = await fetch(`https://api.supabase.com/v1/projects/${projectId}/storage/buckets/${bucket.name}/objects`, {

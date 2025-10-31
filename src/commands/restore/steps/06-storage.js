@@ -26,23 +26,23 @@ module.exports = async ({ backupPath }) => {
     const buckets = manifest?.components?.storage?.buckets || [];
     
     if (buckets.length === 0) {
-      console.log(chalk.gray('   ℹ️  Nenhum bucket para restaurar'));
+      console.log(chalk.white('   ℹ️  Nenhum bucket para restaurar'));
       return { success: false, buckets_count: 0 };
     }
     
     console.log(chalk.green(`\n   ✅ ${buckets.length} bucket(s) encontrado(s) no backup`));
     buckets.forEach(bucket => {
-      console.log(chalk.gray(`   - ${bucket.name} (${bucket.public ? 'público' : 'privado'})`));
+      console.log(chalk.white(`   - ${bucket.name} (${bucket.public ? 'público' : 'privado'})`));
     });
     
     const colabUrl = 'https://colab.research.google.com/github/PLyn/supabase-storage-migrate/blob/main/Supabase_Storage_migration.ipynb';
     
     console.log(chalk.yellow('\n   ⚠️  Migração de objetos de Storage requer processo manual'));
     console.log(chalk.cyan(`   ℹ️  Use o script do Google Colab: ${colabUrl}`));
-    console.log(chalk.gray('\n   📋 Instruções:'));
-    console.log(chalk.gray('   1. Execute o script no Google Colab'));
-    console.log(chalk.gray('   2. Configure as credenciais dos projetos (origem e destino)'));
-    console.log(chalk.gray('   3. Execute a migração'));
+    console.log(chalk.white('\n   📋 Instruções:'));
+    console.log(chalk.white('   1. Execute o script no Google Colab'));
+    console.log(chalk.white('   2. Configure as credenciais dos projetos (origem e destino)'));
+    console.log(chalk.white('   3. Execute a migração'));
     
     await inquirer.prompt([{
       type: 'input',

@@ -13,8 +13,8 @@ module.exports = async ({ backupFilePath, targetDatabaseUrl }) => {
     
     // Verificar se é arquivo .backup.gz (compactado) ou .backup (descompactado)
     if (fileName.endsWith('.backup.gz')) {
-      console.log(chalk.gray('   - Arquivo .backup.gz detectado'));
-      console.log(chalk.gray('   - Extraindo arquivo .gz...'));
+      console.log(chalk.white('   - Arquivo .backup.gz detectado'));
+      console.log(chalk.white('   - Extraindo arquivo .gz...'));
       
       const unzipCmd = [
         'docker run --rm',
@@ -24,10 +24,10 @@ module.exports = async ({ backupFilePath, targetDatabaseUrl }) => {
       
       execSync(unzipCmd, { stdio: 'pipe' });
       uncompressedFile = fileName.replace('.gz', '');
-      console.log(chalk.gray('   - Arquivo descompactado: ' + uncompressedFile));
+      console.log(chalk.white('   - Arquivo descompactado: ' + uncompressedFile));
     } else if (fileName.endsWith('.backup')) {
-      console.log(chalk.gray('   - Arquivo .backup detectado (já descompactado)'));
-      console.log(chalk.gray('   - Prosseguindo com restauração direta'));
+      console.log(chalk.white('   - Arquivo .backup detectado (já descompactado)'));
+      console.log(chalk.white('   - Prosseguindo com restauração direta'));
     } else {
       throw new Error(`Formato de arquivo inválido. Esperado .backup.gz ou .backup, recebido: ${fileName}`);
     }

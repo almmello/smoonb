@@ -8,7 +8,7 @@ const { captureRealtimeSettings } = require('../../../utils/realtime-settings');
  */
 module.exports = async ({ projectId, backupDir, options }) => {
   try {
-    console.log(chalk.gray('   - Capturando Realtime Settings interativamente...'));
+    console.log(chalk.white('   - Capturando Realtime Settings interativamente...'));
     
     const result = await captureRealtimeSettings(projectId, backupDir, options?.skipRealtime);
     

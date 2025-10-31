@@ -11,7 +11,7 @@ const execAsync = promisify(exec);
  */
 module.exports = async ({ databaseUrl, backupDir, accessToken }) => {
   try {
-    console.log(chalk.gray('   - Exportando Custom Roles via Docker...'));
+    console.log(chalk.white('   - Exportando Custom Roles via Docker...'));
     
     const customRolesFile = path.join(backupDir, 'custom-roles.sql');
     

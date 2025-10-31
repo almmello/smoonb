@@ -22,11 +22,11 @@ module.exports = async ({ backupPath, targetProject }) => {
     const extensions = dbSettings.extensions || [];
     
     if (extensions.length > 0) {
-      console.log(chalk.gray(`   - Habilitando ${extensions.length} extension(s)...`));
+      console.log(chalk.white(`   - Habilitando ${extensions.length} extension(s)...`));
       
       for (const ext of extensions) {
         const extName = typeof ext === 'string' ? ext : ext.name;
-        console.log(chalk.gray(`     - ${extName}`));
+        console.log(chalk.white(`     - ${extName}`));
         
         const sqlCommand = `CREATE EXTENSION IF NOT EXISTS ${extName};`;
         

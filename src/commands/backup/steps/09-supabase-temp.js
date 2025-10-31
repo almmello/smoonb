@@ -14,10 +14,10 @@ module.exports = async (context) => {
     
     const fileCount = await copyDirSafe(tempDir, backupTempDir);
     
-    console.log(chalk.gray(`   - Copiando supabase/.temp → backups/backup-${path.basename(backupDir)}/supabase-temp (${fileCount} arquivos)...`));
+    console.log(chalk.white(`   - Copiando supabase/.temp → backups/backup-${path.basename(backupDir)}/supabase-temp (${fileCount} arquivos)...`));
     
     if (fileCount === 0) {
-      console.log(chalk.gray('   - Nenhum arquivo encontrado em supabase/.temp'));
+      console.log(chalk.white('   - Nenhum arquivo encontrado em supabase/.temp'));
     } else {
       console.log(chalk.green(`   ✅ ${fileCount} arquivo(s) copiado(s)`));
     }
@@ -27,7 +27,7 @@ module.exports = async (context) => {
     
     if (shouldClean) {
       await cleanDir(tempDir);
-      console.log(chalk.gray('   - supabase/.temp apagado.'));
+      console.log(chalk.white('   - supabase/.temp apagado.'));
     }
     
     return {
