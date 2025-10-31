@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const chalk = require('chalk');
-const { confirm } = require('../../utils/prompt');
+const { confirm } = require('../../../utils/prompt');
 
 /**
  * Etapa 1: Perguntar quais componentes restaurar

@@ -2,7 +2,7 @@
 // A confirmação agora é feita no index.js com resumo detalhado
 // Mantido para compatibilidade, mas pode ser removido no futuro
 
-const { confirm } = require('../../utils/prompt');
+const { confirm } = require('../../../utils/prompt');
 
 /**
  * Etapa 2: Confirmar execução (LEGACY - não usado mais)
