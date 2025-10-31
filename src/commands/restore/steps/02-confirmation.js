@@ -1,19 +1,14 @@
-const readline = require('readline');
+// Este arquivo não é mais usado diretamente
+// A confirmação agora é feita no index.js com resumo detalhado
+// Mantido para compatibilidade, mas pode ser removido no futuro
+
+const { confirm } = require('../../utils/prompt');
 
 /**
- * Etapa 2: Confirmar execução
+ * Etapa 2: Confirmar execução (LEGACY - não usado mais)
+ * A confirmação agora é feita no index.js após mostrar resumo detalhado
  */
 module.exports = async () => {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-  
-  const question = (query) => new Promise(resolve => rl.question(query, resolve));
-  
-  const confirm = await question('Deseja continuar com a restauração? (s/N): ');
-  rl.close();
-  
-  return confirm.toLowerCase() === 's';
+  return await confirm('Deseja continuar com a restauração?', true);
 };
 

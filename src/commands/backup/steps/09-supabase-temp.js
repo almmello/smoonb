@@ -1,13 +1,13 @@
 const chalk = require('chalk');
 const path = require('path');
-const inquirer = require('inquirer');
 const { copyDirSafe } = require('../../../utils/fsExtra');
 const { cleanDir } = require('../../../utils/fsExtra');
 
 /**
  * Etapa 9: Backup Supabase .temp (NOVA ETAPA INDEPENDENTE)
  */
-module.exports = async ({ backupDir }) => {
+module.exports = async (context) => {
+  const { backupDir } = context;
   try {
     const tempDir = path.join(process.cwd(), 'supabase', '.temp');
     const backupTempDir = path.join(backupDir, 'supabase-temp');
@@ -22,14 +22,8 @@ module.exports = async ({ backupDir }) => {
       console.log(chalk.green(`   ✅ ${fileCount} arquivo(s) copiado(s)`));
     }
     
-    // Perguntar se deseja apagar supabase/.temp após o backup
-    const { shouldClean } = await inquirer.prompt([{
-      type: 'confirm',
-      name: 'shouldClean',
-      message: 'Deseja apagar supabase/.temp após o backup? (S/n):',
-      default: false,
-      prefix: ''
-    }]);
+    // Usar flag de limpeza do contexto (já foi perguntado no início)
+    const shouldClean = context?.cleanupFlags?.cleanTemp || false;
     
     if (shouldClean) {
       await cleanDir(tempDir);

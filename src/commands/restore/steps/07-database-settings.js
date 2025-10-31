@@ -50,7 +50,7 @@ module.exports = async ({ backupPath, targetProject }) => {
         
         try {
           execSync(dockerCmd, { stdio: 'pipe', encoding: 'utf8' });
-        } catch (sqlError) {
+        } catch {
           console.log(chalk.yellow(`     ⚠️  ${extName} - extension já existe ou não pode ser habilitada`));
         }
       }

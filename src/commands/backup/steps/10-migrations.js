@@ -1,6 +1,5 @@
 const chalk = require('chalk');
 const path = require('path');
-const inquirer = require('inquirer');
 const { execSync } = require('child_process');
 const { extractPasswordFromDbUrl, ensureCleanLink } = require('../../../utils/supabaseLink');
 const { cleanDir, countFiles, copyDirSafe } = require('../../../utils/fsExtra');
@@ -8,7 +7,8 @@ const { cleanDir, countFiles, copyDirSafe } = require('../../../utils/fsExtra');
 /**
  * Etapa 10: Backup Migrations (NOVA ETAPA INDEPENDENTE)
  */
-module.exports = async ({ projectId, accessToken, databaseUrl, backupDir }) => {
+module.exports = async (context) => {
+  const { projectId, accessToken, databaseUrl, backupDir } = context;
   try {
     // Reset de link ao projeto de ORIGEM
     const dbPassword = extractPasswordFromDbUrl(databaseUrl);
@@ -54,14 +54,8 @@ module.exports = async ({ projectId, accessToken, databaseUrl, backupDir }) => {
       console.log(chalk.green(`   ✅ ${copiedCount} migration(s) copiada(s)`));
     }
     
-    // Perguntar se deseja apagar supabase/migrations após o backup
-    const { shouldClean } = await inquirer.prompt([{
-      type: 'confirm',
-      name: 'shouldClean',
-      message: 'Deseja apagar supabase/migrations após o backup? (S/n):',
-      default: false,
-      prefix: ''
-    }]);
+    // Usar flag de limpeza do contexto (já foi perguntado no início)
+    const shouldClean = context?.cleanupFlags?.cleanMigrations || false;
     
     if (shouldClean) {
       await cleanDir(migrationsDir);

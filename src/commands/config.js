@@ -1,7 +1,6 @@
 const chalk = require('chalk');
 const fs = require('fs').promises;
 const path = require('path');
-const os = require('os');
 const { showBetaBanner } = require('../utils/banner');
 
 // Exportar FUNÇÃO em vez de objeto Command

@@ -8,6 +8,7 @@ const { getDockerVersion } = require('../../utils/docker');
 const { readEnvFile, writeEnvFile, backupEnvFile } = require('../../utils/env');
 const { saveEnvMap } = require('../../utils/envMap');
 const { mapEnvVariablesInteractively, askComponentsFlags } = require('../../interactive/envMapper');
+const { confirm } = require('../../utils/prompt');
 
 // Importar todas as etapas
 const step00DockerValidation = require('./steps/00-docker-validation');
@@ -27,11 +28,16 @@ module.exports = async (options) => {
   showBetaBanner();
   
   try {
+    // Executar validação Docker ANTES de tudo
+    await step00DockerValidation();
+
     // Consentimento para leitura e escrita do .env.local
-    console.log(chalk.yellow('⚠️  O smoonb irá ler e escrever o arquivo .env.local localmente.'));
+    console.log(chalk.yellow('\n⚠️  O smoonb irá ler e escrever o arquivo .env.local localmente.'));
     console.log(chalk.yellow('   Um backup automático do .env.local será criado antes de qualquer alteração.'));
-    const consent = await require('inquirer').prompt([{ type: 'confirm', name: 'ok', message: 'Você consente em prosseguir (S/n):', default: true }]);
-    if (!consent.ok) {
+    console.log(chalk.yellow('   Vamos mapear suas variáveis de ambiente para garantir que todas as chaves necessárias'));
+    console.log(chalk.yellow('   estejam presentes e com os valores corretos do projeto alvo.'));
+    const consentOk = await confirm('Você consente em prosseguir', true);
+    if (!consentOk) {
       console.log(chalk.red('🚫 Operação cancelada pelo usuário.'));
       process.exit(1);
     }
@@ -128,13 +134,28 @@ module.exports = async (options) => {
       process.exit(1);
     }
 
-    console.log(chalk.blue(`🚀 Iniciando backup do projeto: ${projectId}`));
-
-    // Executar validação Docker (etapa 0)
-    await step00DockerValidation();
-
-    // Flags de componentes
+    // Flags de componentes (perguntas interativas)
     const flags = await askComponentsFlags();
+
+    // Mostrar resumo e pedir confirmação final
+    console.log(chalk.cyan('\n📋 RESUMO DAS CONFIGURAÇÕES:\n'));
+    console.log(chalk.gray(`   ✅ Edge Functions: ${flags.includeFunctions ? 'Sim' : 'Não'}`));
+    console.log(chalk.gray(`   ✅ Storage: ${flags.includeStorage ? 'Sim' : 'Não'}`));
+    console.log(chalk.gray(`   ✅ Auth: ${flags.includeAuth ? 'Sim' : 'Não'}`));
+    console.log(chalk.gray(`   ✅ Realtime: ${flags.includeRealtime ? 'Sim' : 'Não'}`));
+    console.log(chalk.gray(`   🗑️  Limpar supabase/functions após backup: ${flags.cleanFunctions ? 'Sim' : 'Não'}`));
+    console.log(chalk.gray(`   🗑️  Apagar supabase/.temp após backup: ${flags.cleanTemp ? 'Sim' : 'Não'}`));
+    console.log(chalk.gray(`   🗑️  Apagar supabase/migrations após backup: ${flags.cleanMigrations ? 'Sim' : 'Não'}`));
+    console.log(chalk.gray(`   📁 Diretório de backup: ${finalBackupDir}\n`));
+
+    const finalOk = await confirm('Deseja iniciar o backup com estas configurações?', true);
+
+    if (!finalOk) {
+      console.log(chalk.red('🚫 Operação cancelada pelo usuário.'));
+      process.exit(1);
+    }
+
+    console.log(chalk.blue(`\n🚀 Iniciando backup do projeto: ${projectId}`));
 
     // Criar contexto compartilhado para as etapas
     const context = {
@@ -143,7 +164,12 @@ module.exports = async (options) => {
       databaseUrl,
       backupDir: finalBackupDir,
       outputDir: resolvedOutputDir,
-      options: { ...options, flags }
+      options: { ...options, flags },
+      cleanupFlags: {
+        cleanFunctions: flags.cleanFunctions || false,
+        cleanTemp: flags.cleanTemp || false,
+        cleanMigrations: flags.cleanMigrations || false
+      }
     };
 
     // Criar manifest
@@ -162,12 +188,12 @@ module.exports = async (options) => {
     console.log(chalk.gray(`🐳 Backup via Docker Desktop`));
 
     // 1. Backup Database via pg_dumpall Docker
-    console.log(chalk.blue('\n📊 1/12 - Backup da Database PostgreSQL via pg_dumpall Docker...'));
+    console.log(chalk.blue('\n📊 1/11 - Backup da Database PostgreSQL via pg_dumpall Docker...'));
     const databaseResult = await step01Database(context);
     manifest.components.database = databaseResult;
 
     // 2. Backup Database Separado
-    console.log(chalk.blue('\n📊 2/12 - Backup da Database PostgreSQL (arquivos SQL separados)...'));
+    console.log(chalk.blue('\n📊 2/11 - Backup da Database PostgreSQL (arquivos SQL separados)...'));
     const dbSeparatedResult = await step02DatabaseSeparated(context);
     manifest.components.database_separated = {
       success: dbSeparatedResult.success,
@@ -177,50 +203,50 @@ module.exports = async (options) => {
     };
 
     // 3. Backup Database Settings
-    console.log(chalk.blue('\n🔧 3/12 - Backup das Database Extensions and Settings via SQL...'));
+    console.log(chalk.blue('\n🔧 3/11 - Backup das Database Extensions and Settings via SQL...'));
     const databaseSettingsResult = await step03DatabaseSettings(context);
     manifest.components.database_settings = databaseSettingsResult;
 
     // 4. Backup Auth Settings
     if (flags?.includeAuth) {
-      console.log(chalk.blue('\n🔐 4/12 - Backup das Auth Settings via API...'));
+      console.log(chalk.blue('\n🔐 4/11 - Backup das Auth Settings via API...'));
       const authResult = await step04AuthSettings(context);
       manifest.components.auth_settings = authResult;
     }
 
     // 5. Backup Realtime Settings
     if (flags?.includeRealtime) {
-      console.log(chalk.blue('\n🔄 5/12 - Backup das Realtime Settings via Captura Interativa...'));
+      console.log(chalk.blue('\n🔄 5/11 - Backup das Realtime Settings via Captura Interativa...'));
       const realtimeResult = await step05RealtimeSettings(context);
       manifest.components.realtime = realtimeResult;
     }
 
     // 6. Backup Storage
     if (flags?.includeStorage) {
-      console.log(chalk.blue('\n📦 6/12 - Backup do Storage via API...'));
+      console.log(chalk.blue('\n📦 6/11 - Backup do Storage via API...'));
       const storageResult = await step06Storage(context);
       manifest.components.storage = storageResult;
     }
 
     // 7. Backup Custom Roles
-    console.log(chalk.blue('\n👥 7/12 - Backup dos Custom Roles via SQL...'));
+    console.log(chalk.blue('\n👥 7/11 - Backup dos Custom Roles via SQL...'));
     const rolesResult = await step07CustomRoles(context);
     manifest.components.custom_roles = rolesResult;
 
     // 8. Backup Edge Functions
     if (flags?.includeFunctions) {
-      console.log(chalk.blue('\n⚡ 8/12 - Backup das Edge Functions via Docker...'));
+      console.log(chalk.blue('\n⚡ 8/11 - Backup das Edge Functions via Docker...'));
       const functionsResult = await step08EdgeFunctions(context);
       manifest.components.edge_functions = functionsResult;
     }
 
     // 9. Backup Supabase .temp
-    console.log(chalk.blue('\n📁 9/12 - Backup do Supabase .temp...'));
+    console.log(chalk.blue('\n📁 9/11 - Backup do Supabase .temp...'));
     const supabaseTempResult = await step09SupabaseTemp(context);
     manifest.components.supabase_temp = supabaseTempResult;
 
     // 10. Backup Migrations
-    console.log(chalk.blue('\n📋 10/12 - Backup das Migrations...'));
+    console.log(chalk.blue('\n📋 10/11 - Backup das Migrations...'));
     const migrationsResult = await step10Migrations(context);
     manifest.components.migrations = migrationsResult;
 

@@ -1,7 +1,6 @@
 const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs').promises;
-const inquirer = require('inquirer');
 const { ensureDir, writeJson } = require('../../../utils/fsx');
 const { extractPasswordFromDbUrl, ensureCleanLink } = require('../../../utils/supabaseLink');
 const { cleanDir } = require('../../../utils/fsExtra');
@@ -9,7 +8,8 @@ const { cleanDir } = require('../../../utils/fsExtra');
 /**
  * Etapa 8: Backup Edge Functions via Docker (reset link + limpeza opcional)
  */
-module.exports = async ({ projectId, accessToken, databaseUrl, backupDir }) => {
+module.exports = async (context) => {
+  const { projectId, accessToken, databaseUrl, backupDir } = context;
   try {
     const functionsDir = path.join(backupDir, 'edge-functions');
     await ensureDir(functionsDir);
@@ -94,7 +94,7 @@ module.exports = async ({ projectId, accessToken, databaseUrl, backupDir }) => {
               }
             }
           }
-        } catch (copyError) {
+        } catch {
           // Arquivos não foram baixados, continuar
           console.log(chalk.yellow(`     ⚠️ Nenhum arquivo encontrado em ${tempDownloadDir}`));
         }
@@ -102,7 +102,7 @@ module.exports = async ({ projectId, accessToken, databaseUrl, backupDir }) => {
         // LIMPAR supabase/functions após copiar
         try {
           await fs.rm(tempDownloadDir, { recursive: true, force: true });
-        } catch (cleanError) {
+        } catch {
           // Ignorar erro de limpeza
         }
         
@@ -126,14 +126,8 @@ module.exports = async ({ projectId, accessToken, databaseUrl, backupDir }) => {
     console.log(chalk.green(`   ✅ Sucessos: ${successCount}`));
     console.log(chalk.green(`   ❌ Erros: ${errorCount}`));
     
-    // Perguntar se deseja limpar supabase/functions após o backup
-    const { shouldClean } = await inquirer.prompt([{
-      type: 'confirm',
-      name: 'shouldClean',
-      message: 'Deseja limpar supabase/functions após o backup? (S/n):',
-      default: true,
-      prefix: ''
-    }]);
+    // Usar flag de limpeza do contexto (já foi perguntado no início)
+    const shouldClean = context?.cleanupFlags?.cleanFunctions || false;
     
     if (shouldClean) {
       await cleanDir(supabaseFunctionsDir);

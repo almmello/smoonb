@@ -29,7 +29,7 @@ async function listValidBackups(backupsDir) {
         if (fs.existsSync(manifestPath)) {
           try {
             manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-          } catch (error) {
+          } catch {
             // Ignorar erro de leitura do manifest
           }
         }

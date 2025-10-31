@@ -1,17 +1,17 @@
 const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs');
-const inquirer = require('inquirer');
 const { readEnvFile, writeEnvFile, backupEnvFile } = require('../../utils/env');
 const { saveEnvMap } = require('../../utils/envMap');
 const { mapEnvVariablesInteractively } = require('../../interactive/envMapper');
 const { showBetaBanner } = require('../../utils/banner');
 const { listValidBackups, showRestoreSummary } = require('./utils');
+const { confirm } = require('../../utils/prompt');
+const step00DockerValidation = require('../backup/steps/00-docker-validation');
 
 // Importar todas as etapas
 const step00BackupSelection = require('./steps/00-backup-selection');
 const step01ComponentsSelection = require('./steps/01-components-selection');
-const step02Confirmation = require('./steps/02-confirmation');
 const step03Database = require('./steps/03-database');
 const step04EdgeFunctions = require('./steps/04-edge-functions');
 const step05AuthSettings = require('./steps/05-auth-settings');
@@ -23,11 +23,16 @@ module.exports = async (_options) => {
   showBetaBanner();
   
   try {
+    // Executar validação Docker ANTES de tudo
+    await step00DockerValidation();
+
     // Consentimento para leitura e escrita do .env.local
-    console.log(chalk.yellow('⚠️  O smoonb irá ler e escrever o arquivo .env.local localmente.'));
+    console.log(chalk.yellow('\n⚠️  O smoonb irá ler e escrever o arquivo .env.local localmente.'));
     console.log(chalk.yellow('   Um backup automático do .env.local será criado antes de qualquer alteração.'));
-    const consent = await inquirer.prompt([{ type: 'confirm', name: 'ok', message: 'Você consente em prosseguir (S/n):', default: true }]);
-    if (!consent.ok) {
+    console.log(chalk.yellow('   Vamos mapear suas variáveis de ambiente para garantir que todas as chaves necessárias'));
+    console.log(chalk.yellow('   estejam presentes e com os valores corretos do projeto de destino.'));
+    const consentOk = await confirm('Você consente em prosseguir', true);
+    if (!consentOk) {
       console.log(chalk.red('🚫 Operação cancelada pelo usuário.'));
       process.exit(1);
     }
@@ -100,13 +105,24 @@ module.exports = async (_options) => {
       process.exit(1);
     }
     
-    // 4. Mostrar resumo
+    // 4. Mostrar resumo detalhado
+    console.log(chalk.cyan('\n📋 RESUMO DA RESTAURAÇÃO:\n'));
+    console.log(chalk.gray(`   📁 Backup selecionado: ${path.basename(selectedBackup.path)}`));
+    console.log(chalk.gray(`   🎯 Projeto destino: ${targetProject.targetProjectId || '(não configurado)'}`));
+    console.log(chalk.gray(`   📊 Database: ${components.database ? 'Sim' : 'Não'}`));
+    console.log(chalk.gray(`   ⚡ Edge Functions: ${components.edgeFunctions ? 'Sim' : 'Não'}`));
+    console.log(chalk.gray(`   🔐 Auth Settings: ${components.authSettings ? 'Sim' : 'Não'}`));
+    console.log(chalk.gray(`   📦 Storage: ${components.storage ? 'Sim' : 'Não'}`));
+    console.log(chalk.gray(`   🔧 Database Settings: ${components.databaseSettings ? 'Sim' : 'Não'}`));
+    console.log(chalk.gray(`   🔄 Realtime Settings: ${components.realtimeSettings ? 'Sim' : 'Não'}\n`));
+    
+    // Mostrar resumo técnico adicional
     showRestoreSummary(selectedBackup, components, targetProject);
     
     // 5. Confirmar execução
-    const confirmed = await step02Confirmation();
-    if (!confirmed) {
-      console.log(chalk.yellow('Restauração cancelada.'));
+    const finalOk = await confirm('Deseja iniciar a restauração com estas configurações?', true);
+    if (!finalOk) {
+      console.log(chalk.yellow('🚫 Restauração cancelada.'));
       process.exit(0);
     }
     

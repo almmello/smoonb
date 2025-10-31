@@ -12,7 +12,7 @@ async function detectDockerInstallation() {
     // Tentar executar docker --version
     await execAsync('docker --version');
     return { installed: true, running: false }; // Instalado mas não sabemos se está rodando
-  } catch (error) {
+  } catch {
     return { installed: false, running: false };
   }
 }
@@ -26,7 +26,7 @@ async function detectDockerRunning() {
     // Tentar executar docker ps
     await execAsync('docker ps');
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -40,7 +40,7 @@ async function detectSupabaseCLI() {
     // Tentar executar supabase --version
     await execAsync('supabase --version');
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }

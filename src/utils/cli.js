@@ -13,7 +13,7 @@ async function ensureBin(name) {
     const { stdout } = await exec(command);
     const path = stdout.trim().split('\n')[0];
     return path || null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

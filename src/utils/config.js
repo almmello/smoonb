@@ -13,16 +13,14 @@ async function readConfig() {
   ];
 
   let configContent = null;
-  let configPath = null;
 
   for (const configPathCandidate of configPaths) {
     try {
       if (fs.existsSync(configPathCandidate)) {
         configContent = fs.readFileSync(configPathCandidate, 'utf8');
-        configPath = configPathCandidate;
         break;
       }
-    } catch (error) {
+    } catch {
       // Continue para próximo caminho
     }
   }

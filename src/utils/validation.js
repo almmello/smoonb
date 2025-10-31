@@ -46,7 +46,7 @@ function validateSupabaseUrl(url) {
     }
 
     return { valid: true };
-  } catch (error) {
+  } catch {
     return { valid: false, error: 'URL inválida' };
   }
 }
@@ -107,7 +107,7 @@ function validateDatabaseUrl(dbUrl) {
     }
 
     return { valid: true };
-  } catch (error) {
+  } catch {
     return { valid: false, error: 'URL da database inválida' };
   }
 }

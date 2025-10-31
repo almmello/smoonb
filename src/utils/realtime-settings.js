@@ -70,14 +70,14 @@ async function getPreviousRealtimeSettings(backupDir) {
         if (settings.realtime_settings && settings.realtime_settings.settings) {
           return settings;
         }
-      } catch (error) {
+      } catch {
         // Continuar para próximo backup
         continue;
       }
     }
     
     return null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

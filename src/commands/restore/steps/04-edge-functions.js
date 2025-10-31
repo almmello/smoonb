@@ -47,7 +47,7 @@ module.exports = async ({ backupPath, targetProject }) => {
     try {
       await fs.rm(supabaseFunctionsDir, { recursive: true, force: true });
       await fs.mkdir(supabaseFunctionsDir, { recursive: true });
-    } catch (cleanError) {
+    } catch {
       // Ignorar erro de limpeza se não existir
     }
     
@@ -72,7 +72,7 @@ module.exports = async ({ backupPath, targetProject }) => {
         timeout: 10000,
         env: { ...process.env, SUPABASE_ACCESS_TOKEN: targetProject.targetAccessToken || '' }
       });
-    } catch (linkError) {
+    } catch {
       console.log(chalk.yellow('   ⚠️  Link pode já existir, continuando...'));
     }
     
@@ -99,7 +99,7 @@ module.exports = async ({ backupPath, targetProject }) => {
     console.log(chalk.gray('   - Limpando supabase/functions após deploy...'));
     try {
       await fs.rm(supabaseFunctionsDir, { recursive: true, force: true });
-    } catch (cleanError) {
+    } catch {
       // Ignorar erro de limpeza
     }
     

@@ -112,7 +112,7 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason, _promise) => {
   console.error(chalk.red.bold('❌ Promise rejeitada não tratada:'), reason);
   process.exit(1);
 });

@@ -6,7 +6,7 @@ async function loadEnvMap(filePath) {
   try {
     const content = await fs.readFile(filePath, 'utf8');
     return JSON.parse(content);
-  } catch (e) {
+  } catch {
     return {};
   }
 }

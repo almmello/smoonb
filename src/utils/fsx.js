@@ -14,13 +14,13 @@ async function copyDir(src, dest) {
       await fs.promises.cp(src, dest, { recursive: true });
       return;
     }
-  } catch (error) {
+  } catch {
     // Fallback para fs-extra se disponível
     try {
       const fse = require('fs-extra');
       await fse.copy(src, dest);
       return;
-    } catch (fseError) {
+    } catch {
       // Fallback manual usando fs nativo
     }
   }

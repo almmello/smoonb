@@ -43,7 +43,7 @@ function findPgDumpPath() {
       } else if (fs.existsSync(pgPath)) {
         return pgPath;
       }
-    } catch (error) {
+    } catch {
       // Continuar para o próximo caminho
       continue;
     }
@@ -244,10 +244,10 @@ async function testConnection() {
     const client = getSupabaseClient();
     
     // Tentar uma operação simples
-    const { data, error } = await client.from('_smoonb_test').select('*').limit(1);
+    const { error: testError } = await client.from('_smoonb_test').select('*').limit(1);
     
-    if (error && error.code !== 'PGRST116') { // PGRST116 = tabela não existe (esperado)
-      throw error;
+    if (testError && testError.code !== 'PGRST116') { // PGRST116 = tabela não existe (esperado)
+      throw testError;
     }
     
     return { success: true, message: 'Conexão estabelecida com sucesso' };
@@ -261,7 +261,7 @@ async function testConnection() {
  */
 async function getProjectInfo(projectId) {
   try {
-    const client = getSupabaseClient();
+    getSupabaseClient(); // Garantir que cliente está disponível
     
     // TODO: Implementar busca real de informações do projeto
     // Por enquanto, retornar informações básicas
@@ -292,7 +292,7 @@ async function listTables() {
     }
     
     return data || [];
-  } catch (error) {
+  } catch {
     // Fallback: tentar query direta
     try {
       const { data, error } = await client
@@ -326,7 +326,7 @@ async function listExtensions() {
     }
     
     return data || [];
-  } catch (error) {
+  } catch {
     // Fallback: tentar query direta
     try {
       const { data, error } = await client
@@ -349,7 +349,7 @@ async function listExtensions() {
  */
 async function getAuthSettings() {
   try {
-    const client = getSupabaseClient();
+    getSupabaseClient(); // Garantir que cliente está disponível
     
     // TODO: Implementar busca real de configurações de Auth
     // Por enquanto, retornar estrutura básica
@@ -383,7 +383,7 @@ async function getStorageSettings() {
     // Para cada bucket, listar objetos
     const bucketsWithObjects = [];
     for (const bucket of buckets) {
-      const { data: objects, error: objectsError } = await client.storage
+      const { data: objects } = await client.storage
         .from(bucket.name)
         .list();
       
@@ -408,7 +408,7 @@ async function getStorageSettings() {
  */
 async function getRealtimeSettings() {
   try {
-    const client = getSupabaseClient();
+    getSupabaseClient(); // Garantir que cliente está disponível
     
     // TODO: Implementar busca real de configurações de Realtime
     // Por enquanto, retornar estrutura básica

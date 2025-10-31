@@ -4,7 +4,7 @@ const { readConfig, validateFor } = require('../utils/config');
 const { showBetaBanner } = require('../utils/banner');
 
 // Exportar FUNÇÃO em vez de objeto Command
-module.exports = async (options) => {
+module.exports = async (_options) => {
   showBetaBanner();
   
   try {

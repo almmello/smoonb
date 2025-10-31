@@ -1,4 +1,3 @@
-const fs = require('fs');
 const fsp = require('fs').promises;
 const path = require('path');
 
@@ -27,7 +26,7 @@ function stringifyEnv(entries, existingContent) {
   const seen = new Set();
   const resultLines = [];
 
-  for (let line of existingLines) {
+  for (const line of existingLines) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) {
       resultLines.push(line);
@@ -70,7 +69,7 @@ async function readEnvFile(filePath) {
   }
 }
 
-async function writeEnvFile(filePath, entries, options = {}) {
+async function writeEnvFile(filePath, entries, _options = {}) {
   const dir = path.dirname(filePath);
   await fsp.mkdir(dir, { recursive: true });
   let existing = '';

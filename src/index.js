@@ -125,7 +125,7 @@ function checkPrerequisites() {
     const { execSync } = require('child_process');
     const npmVersion = execSync('npm --version', { encoding: 'utf8' }).trim();
     prerequisites.npm = { installed: true, version: npmVersion };
-  } catch (error) {
+  } catch {
     prerequisites.npm = { installed: false, version: null };
   }
 
@@ -134,7 +134,7 @@ function checkPrerequisites() {
     const { execSync } = require('child_process');
     const supabaseVersion = execSync('supabase --version', { encoding: 'utf8' }).trim();
     prerequisites.supabase_cli = { installed: true, version: supabaseVersion };
-  } catch (error) {
+  } catch {
     prerequisites.supabase_cli = { installed: false, version: null };
   }
 
@@ -143,7 +143,7 @@ function checkPrerequisites() {
     const { execSync } = require('child_process');
     const pgDumpVersion = execSync('pg_dump --version', { encoding: 'utf8' }).trim();
     prerequisites.pg_dump = { installed: true, version: pgDumpVersion };
-  } catch (error) {
+  } catch {
     prerequisites.pg_dump = { installed: false, version: null };
   }
 
