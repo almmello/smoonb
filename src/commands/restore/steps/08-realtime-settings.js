@@ -7,7 +7,6 @@ const inquirer = require('inquirer');
  * Etapa 8: Restaurar Realtime Settings (interativo - exibir URL e valores)
  */
 module.exports = async ({ backupPath, targetProject }) => {
-  console.log(chalk.blue('\n🔄 Restaurando Realtime Settings...'));
   
   try {
     const realtimeSettingsPath = path.join(backupPath, 'realtime-settings.json');

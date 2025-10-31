@@ -7,15 +7,13 @@ const { execSync } = require('child_process');
  * Etapa 7: Restaurar Database Settings (via SQL)
  */
 module.exports = async ({ backupPath, targetProject }) => {
-  console.log(chalk.blue('\n🔧 Restaurando Database Settings...'));
-  
   try {
     const files = fs.readdirSync(backupPath);
     const dbSettingsFile = files.find(f => f.startsWith('database-settings-') && f.endsWith('.json'));
     
     if (!dbSettingsFile) {
       console.log(chalk.yellow('   ⚠️  Nenhuma configuração de Database encontrada no backup'));
-      return;
+      return { success: false };
     }
     
     const dbSettingsData = JSON.parse(fs.readFileSync(path.join(backupPath, dbSettingsFile), 'utf8'));
@@ -58,8 +56,11 @@ module.exports = async ({ backupPath, targetProject }) => {
     
     console.log(chalk.green('   ✅ Database Settings restaurados com sucesso!'));
     
+    return { success: true, extensions_count: extensions.length };
+    
   } catch (error) {
     console.error(chalk.red(`   ❌ Erro ao restaurar Database Settings: ${error.message}`));
+    throw error;
   }
 };
 

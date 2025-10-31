@@ -7,7 +7,6 @@ const inquirer = require('inquirer');
  * Etapa 5: Restaurar Auth Settings (interativo - exibir URL e valores)
  */
 module.exports = async ({ backupPath, targetProject }) => {
-  console.log(chalk.blue('\n🔐 Restaurando Auth Settings...'));
   
   try {
     const authSettingsPath = path.join(backupPath, 'auth-settings.json');

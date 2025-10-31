@@ -107,14 +107,14 @@ module.exports = async (_options) => {
     
     // 4. Mostrar resumo detalhado
     console.log(chalk.cyan('\n📋 RESUMO DA RESTAURAÇÃO:\n'));
-    console.log(chalk.gray(`   📁 Backup selecionado: ${path.basename(selectedBackup.path)}`));
-    console.log(chalk.gray(`   🎯 Projeto destino: ${targetProject.targetProjectId || '(não configurado)'}`));
-    console.log(chalk.gray(`   📊 Database: ${components.database ? 'Sim' : 'Não'}`));
-    console.log(chalk.gray(`   ⚡ Edge Functions: ${components.edgeFunctions ? 'Sim' : 'Não'}`));
-    console.log(chalk.gray(`   🔐 Auth Settings: ${components.authSettings ? 'Sim' : 'Não'}`));
-    console.log(chalk.gray(`   📦 Storage: ${components.storage ? 'Sim' : 'Não'}`));
-    console.log(chalk.gray(`   🔧 Database Settings: ${components.databaseSettings ? 'Sim' : 'Não'}`));
-    console.log(chalk.gray(`   🔄 Realtime Settings: ${components.realtimeSettings ? 'Sim' : 'Não'}\n`));
+    console.log(chalk.white(`   📁 Backup selecionado: ${path.basename(selectedBackup.path)}`));
+    console.log(chalk.white(`   🎯 Projeto destino: ${targetProject.targetProjectId || '(não configurado)'}`));
+    console.log(chalk.white(`   📊 Database: ${components.database ? 'Sim' : 'Não'}`));
+    console.log(chalk.white(`   ⚡ Edge Functions: ${components.edgeFunctions ? 'Sim' : 'Não'}`));
+    console.log(chalk.white(`   🔐 Auth Settings: ${components.authSettings ? 'Sim' : 'Não'}`));
+    console.log(chalk.white(`   📦 Storage: ${components.storage ? 'Sim' : 'Não'}`));
+    console.log(chalk.white(`   🔧 Database Settings: ${components.databaseSettings ? 'Sim' : 'Não'}`));
+    console.log(chalk.white(`   🔄 Realtime Settings: ${components.realtimeSettings ? 'Sim' : 'Não'}\n`));
     
     // Mostrar resumo técnico adicional
     showRestoreSummary(selectedBackup, components, targetProject);
@@ -129,51 +129,81 @@ module.exports = async (_options) => {
     // 6. Executar restauração
     console.log(chalk.blue('\n🚀 Iniciando restauração...'));
     
+    // Contar etapas totais para numeração dinâmica
+    let stepNumber = 0;
+    const totalSteps = (components.database ? 1 : 0) + 
+                      (components.edgeFunctions ? 1 : 0) + 
+                      (components.authSettings ? 1 : 0) + 
+                      (components.storage ? 1 : 0) + 
+                      (components.databaseSettings ? 1 : 0) + 
+                      (components.realtimeSettings ? 1 : 0);
+    
+    // Armazenar resultados para o resumo final
+    const restoreResults = {};
+    
     // 6.1 Database (se selecionado)
     if (components.database) {
+      stepNumber++;
+      console.log(chalk.blue(`\n📊 ${stepNumber}/${totalSteps} - Restaurando Database...`));
       await step03Database({
         backupFilePath: path.join(selectedBackup.path, selectedBackup.backupFile),
         targetDatabaseUrl: targetProject.targetDatabaseUrl
       });
+      restoreResults.database = { success: true };
     }
     
     // 6.2 Edge Functions (se selecionado)
     if (components.edgeFunctions) {
-      await step04EdgeFunctions({
+      stepNumber++;
+      console.log(chalk.blue(`\n⚡ ${stepNumber}/${totalSteps} - Restaurando Edge Functions...`));
+      const edgeFunctionsResult = await step04EdgeFunctions({
         backupPath: selectedBackup.path,
         targetProject
       });
+      restoreResults.edgeFunctions = edgeFunctionsResult || { success: true };
     }
     
     // 6.3 Auth Settings (se selecionado)
     if (components.authSettings) {
+      stepNumber++;
+      console.log(chalk.blue(`\n🔐 ${stepNumber}/${totalSteps} - Restaurando Auth Settings...`));
       await step05AuthSettings({
         backupPath: selectedBackup.path,
         targetProject
       });
+      restoreResults.authSettings = { success: true };
     }
     
     // 6.4 Storage Buckets (se selecionado)
     if (components.storage) {
-      await step06Storage({
+      stepNumber++;
+      console.log(chalk.blue(`\n📦 ${stepNumber}/${totalSteps} - Restaurando Storage Buckets...`));
+      const storageResult = await step06Storage({
         backupPath: selectedBackup.path
       });
+      restoreResults.storage = storageResult || { success: true };
     }
     
     // 6.5 Database Settings (se selecionado)
     if (components.databaseSettings) {
+      stepNumber++;
+      console.log(chalk.blue(`\n🔧 ${stepNumber}/${totalSteps} - Restaurando Database Settings...`));
       await step07DatabaseSettings({
         backupPath: selectedBackup.path,
         targetProject
       });
+      restoreResults.databaseSettings = { success: true };
     }
     
     // 6.6 Realtime Settings (se selecionado)
     if (components.realtimeSettings) {
+      stepNumber++;
+      console.log(chalk.blue(`\n🔄 ${stepNumber}/${totalSteps} - Restaurando Realtime Settings...`));
       await step08RealtimeSettings({
         backupPath: selectedBackup.path,
         targetProject
       });
+      restoreResults.realtimeSettings = { success: true };
     }
     
     // report.json de restauração
@@ -186,6 +216,7 @@ module.exports = async (_options) => {
         env_map: path.join(processDir, 'env', 'env-map.json')
       },
       components: components,
+      results: restoreResults,
       notes: [
         'supabase/functions limpo antes e depois do deploy (se Edge Functions selecionado)'
       ]
@@ -196,7 +227,36 @@ module.exports = async (_options) => {
       // silencioso
     }
 
-    console.log(chalk.green('\n🎉 Restauração completa finalizada!'));
+    // Exibir resumo final
+    console.log(chalk.green('\n🎉 RESTAURAÇÃO COMPLETA FINALIZADA!'));
+    console.log(chalk.blue(`🎯 Projeto destino: ${targetProject.targetProjectId || '(não configurado)'}`));
+    
+    if (restoreResults.database) {
+      console.log(chalk.green(`📊 Database: Restaurada com sucesso via Docker`));
+    }
+    
+    if (restoreResults.edgeFunctions) {
+      const funcCount = restoreResults.edgeFunctions.functions_count || 0;
+      const successCount = restoreResults.edgeFunctions.success_count || 0;
+      console.log(chalk.green(`⚡ Edge Functions: ${successCount}/${funcCount} functions restauradas`));
+    }
+    
+    if (restoreResults.authSettings) {
+      console.log(chalk.green(`🔐 Auth Settings: Configurações exibidas para configuração manual`));
+    }
+    
+    if (restoreResults.storage) {
+      const bucketCount = restoreResults.storage.buckets_count || 0;
+      console.log(chalk.green(`📦 Storage: ${bucketCount} bucket(s) encontrado(s) - migração manual necessária`));
+    }
+    
+    if (restoreResults.databaseSettings) {
+      console.log(chalk.green(`🔧 Database Settings: Extensões e configurações restauradas via SQL`));
+    }
+    
+    if (restoreResults.realtimeSettings) {
+      console.log(chalk.green(`🔄 Realtime Settings: Configurações exibidas para configuração manual`));
+    }
     
   } catch (error) {
     console.error(chalk.red(`❌ Erro na restauração: ${error.message}`));

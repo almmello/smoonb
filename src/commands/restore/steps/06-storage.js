@@ -7,14 +7,13 @@ const inquirer = require('inquirer');
  * Etapa 6: Restaurar Storage Buckets (interativo - exibir informações)
  */
 module.exports = async ({ backupPath }) => {
-  console.log(chalk.blue('\n📦 Restaurando Storage Buckets...'));
   
   try {
     const storageDir = path.join(backupPath, 'storage');
     
     if (!fs.existsSync(storageDir)) {
       console.log(chalk.yellow('   ⚠️  Nenhum bucket de Storage encontrado no backup'));
-      return;
+      return { success: false, buckets_count: 0 };
     }
     
     const manifestPath = path.join(backupPath, 'backup-manifest.json');
@@ -28,7 +27,7 @@ module.exports = async ({ backupPath }) => {
     
     if (buckets.length === 0) {
       console.log(chalk.gray('   ℹ️  Nenhum bucket para restaurar'));
-      return;
+      return { success: false, buckets_count: 0 };
     }
     
     console.log(chalk.green(`\n   ✅ ${buckets.length} bucket(s) encontrado(s) no backup`));
@@ -51,8 +50,14 @@ module.exports = async ({ backupPath }) => {
       message: 'Pressione Enter para continuar'
     }]);
     
+    return {
+      success: true,
+      buckets_count: buckets.length
+    };
+    
   } catch (error) {
     console.error(chalk.red(`   ❌ Erro ao processar Storage: ${error.message}`));
+    throw error;
   }
 };
 

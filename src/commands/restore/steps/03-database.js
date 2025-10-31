@@ -6,8 +6,6 @@ const { execSync } = require('child_process');
  * Etapa 3: Restaurar Database via psql
  */
 module.exports = async ({ backupFilePath, targetDatabaseUrl }) => {
-  console.log(chalk.blue('📊 Restaurando Database...'));
-  
   try {
     const backupDirAbs = path.resolve(path.dirname(backupFilePath));
     const fileName = path.basename(backupFilePath);

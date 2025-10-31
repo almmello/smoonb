@@ -15,8 +15,8 @@ module.exports = async (backupPath) => {
   let restoreEdgeFunctions = false;
   if (fs.existsSync(edgeFunctionsDir) && fs.readdirSync(edgeFunctionsDir).length > 0) {
     console.log(chalk.cyan('\n⚡ Edge Functions:'));
-    console.log(chalk.gray('   As Edge Functions serão copiadas para supabase/functions e implantadas no projeto destino.'));
-    console.log(chalk.gray('   A pasta supabase/functions será limpa antes do processo.\n'));
+    console.log(chalk.white('   As Edge Functions serão copiadas para supabase/functions e implantadas no projeto destino.'));
+    console.log(chalk.white('   A pasta supabase/functions será limpa antes do processo.\n'));
     restoreEdgeFunctions = await confirm('Deseja restaurar Edge Functions', true);
   }
   
@@ -24,8 +24,8 @@ module.exports = async (backupPath) => {
   let restoreAuthSettings = false;
   if (fs.existsSync(path.join(backupPath, 'auth-settings.json'))) {
     console.log(chalk.cyan('\n🔐 Auth Settings:'));
-    console.log(chalk.gray('   As configurações de Auth serão exibidas para configuração manual no Dashboard.'));
-    console.log(chalk.gray('   Algumas configurações não podem ser aplicadas automaticamente por questões de segurança.\n'));
+    console.log(chalk.white('   As configurações de Auth serão exibidas para configuração manual no Dashboard.'));
+    console.log(chalk.white('   Algumas configurações não podem ser aplicadas automaticamente por questões de segurança.\n'));
     restoreAuthSettings = await confirm('Deseja ver as configurações de Auth Settings', true);
   }
   
@@ -34,8 +34,8 @@ module.exports = async (backupPath) => {
   let restoreStorage = false;
   if (fs.existsSync(storageDir) && fs.readdirSync(storageDir).length > 0) {
     console.log(chalk.cyan('\n📦 Storage:'));
-    console.log(chalk.gray('   As informações dos buckets de Storage serão exibidas para migração manual.'));
-    console.log(chalk.gray('   Os arquivos precisam ser migrados manualmente usando as ferramentas do Supabase.\n'));
+    console.log(chalk.white('   As informações dos buckets de Storage serão exibidas para migração manual.'));
+    console.log(chalk.white('   Os arquivos precisam ser migrados manualmente usando as ferramentas do Supabase.\n'));
     restoreStorage = await confirm('Deseja ver informações de Storage Buckets', true);
   }
   
@@ -45,8 +45,8 @@ module.exports = async (backupPath) => {
   let restoreDatabaseSettings = false;
   if (dbSettingsFiles.length > 0) {
     console.log(chalk.cyan('\n🔧 Database Extensions and Settings:'));
-    console.log(chalk.gray('   As extensões e configurações do banco de dados serão restauradas via SQL.'));
-    console.log(chalk.gray('   Isso inclui extensões PostgreSQL e configurações específicas do projeto.\n'));
+    console.log(chalk.white('   As extensões e configurações do banco de dados serão restauradas via SQL.'));
+    console.log(chalk.white('   Isso inclui extensões PostgreSQL e configurações específicas do projeto.\n'));
     restoreDatabaseSettings = await confirm('Deseja restaurar Database Extensions and Settings', true);
   }
   
@@ -54,8 +54,8 @@ module.exports = async (backupPath) => {
   let restoreRealtimeSettings = false;
   if (fs.existsSync(path.join(backupPath, 'realtime-settings.json'))) {
     console.log(chalk.cyan('\n🔄 Realtime Settings:'));
-    console.log(chalk.gray('   As configurações de Realtime serão exibidas para configuração manual no Dashboard.'));
-    console.log(chalk.gray('   Algumas configurações precisam ser aplicadas manualmente.\n'));
+    console.log(chalk.white('   As configurações de Realtime serão exibidas para configuração manual no Dashboard.'));
+    console.log(chalk.white('   Algumas configurações precisam ser aplicadas manualmente.\n'));
     restoreRealtimeSettings = await confirm('Deseja ver as configurações de Realtime Settings', true);
   }
   

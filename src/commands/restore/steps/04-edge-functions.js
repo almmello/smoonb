@@ -8,14 +8,12 @@ const { copyDirectoryRecursive } = require('../utils');
  * Etapa 4: Restaurar Edge Functions via supabase functions deploy
  */
 module.exports = async ({ backupPath, targetProject }) => {
-  console.log(chalk.blue('\n⚡ Restaurando Edge Functions...'));
-  
   try {
     const edgeFunctionsDir = path.join(backupPath, 'edge-functions');
     
     if (!await fs.access(edgeFunctionsDir).then(() => true).catch(() => false)) {
       console.log(chalk.yellow('   ⚠️  Nenhuma Edge Function encontrada no backup'));
-      return;
+      return { success: false, functions_count: 0, success_count: 0 };
     }
     
     const items = await fs.readdir(edgeFunctionsDir);
@@ -31,7 +29,7 @@ module.exports = async ({ backupPath, targetProject }) => {
     
     if (functions.length === 0) {
       console.log(chalk.yellow('   ⚠️  Nenhuma Edge Function encontrada no backup'));
-      return;
+      return { success: false, functions_count: 0, success_count: 0 };
     }
     
     console.log(chalk.gray(`   - Encontradas ${functions.length} Edge Function(s)`));
@@ -77,6 +75,7 @@ module.exports = async ({ backupPath, targetProject }) => {
     }
     
     // Deploy das Edge Functions
+    let successCount = 0;
     for (const funcName of functions) {
       console.log(chalk.gray(`   - Deployando ${funcName}...`));
       
@@ -90,6 +89,7 @@ module.exports = async ({ backupPath, targetProject }) => {
         });
         
         console.log(chalk.green(`   ✅ ${funcName} deployada com sucesso!`));
+        successCount++;
       } catch (deployError) {
         console.log(chalk.yellow(`   ⚠️  ${funcName} - deploy falhou: ${deployError.message}`));
       }
@@ -105,8 +105,15 @@ module.exports = async ({ backupPath, targetProject }) => {
     
     console.log(chalk.green('   ✅ Edge Functions restauradas com sucesso!'));
     
+    return {
+      success: true,
+      functions_count: functions.length,
+      success_count: successCount
+    };
+    
   } catch (error) {
     console.error(chalk.red(`   ❌ Erro ao restaurar Edge Functions: ${error.message}`));
+    throw error;
   }
 };
 

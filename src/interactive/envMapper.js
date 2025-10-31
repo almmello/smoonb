@@ -84,36 +84,57 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
 async function askComponentsFlags() {
   // Explicação sobre Edge Functions
   console.log(chalk.cyan('\n⚡ Edge Functions:'));
-  console.log(chalk.gray('   Vamos apagar as funções existentes na pasta supabase/functions, fazer um reset no link'));
-  console.log(chalk.gray('   entre a ferramenta e o projeto, e baixar novamente as funções do servidor.'));
-  console.log(chalk.gray('   Você terá a opção de manter ou apagar as funções na pasta após o backup.\n'));
+  console.log(chalk.white('   Vamos apagar as funções existentes na pasta supabase/functions, fazer um reset no link'));
+  console.log(chalk.white('   entre a ferramenta e o projeto, e baixar novamente as funções do servidor.'));
+  console.log(chalk.white('   Você terá a opção de manter ou apagar as funções na pasta após o backup.\n'));
 
   const includeFunctions = await confirm('Deseja incluir Edge Functions', true);
+  
+  // Pergunta de limpeza de functions imediatamente após
+  let cleanFunctions = false;
+  if (includeFunctions) {
+    cleanFunctions = await confirm('Deseja limpar supabase/functions após o backup', false);
+  }
 
   // Explicação sobre .temp
   console.log(chalk.cyan('\n📁 Supabase .temp:'));
-  console.log(chalk.gray('   Vamos copiar os arquivos existentes (se existirem) na pasta supabase/.temp.'));
-  console.log(chalk.gray('   Você terá a opção de manter ou apagar os arquivos nesta pasta após o backup.\n'));
+  console.log(chalk.white('   Vamos copiar os arquivos existentes (se existirem) na pasta supabase/.temp.'));
+  console.log(chalk.white('   Você terá a opção de manter ou apagar os arquivos nesta pasta após o backup.\n'));
+
+  const includeTemp = await confirm('Deseja incluir Supabase .temp', true);
+  
+  // Pergunta de limpeza de .temp imediatamente após
+  let cleanTemp = false;
+  if (includeTemp) {
+    cleanTemp = await confirm('Deseja apagar supabase/.temp após o backup', false);
+  }
 
   // Explicação sobre Migrations
   console.log(chalk.cyan('\n📋 Migrations:'));
-  console.log(chalk.gray('   Vamos apagar as migrations existentes (se existirem) na pasta supabase/migrations,'));
-  console.log(chalk.gray('   fazer um reset no link entre a ferramenta e o projeto, e baixar novamente as migrations'));
-  console.log(chalk.gray('   do servidor. Você terá a opção de manter ou apagar as migrations na pasta após o backup.\n'));
+  console.log(chalk.white('   Vamos apagar as migrations existentes (se existirem) na pasta supabase/migrations,'));
+  console.log(chalk.white('   fazer um reset no link entre a ferramenta e o projeto, e baixar novamente as migrations'));
+  console.log(chalk.white('   do servidor. Você terá a opção de manter ou apagar as migrations na pasta após o backup.\n'));
+
+  const includeMigrations = await confirm('Deseja incluir Migrations', true);
+  
+  // Pergunta de limpeza de migrations imediatamente após
+  let cleanMigrations = false;
+  if (includeMigrations) {
+    cleanMigrations = await confirm('Deseja apagar supabase/migrations após o backup', false);
+  }
 
   // Continuar com outras perguntas
   const includeStorage = await confirm('Deseja incluir Storage', true);
   const includeAuth = await confirm('Deseja incluir Auth', true);
   const includeRealtime = await confirm('Deseja incluir Realtime', true);
-  const cleanFunctions = await confirm('Deseja limpar supabase/functions após o backup', false);
-  const cleanTemp = await confirm('Deseja apagar supabase/.temp após o backup', false);
-  const cleanMigrations = await confirm('Deseja apagar supabase/migrations após o backup', false);
 
   return {
     includeFunctions,
     includeStorage,
     includeAuth,
     includeRealtime,
+    includeTemp,
+    includeMigrations,
     cleanFunctions,
     cleanTemp,
     cleanMigrations
