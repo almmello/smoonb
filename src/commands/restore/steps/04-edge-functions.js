@@ -40,8 +40,8 @@ module.exports = async ({ backupPath, targetProject }) => {
     // Criar diretório supabase/functions se não existir
     await fs.mkdir(supabaseFunctionsDir, { recursive: true });
     
-    // Limpar supabase/functions antes de copiar
-    console.log(chalk.gray('   - Limpando supabase/functions...'));
+    // Limpar supabase/functions antes de copiar (necessário para garantir ambiente limpo)
+    console.log(chalk.cyan('   - Limpando supabase/functions antes de copiar...'));
     try {
       await fs.rm(supabaseFunctionsDir, { recursive: true, force: true });
       await fs.mkdir(supabaseFunctionsDir, { recursive: true });
@@ -95,8 +95,8 @@ module.exports = async ({ backupPath, targetProject }) => {
       }
     }
     
-    // Limpar supabase/functions após deploy
-    console.log(chalk.gray('   - Limpando supabase/functions após deploy...'));
+    // Limpar supabase/functions após deploy (arquivos temporários não são mais necessários)
+    console.log(chalk.cyan('   - Limpando supabase/functions após deploy...'));
     try {
       await fs.rm(supabaseFunctionsDir, { recursive: true, force: true });
     } catch {

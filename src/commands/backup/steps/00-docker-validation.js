@@ -8,7 +8,7 @@ const { showDockerMessagesAndExit } = require('../utils');
  */
 module.exports = async () => {
   console.log(chalk.blue('\n🐳 Validação Docker...'));
-  console.log(chalk.gray('🔍 Verificando dependências Docker...'));
+  console.log(chalk.cyan('🔍 Verificando dependências Docker...'));
   
   const backupCapability = await canPerformCompleteBackup();
 

@@ -49,8 +49,8 @@ module.exports = async ({ backupFilePath, targetDatabaseUrl }) => {
       `-f /host/${uncompressedFile}`
     ].join(' ');
     
-    console.log(chalk.gray('   - Executando psql via Docker...'));
-    console.log(chalk.gray('   ℹ️ Seguindo documentação oficial Supabase'));
+    console.log(chalk.cyan('   - Executando psql via Docker...'));
+    console.log(chalk.cyan('   ℹ️ Seguindo documentação oficial Supabase'));
     console.log(chalk.yellow('   ⚠️ AVISO: Erros como "object already exists" são ESPERADOS'));
     console.log(chalk.yellow('   ⚠️ Isto acontece porque o backup contém CREATE para todos os schemas'));
     console.log(chalk.yellow('   ⚠️ Supabase já tem auth e storage criados, então esses erros são normais'));

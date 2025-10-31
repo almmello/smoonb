@@ -196,8 +196,10 @@ module.exports = async (options) => {
     console.log(chalk.gray(`🐳 Backup via Docker Desktop`));
 
     // Contar etapas totais para numeração
+    // Etapas fixas: Database, Database Separado, Database Settings, Custom Roles (4)
+    // Etapas condicionais: Auth, Realtime, Storage, Functions, Temp, Migrations
     let stepNumber = 0;
-    const totalSteps = 7 + (flags?.includeAuth ? 1 : 0) + (flags?.includeRealtime ? 1 : 0) + (flags?.includeStorage ? 1 : 0) + (flags?.includeFunctions ? 1 : 0) + (flags?.includeTemp ? 1 : 0) + (flags?.includeMigrations ? 1 : 0);
+    const totalSteps = 4 + (flags?.includeAuth ? 1 : 0) + (flags?.includeRealtime ? 1 : 0) + (flags?.includeStorage ? 1 : 0) + (flags?.includeFunctions ? 1 : 0) + (flags?.includeTemp ? 1 : 0) + (flags?.includeMigrations ? 1 : 0);
 
     // 1. Backup Database via pg_dumpall Docker
     stepNumber++;

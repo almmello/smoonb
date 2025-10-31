@@ -18,10 +18,43 @@ module.exports = async (context) => {
     const dbPassword = extractPasswordFromDbUrl(databaseUrl);
     await ensureCleanLink(projectId, accessToken, dbPassword);
 
-    // Limpar pasta supabase/functions antes do backup
+    // Preparar diretório supabase/functions (criar se não existir, mas não limpar ainda)
     const supabaseFunctionsDir = path.join(process.cwd(), 'supabase', 'functions');
-    await cleanDir(supabaseFunctionsDir);
-    console.log(chalk.gray('   - Pasta supabase/functions limpa.'));
+    
+    // Verificar flag de limpeza antes do backup
+    const shouldCleanAfter = context?.cleanupFlags?.cleanFunctions || false;
+    
+    // Registrar funções que já existiam ANTES do processo (para preservar se necessário)
+    let existingFunctionsBefore = [];
+    try {
+      const existingItems = await fs.readdir(supabaseFunctionsDir);
+      for (const item of existingItems) {
+        const itemPath = path.join(supabaseFunctionsDir, item);
+        const stats = await fs.stat(itemPath);
+        if (stats.isDirectory()) {
+          existingFunctionsBefore.push(item);
+        }
+      }
+    } catch {
+      // Diretório não existe, tudo bem
+      existingFunctionsBefore = [];
+    }
+    
+    // Se o usuário escolheu limpar APÓS, podemos limpar ANTES também para garantir ambiente limpo
+    // Mas se escolheu NÃO limpar, preservamos o que já existe
+    if (shouldCleanAfter) {
+      // Limpar antes se o usuário escolheu limpar após (garante ambiente limpo)
+      await cleanDir(supabaseFunctionsDir);
+      console.log(chalk.gray('   - Pasta supabase/functions limpa antes do backup.'));
+    } else {
+      // Apenas garantir que o diretório existe
+      await fs.mkdir(supabaseFunctionsDir, { recursive: true });
+      if (existingFunctionsBefore.length > 0) {
+        console.log(chalk.gray(`   - Preservando ${existingFunctionsBefore.length} função(ões) existente(s) na pasta supabase/functions.`));
+      } else {
+        console.log(chalk.gray('   - Pasta supabase/functions preparada (será preservada após backup).'));
+      }
+    }
 
     console.log(chalk.gray('   - Listando Edge Functions via Management API...'));
     
@@ -99,12 +132,16 @@ module.exports = async (context) => {
           console.log(chalk.yellow(`     ⚠️ Nenhum arquivo encontrado em ${tempDownloadDir}`));
         }
         
-        // LIMPAR supabase/functions após copiar
-        try {
-          await fs.rm(tempDownloadDir, { recursive: true, force: true });
-        } catch {
-          // Ignorar erro de limpeza
+        // Limpar função baixada temporariamente APENAS se o usuário escolheu limpar após
+        // Se não escolheu, preservar (pode ser que já existisse antes)
+        if (shouldCleanAfter) {
+          try {
+            await fs.rm(tempDownloadDir, { recursive: true, force: true });
+          } catch {
+            // Ignorar erro de limpeza
+          }
         }
+        // Se shouldCleanAfter = false, manter a função baixada (e qualquer função que já existia)
         
         console.log(chalk.green(`     ✅ ${func.name} baixada com sucesso`));
         successCount++;
@@ -126,12 +163,15 @@ module.exports = async (context) => {
     console.log(chalk.green(`   ✅ Sucessos: ${successCount}`));
     console.log(chalk.green(`   ❌ Erros: ${errorCount}`));
     
-    // Usar flag de limpeza do contexto (já foi perguntado no início)
-    const shouldClean = context?.cleanupFlags?.cleanFunctions || false;
-    
-    if (shouldClean) {
+    // Limpar pasta supabase/functions APÓS o backup apenas se o usuário escolheu
+    // Nota: shouldCleanAfter já foi definido acima
+    if (shouldCleanAfter) {
       await cleanDir(supabaseFunctionsDir);
-      console.log(chalk.gray('   - supabase/functions limpo.'));
+      console.log(chalk.gray('   - supabase/functions limpo após o backup.'));
+    } else {
+      // Preservar tudo: tanto as funções que já existiam quanto as que foram baixadas
+      // As funções baixadas não foram removidas individualmente (linha acima foi ajustada)
+      console.log(chalk.gray('   - supabase/functions preservada conforme solicitado.'));
     }
     
     return { 
