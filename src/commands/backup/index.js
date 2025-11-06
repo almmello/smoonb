@@ -2,7 +2,6 @@ const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs').promises;
 const { ensureDir, writeJson } = require('../../utils/fsx');
-const { readConfig, validateFor } = require('../../utils/config');
 const { showBetaBanner } = require('../../utils/banner');
 const { getDockerVersion } = require('../../utils/docker');
 const { readEnvFile, writeEnvFile, backupEnvFile } = require('../../utils/env');
@@ -28,6 +27,18 @@ module.exports = async (options) => {
   showBetaBanner();
   
   try {
+    // Termo de uso e aviso de risco
+    console.log(chalk.yellow.bold('\n⚠️  TERMO DE USO E AVISO DE RISCO\n'));
+    console.log(chalk.white('Ao prosseguir, você reconhece e concorda que o smoonb é fornecido "NO ESTADO EM QUE SE ENCONTRA" ("AS IS") e "CONFORME DISPONIBILIDADE", sem garantias de qualquer natureza—expressas, implícitas ou legais—incluindo, sem limitação, garantias de comercialização, adequação a um fim específico e não violação, na máxima extensão permitida pela lei aplicável. Operações de backup e restauração envolvem riscos, os ambientes variam amplamente e não é possível prever ou validar todas as configurações dos usuários. Você é o único responsável por validar seu ambiente, manter cópias independentes e verificar os resultados antes de utilizá-los em produção. O smoonb é construído com repositórios públicos, auditáveis e software livre, para auxiliar pessoas a simplificar seus fluxos, sem com isso criar qualquer garantia, promessa de suporte ou compromisso de nível de serviço.\n'));
+    console.log(chalk.white('Limitação de responsabilidade (PT-BR) — Na máxima extensão permitida por lei, a Goalmoon, seus contribuidores e licenciadores não serão responsáveis por danos indiretos, incidentais, especiais, consequentes, exemplares ou punitivos (incluindo perda de dados, interrupção de negócios ou lucros cessantes) decorrentes do uso, incapacidade de uso, das operações de backup/restauração realizadas com, ou dos resultados gerados pelo smoonb. Em qualquer hipótese, a responsabilidade total por todas as reivindicações relacionadas ao smoonb não excederá o valor pago por você pelo smoonb nos 12 meses anteriores ao evento. Nada neste aviso exclui ou limita responsabilidades onde tais limites sejam proibidos por lei, incluindo (conforme aplicável) dolo ou culpa grave.\n'));
+    console.log(chalk.white('Observação para consumidores no Brasil (PT-BR) — Para consumidores brasileiros, este aviso não afasta direitos irrenunciáveis previstos no Código de Defesa do Consumidor (CDC); qualquer limitação aqui prevista só se aplica nos limites da lei e não impede a indenização obrigatória quando cabível.\n'));
+    
+    const termsAccepted = await confirm('Você aceita os Termos de Uso e o Aviso de Risco de Backup?', true);
+    if (!termsAccepted) {
+      console.log(chalk.red('🚫 Operação cancelada pelo usuário.'));
+      process.exit(1);
+    }
+
     // Executar validação Docker ANTES de tudo
     await step00DockerValidation();
 
@@ -42,9 +53,8 @@ module.exports = async (options) => {
       process.exit(1);
     }
 
-    // Carregar configuração existente apenas para defaults de diretório
-    const config = await readConfig().catch(() => ({ backup: { outputDir: './backups' }, supabase: {} }));
-    validateFor(config, 'backup');
+    // Diretório de backup padrão
+    const defaultOutputDir = './backups';
 
     // Pré-passo de ENV: criar diretório de backup com timestamp já no início
     const now = new Date();
@@ -56,7 +66,7 @@ module.exports = async (options) => {
     const second = String(now.getSeconds()).padStart(2, '0');
 
     // Resolver diretório de saída
-    const defaultOutput = options.output || config.backup?.outputDir || './backups';
+    const defaultOutput = options.output || defaultOutputDir;
     const backupDir = path.join(defaultOutput, `backup-${year}-${month}-${day}-${hour}-${minute}-${second}`);
     await ensureDir(backupDir);
 
@@ -88,7 +98,7 @@ module.exports = async (options) => {
     }
 
     // Recalcular outputDir a partir do ENV mapeado
-    const resolvedOutputDir = options.output || getValue('SMOONB_OUTPUT_DIR') || config.backup?.outputDir || './backups';
+    const resolvedOutputDir = options.output || getValue('SMOONB_OUTPUT_DIR') || defaultOutputDir;
 
     // Se mudou o outputDir, movemos o backupDir inicial para o novo local mantendo timestamp
     const finalBackupDir = backupDir.startsWith(path.resolve(resolvedOutputDir))

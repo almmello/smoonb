@@ -6,6 +6,7 @@
  */
 
 const chalk = require('chalk');
+const path = require('path');
 const { showBetaBanner } = require('./utils/banner');
 
 // Exportar comandos
@@ -62,50 +63,24 @@ function showQuickHelp() {
 🚀 COMANDOS PRINCIPAIS:
 
 📊 Backup completo:
-   npx smoonb backup                    # Usa configuração do .smoonbrc
+   npx smoonb backup                    # Backup completo interativo usando Docker
 
 🔄 Restauração completa:
-   npx smoonb restore --backup-dir <dir>  # Restaura backup usando psql
-
-⚡ Edge Functions:
-   npx smoonb functions list
-   npx smoonb functions push
+   npx smoonb restore                    # Restauração interativa usando psql (Docker)
 
 🔍 Verificação pós-restore:
    npx smoonb check                     # Verifica integridade do projeto
 
-⚙️  Configuração:
-   npx smoonb config --init             # Criar arquivo de configuração
-   npx smoonb config --show             # Mostrar configuração atual
-
-📋 CONFIGURAÇÃO AUTOMÁTICA:
-   npx smoonb config --init       # Cria .smoonbrc com projectId, URLs, etc.
-   # Edite o arquivo com suas credenciais Supabase
-   npx smoonb backup              # Funciona automaticamente!
-
-📝 EXEMPLO DE CONFIGURAÇÃO (.smoonbrc):
-   {
-     "supabase": {
-       "projectId": "abc123def456",
-       "url": "https://abc123def456.supabase.co",
-       "serviceKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkXVCJ9...",
-       "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkXVCJ9...",
-       "databaseUrl": "postgresql://postgres:[senha]@db.abc123def456.supabase.co:5432/postgres",
-       "accessToken": "sbp_1234567890abcdef1234567890abcdef"
-     }
-   }
+📋 CONFIGURAÇÃO:
+   Configure o arquivo .env.local na raiz do projeto com suas credenciais Supabase.
+   O smoonb irá mapear as variáveis interativamente na primeira execução.
 
 🔑 PERSONAL ACCESS TOKEN (OBRIGATÓRIO):
    Para Management API (Edge Functions, Auth Settings, Storage):
    1. Acesse: https://supabase.com/dashboard/account/tokens
    2. Clique em "Generate new token"
    3. Copie o token (formato: sbp_...)
-   4. Adicione ao .smoonbrc como "accessToken"
-
-🔧 COMO CONFIGURAR:
-   1. npx smoonb config --init
-   2. Edite .smoonbrc com suas credenciais
-   3. npx smoonb backup (funciona automaticamente!)
+   4. Adicione ao .env.local como SUPABASE_ACCESS_TOKEN
 `));
 }
 
@@ -195,7 +170,7 @@ function checkCurrentConfig() {
   
   if (config) {
     console.log(chalk.green('✅ Arquivo de configuração encontrado'));
-    console.log(chalk.gray(`   - Localização: ${require('os').homedir()}/.smoonbrc`));
+    console.log(chalk.gray(`   - Localização: ${path.join(process.cwd(), '.env.local')}`));
     
     if (config.supabase?.url) {
       console.log(chalk.gray(`   - Supabase URL: ${config.supabase.url}`));
@@ -210,7 +185,7 @@ function checkCurrentConfig() {
     }
   } else {
     console.log(chalk.yellow('⚠️  Arquivo de configuração não encontrado'));
-    console.log(chalk.gray('   - Use: smoonb config --init'));
+    console.log(chalk.gray('   - Configure o arquivo .env.local na raiz do projeto'));
   }
   
   if (hasCredentials) {

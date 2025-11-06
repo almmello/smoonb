@@ -35,7 +35,7 @@ async function captureRealtimeSettings(projectId, backupDir, skipInteractive = f
   console.log('\n🔧 Configurações de Realtime Settings');
   console.log('═'.repeat(50));
   console.log(`📱 Acesse: ${dashboardUrl}`);
-  console.log('📝 Anote os valores dos 4 parâmetros abaixo:\n');
+  console.log('📝 Anote os valores dos 7 parâmetros abaixo:\n');
   
   const settings = await captureSettingsInteractively(projectId, previousSettings);
   
@@ -126,30 +126,48 @@ async function captureSettingsInteractively(projectId, previousSettings) {
     
     // Valores padrão baseados na imagem ou configurações anteriores
     const defaults = previousSettings?.realtime_settings?.settings || {
+      enable_realtime_service: { value: true },
       allow_public_access: { value: true },
       database_connection_pool_size: { value: 2 },
       max_concurrent_clients: { value: 200 },
-      max_events_per_second: { value: 100 }
+      max_events_per_second: { value: 100 },
+      max_presence_events_per_second: { value: 100 },
+      max_payload_size_kb: { value: 100 }
     };
     
+    const enableRealtime = await askQuestion(
+      '1. Enable Realtime service (true/false):',
+      defaults.enable_realtime_service?.value ?? true
+    );
+    
     const allowPublicAccess = await askQuestion(
-      '1. Allow public access (true/false):',
+      '2. Allow public access (true/false):',
       defaults.allow_public_access.value
     );
     
     const poolSize = await askQuestion(
-      '2. Database connection pool size:',
+      '3. Database connection pool size:',
       defaults.database_connection_pool_size.value
     );
     
     const maxClients = await askQuestion(
-      '3. Max concurrent clients:',
+      '4. Max concurrent clients:',
       defaults.max_concurrent_clients.value
     );
     
     const maxEvents = await askQuestion(
-      '4. Max events per second:',
+      '5. Max events per second:',
       defaults.max_events_per_second.value
+    );
+    
+    const maxPresenceEvents = await askQuestion(
+      '6. Max presence events per second:',
+      defaults.max_presence_events_per_second?.value ?? 100
+    );
+    
+    const maxPayloadSize = await askQuestion(
+      '7. Max payload size in KB:',
+      defaults.max_payload_size_kb?.value ?? 100
     );
     
     const settings = {
@@ -158,6 +176,11 @@ async function captureSettingsInteractively(projectId, previousSettings) {
         dashboard_url: `https://supabase.com/dashboard/project/${projectId}/realtime/settings`,
         captured_at: new Date().toISOString(),
         settings: {
+          enable_realtime_service: {
+            label: "Enable Realtime service",
+            description: "If disabled, no clients will be able to connect and new connections will be rejected",
+            value: enableRealtime === 'true' || enableRealtime === true
+          },
           allow_public_access: {
             label: "Allow public access",
             description: "If disabled, only private channels will be allowed",
@@ -177,17 +200,30 @@ async function captureSettingsInteractively(projectId, previousSettings) {
             label: "Max events per second",
             description: "Sets maximum number of events per second that can be sent to your Realtime service",
             value: parseInt(maxEvents)
+          },
+          max_presence_events_per_second: {
+            label: "Max presence events per second",
+            description: "Sets maximum number of presence events per second",
+            value: parseInt(maxPresenceEvents)
+          },
+          max_payload_size_kb: {
+            label: "Max payload size in KB",
+            description: "Sets maximum payload size in KB",
+            value: parseInt(maxPayloadSize)
           }
         },
         restore_instructions: {
           url: `https://supabase.com/dashboard/project/${projectId}/realtime/settings`,
           steps: [
             "1. Acesse a URL acima",
-            "2. Configure 'Allow public access' conforme o valor em settings.allow_public_access.value",
-            "3. Configure 'Database connection pool size' conforme o valor em settings.database_connection_pool_size.value",
-            "4. Configure 'Max concurrent clients' conforme o valor em settings.max_concurrent_clients.value", 
-            "5. Configure 'Max events per second' conforme o valor em settings.max_events_per_second.value",
-            "6. Clique em 'Save changes'"
+            "2. Configure 'Enable Realtime service' conforme o valor em settings.enable_realtime_service.value",
+            "3. Configure 'Allow public access' conforme o valor em settings.allow_public_access.value",
+            "4. Configure 'Database connection pool size' conforme o valor em settings.database_connection_pool_size.value",
+            "5. Configure 'Max concurrent clients' conforme o valor em settings.max_concurrent_clients.value", 
+            "6. Configure 'Max events per second' conforme o valor em settings.max_events_per_second.value",
+            "7. Configure 'Max presence events per second' conforme o valor em settings.max_presence_events_per_second.value",
+            "8. Configure 'Max payload size in KB' conforme o valor em settings.max_payload_size_kb.value",
+            "9. Clique em 'Save changes'"
           ]
         }
       }

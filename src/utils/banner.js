@@ -1,32 +1,28 @@
 const chalk = require('chalk');
 
 /**
- * Banner da versão experimental
+ * Banner principal do smoonb
  */
 function showBetaBanner() {
-  console.log(chalk.red.bold(`
-╔══════════════════════════════════════════════════════════════╗
-║                    🚀 smoonb                                ║
-║                                                              ║
-║              ⚠️  EXPERIMENTAL VERSION - NÃO TESTADA!        ║
-║                                                              ║
-║  🚨 AVISO: Este software NUNCA foi testado em produção!     ║
-║  ⚠️  USE POR SUA CONTA E RISCO - Pode causar perda de dados ║
-║  ❌ NÃO NOS RESPONSABILIZAMOS por qualquer perda de dados   ║
-║                                                              ║
-║  A primeira ferramenta CLI completa para backup e migração  ║
-║  de projetos Supabase. Resolve o problema de backup        ║
-║  incompleto das ferramentas existentes.                     ║
-║                                                              ║
-║  ✅ Database PostgreSQL + Edge Functions + Auth Settings     ║
-║  ✅ Storage Objects + Realtime Settings + Metadados          ║
-║                                                              ║
-║  🏢 Desenvolvido por: Goalmoon Tecnologia LTDA              ║
-║  🌐 Website: https://goalmoon.com                           ║
-║  📖 Documentação: https://github.com/almmello/smoonb       ║
-║  🐛 Issues: https://github.com/almmello/smoonb/issues      ║
-╚══════════════════════════════════════════════════════════════╝
-`));
+  console.log(chalk.cyan.bold('\n🚀 Supa Moonbase (smoonb)\n'));
+  console.log(chalk.white('A primeira ferramenta CLI completa para backup e migração de projetos Supabase.'));
+  console.log(chalk.white('Resolve o problema de backup incompleto das ferramentas existentes.\n'));
+  
+  console.log(chalk.cyan.bold('📦 Componentes de Backup:\n'));
+  console.log(chalk.white('  ✅ Database PostgreSQL (pg_dumpall + SQL separados)'));
+  console.log(chalk.white('  ✅ Database Extensions and Settings'));
+  console.log(chalk.white('  ✅ Custom Roles'));
+  console.log(chalk.white('  ✅ Edge Functions'));
+  console.log(chalk.white('  ✅ Auth Settings'));
+  console.log(chalk.white('  ✅ Storage Buckets'));
+  console.log(chalk.white('  ✅ Realtime Settings'));
+  console.log(chalk.white('  ✅ Supabase .temp'));
+  console.log(chalk.white('  ✅ Migrations\n'));
+  
+  console.log(chalk.white('🏢 Desenvolvido por: Goalmoon Tecnologia LTDA'));
+  console.log(chalk.cyan('🌐 Website: https://smoonb.com'));
+  console.log(chalk.gray('📖 Documentação: https://github.com/almmello/smoonb'));
+  console.log(chalk.gray('🐛 Issues: https://github.com/almmello/smoonb/issues\n'));
 }
 
 module.exports = { showBetaBanner };

@@ -1,31 +1,42 @@
-# smoonb
+# Supa Moonbase (smoonb)
 
 **Complete Supabase backup and migration tool**
 
-## ⚠️ EXPERIMENTAL VERSION - NÃO TESTADA - USE POR SUA CONTA E RISCO
+A primeira ferramenta CLI completa para backup e migração de projetos Supabase. Resolve o problema de backup incompleto das ferramentas existentes.
 
-**🚨 AVISO IMPORTANTE:**
-- Este software **NUNCA** foi testado em produção
-- **USE POR SUA CONTA E RISCO** - Pode causar perda irreparável de dados
-- **NÃO NOS RESPONSABILIZAMOS** por qualquer perda de dados
-- **NENHUM SUPORTE** é oferecido nesta fase - apenas aceitamos contribuições
+> **Nota sobre acesso comercial:** o Supa Moonbase passará a exigir validação de conta antes de executar operações (login + verificação de assinatura) em fase futura. Nesta versão, não há autenticação implementada — este README apenas apresenta a base legal/comercial. O uso operacional será regido pelos [Termos de Serviço](https://smoonb.com/terms) e pela [Política de Privacidade](https://smoonb.com/privacy).
 
-**Desenvolvido por:** Goalmoon Tecnologia LTDA (https://goalmoon.com)
+**Desenvolvido por:** Goalmoon Tecnologia LTDA  
+**Website:** https://smoonb.com  
+**GitHub:** https://github.com/almmello/smoonb
 
 ## 🎯 Objetivo
 
-O **smoonb** resolve o problema das ferramentas existentes que fazem backup apenas da database PostgreSQL, ignorando componentes críticos do Supabase:
+O **smoonb** resolve o problema das ferramentas existentes que fazem backup apenas da database PostgreSQL, ignorando componentes críticos do Supabase.
 
-- ✅ **Database PostgreSQL** (backup completo via `pg_dumpall`, idêntico ao Dashboard)
-- ✅ **Database SQL Separado** (schema, data, roles em arquivos separados para troubleshooting)
+## 📦 Componentes de Backup
+
+O smoonb faz backup completo de todos os componentes do seu projeto Supabase:
+
+- ✅ **Database PostgreSQL** (backup completo via `pg_dumpall` + SQL separados, idêntico ao Dashboard)
 - ✅ **Database Extensions and Settings** (extensões PostgreSQL e configurações)
+- ✅ **Custom Roles** (roles personalizados do PostgreSQL)
 - ✅ **Edge Functions** (download automático do servidor)
 - ✅ **Auth Settings** (configurações de autenticação via Management API)
 - ✅ **Storage Buckets** (metadados e configurações via Management API)
-- ✅ **Realtime Settings** (publicações e configurações capturadas interativamente)
-- ✅ **Custom Roles** (roles personalizados do PostgreSQL)
+- ✅ **Realtime Settings** (7 parâmetros capturados interativamente)
 - ✅ **Supabase .temp** (arquivos temporários do Supabase CLI)
 - ✅ **Migrations** (todas as migrations do projeto via `supabase migration fetch`)
+
+## ⚠️ Termo de Uso e Aviso de Risco
+
+Ao usar o smoonb, você reconhece e concorda que o smoonb é fornecido "NO ESTADO EM QUE SE ENCONTRA" ("AS IS") e "CONFORME DISPONIBILIDADE", sem garantias de qualquer natureza—expressas, implícitas ou legais—incluindo, sem limitação, garantias de comercialização, adequação a um fim específico e não violação, na máxima extensão permitida pela lei aplicável.
+
+Operações de backup e restauração envolvem riscos, os ambientes variam amplamente e não é possível prever ou validar todas as configurações dos usuários. Você é o único responsável por validar seu ambiente, manter cópias independentes e verificar os resultados antes de utilizá-los em produção.
+
+**Limitação de responsabilidade (PT-BR)** — Na máxima extensão permitida por lei, a Goalmoon, seus contribuidores e licenciadores não serão responsáveis por danos indiretos, incidentais, especiais, consequentes, exemplares ou punitivos (incluindo perda de dados, interrupção de negócios ou lucros cessantes) decorrentes do uso, incapacidade de uso, das operações de backup/restauração realizadas com, ou dos resultados gerados pelo smoonb.
+
+**Observação para consumidores no Brasil (PT-BR)** — Para consumidores brasileiros, este aviso não afasta direitos irrenunciáveis previstos no Código de Defesa do Consumidor (CDC); qualquer limitação aqui prevista só se aplica nos limites da lei e não impede a indenização obrigatória quando cabível.
 
 ## 🚀 Instalação
 
@@ -96,18 +107,18 @@ touch .env.local
 
 ```env
 # URLs e Chaves do Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://seu-project-id.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_SUPABASE_URL=[sua-supabase-url]
+NEXT_PUBLIC_SUPABASE_ANON_KEY=[sua-anon-key]
+SUPABASE_SERVICE_ROLE_KEY=e[sua-service-role]
 
 # Database Connection
-SUPABASE_DB_URL=postgresql://postgres:[senha]@db.seu-project-id.supabase.co:5432/postgres
+SUPABASE_DB_URL=postgresql://postgres:[sua-database-password]@db.[seu-project-id].supabase.co:5432/postgres
 
 # Identificação do Projeto
-SUPABASE_PROJECT_ID=seu-project-id
+SUPABASE_PROJECT_ID=[seu-project-id]
 
 # Personal Access Token (OBRIGATÓRIO para Management API)
-SUPABASE_ACCESS_TOKEN=sbp_1234567890abcdef1234567890abcdef
+SUPABASE_ACCESS_TOKEN=[seu-access-token]]
 
 # Diretório de Backups (opcional, padrão: ./backups)
 SMOONB_OUTPUT_DIR=./backups
@@ -131,10 +142,6 @@ Valor atual: https://abc123.supabase.co
 Este é o valor correto do projeto alvo? (S/n): S
 ```
 
-### Método Legado: `.smoonbrc` (DEPRECADO)
-
-⚠️ **Nota:** O arquivo `.smoonbrc` ainda é suportado para compatibilidade, mas é **recomendado migrar para `.env.local`**.
-
 ```bash
 npx smoonb config --init
 ```
@@ -157,21 +164,21 @@ npx smoonb backup
    - ⚡ Edge Functions (explicação sobre reset de link e download)
    - 📦 Storage (explicação sobre metadados)
    - 🔐 Auth Settings (explicação sobre configurações)
-   - 🔄 Realtime Settings (explicação sobre captura interativa)
+   - 🔄 Realtime Settings (explicação sobre captura interativa de 7 parâmetros)
    - 🗑️ Opções de limpeza (functions, .temp, migrations após backup)
 6. **Resumo de Configurações** - Mostra tudo que será feito
 7. **Confirmação Final** - Confirma antes de iniciar
 8. **Execução das Etapas:**
-   - 📊 1/11 - Backup Database via `pg_dumpall` (Docker)
-   - 📊 2/11 - Backup Database SQL separado (schema, data, roles)
-   - 🔧 3/11 - Backup Database Extensions and Settings
-   - 🔐 4/11 - Backup Auth Settings (se selecionado)
-   - 🔄 5/11 - Backup Realtime Settings (se selecionado)
-   - 📦 6/11 - Backup Storage (se selecionado)
-   - 👥 7/11 - Backup Custom Roles
-   - ⚡ 8/11 - Backup Edge Functions (se selecionado)
-   - 📁 9/11 - Backup Supabase .temp
-   - 📋 10/11 - Backup Migrations
+   - 📊 1/10 - Backup Database via `pg_dumpall` (Docker)
+   - 📊 2/10 - Backup Database SQL separado (schema, data, roles)
+   - 🔧 3/10 - Backup Database Extensions and Settings
+   - 🔐 4/10 - Backup Auth Settings (se selecionado)
+   - 🔄 5/10 - Backup Realtime Settings (se selecionado) - 7 parâmetros capturados interativamente
+   - 📦 6/10 - Backup Storage (se selecionado)
+   - 👥 7/10 - Backup Custom Roles
+   - ⚡ 8/10 - Backup Edge Functions (se selecionado)
+   - 📁 9/10 - Backup Supabase .temp (se selecionado)
+   - 📋 10/10 - Backup Migrations (se selecionado)
 
 **Resultado:**
 ```
@@ -259,8 +266,6 @@ npx smoonb functions push
 | `npx smoonb backup` | Backup completo interativo usando Docker |
 | `npx smoonb restore` | Restauração interativa usando psql (Docker) |
 | `npx smoonb check` | Verificação de integridade pós-restore |
-| `npx smoonb functions` | Gerenciar Edge Functions |
-| `npx smoonb config` | Configurar credenciais (legado) |
 
 ## 🏗️ Arquitetura Técnica
 
@@ -328,6 +333,14 @@ restore/
 #### Auth, Storage, Realtime
 - **Management API**: Usa Personal Access Token
 - **JSON Export**: Configurações exportadas como JSON
+- **Realtime Settings**: Captura interativa de 7 parâmetros:
+  1. Enable Realtime service
+  2. Allow public access
+  3. Database connection pool size
+  4. Max concurrent clients
+  5. Max events per second
+  6. Max presence events per second
+  7. Max payload size in KB
 - **Manual para alguns**: Alguns settings precisam ser aplicados manualmente por segurança
 
 ### Restore Strategy
@@ -471,28 +484,51 @@ Se houver problemas:
 - **Sem Dados Sensíveis**: Nenhum dado sensível é enviado para fora do seu ambiente
 - **Docker Isolado**: Operações de database via Docker (isolamento)
 
+## 💼 Modelo de Acesso e Assinatura
+
+O código do Supa Moonbase é disponibilizado sob licença MIT (ver `LICENSE`). Em fase futura, a execução do CLI será vinculada a uma assinatura por conta, permitindo uso associado a uma conta válida. A validação de conta ocorrerá antes de qualquer operação sensível (ex.: backup e restore).
+
+Até que a validação esteja ativa, a ferramenta pode ser utilizada sem login.
+
+Saiba mais em [Pricing](https://smoonb.com/pricing) e [FAQ Comercial](https://smoonb.com/faq).
+
+## 🎁 Grandfathering (conceito)
+
+Contas criadas durante o período inicial de disponibilização comercial poderão manter condições de acesso diferenciadas enquanto permanecerem ativas. O objetivo é reconhecer os primeiros usuários. Detalhes específicos constarão nos [Termos de Serviço](https://smoonb.com/terms) e no [Pricing](https://smoonb.com/pricing).
+
+## 🔒 Privacidade e LGPD (resumo)
+
+O Supa Moonbase adota o princípio de minimização de dados. Quando a validação de conta estiver ativa, trataremos apenas informações estritamente necessárias para controle de acesso e faturamento (por exemplo, identificador de conta e contato). Os propósitos, bases legais e direitos do titular serão descritos na [Política de Privacidade](https://smoonb.com/privacy).
+
+## 📋 Termos de Serviço e Uso de Marca
+
+A licença de código (MIT) não substitui os Termos de Serviço que regerão o acesso operacional por conta e a validação de assinatura.
+
+"Supa Moonbase" e elementos de identidade visual são marcas da Goalmoon Tecnologia Ltda.; o uso de marca e assets de branding é restrito, conforme os [Termos de Serviço](https://smoonb.com/terms).
+
+## ❓ FAQ Comercial
+
+**Por que assinatura se o código é MIT?**
+
+> O código permanece aberto para auditoria e contribuições. O acesso operacional será condicionado à validação de conta, conforme Termos de Serviço.
+
+**O que significa grandfathering?**
+
+> Contas do período inicial poderão manter condições diferenciadas enquanto ativas; detalhes estarão nos Termos.
+
+
+
 ## 📝 Licença
 
-**Versões 0.x.x**: Uso gratuito (experimental)  
-**Versões 1.0.0+**: Licença comercial (anúncio com 90 dias de antecedência)
-
-Veja [LICENSE.md](LICENSE.md) para mais detalhes.
+O código do Supa Moonbase é disponibilizado sob licença MIT. Veja [LICENSE](LICENSE) para o texto completo da licença.
 
 ## 🤝 Contribuição
 
 Contribuições são bem-vindas! Este é um projeto experimental e precisamos de feedback da comunidade.
 
-## 📚 Versão
-
-**Versão Atual:** 0.0.48
-
-## ☕ Apoie o Projeto
-
-Se este projeto for útil para você, considere comprar um café:  
-[Compre um café](https://pag.ae/7Yj8QjQjQ)
 
 ---
 
 **Desenvolvido por:** Goalmoon Tecnologia LTDA  
-**Website:** https://goalmoon.com  
+**Website:** https://smoonb.com  
 **GitHub:** https://github.com/almmello/smoonb
