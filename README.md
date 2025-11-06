@@ -242,6 +242,39 @@ npx smoonb restore
 - ✅ `.backup.gz` (compactado) - Descompacta automaticamente antes de restaurar
 - ✅ `.backup` (descompactado) - Restaura diretamente
 
+### Importar Backup do Dashboard do Supabase
+
+Se você baixou um backup diretamente do Dashboard do Supabase (formato `.backup.gz`), você pode importá-lo para o formato esperado pelo smoonb:
+
+```bash
+npx smoonb import --file "caminho/completo/para/db_cluster-04-03-2024@14-16-59.backup.gz"
+```
+
+**O que o comando faz:**
+1. Lê o arquivo `.backup.gz` do Dashboard
+2. Extrai informações do nome do arquivo (data e hora)
+3. Cria uma pasta de backup no formato esperado (`backup-YYYY-MM-DD-HH-MM-SS`)
+4. Copia o arquivo para a pasta criada
+5. Deixa o backup pronto para ser encontrado pelo comando `restore`
+
+**Exemplo completo:**
+```bash
+# 1. Baixar backup do Dashboard do Supabase
+#    Arquivo: db_cluster-04-03-2024@14-16-59.backup.gz
+
+# 2. Importar o arquivo
+npx smoonb import --file "C:\Downloads\db_cluster-04-03-2024@14-16-59.backup.gz"
+
+# 3. Restaurar o backup importado
+npx smoonb restore
+# O backup importado aparecerá na lista de backups disponíveis
+```
+
+**Importante:**
+- O arquivo deve estar no formato do Dashboard: `db_cluster-DD-MM-YYYY@HH-MM-SS.backup.gz`
+- O caminho pode ser absoluto ou relativo
+- O comando criará a estrutura de pastas necessária automaticamente
+
 ### Verificação Pós-Restore
 
 ```bash
@@ -263,6 +296,7 @@ npx smoonb check
 |---------|-----------|
 | `npx smoonb backup` | Backup completo interativo usando Docker |
 | `npx smoonb restore` | Restauração interativa usando psql (Docker) |
+| `npx smoonb import --file <path>` | Importar arquivo .backup.gz do Dashboard do Supabase |
 | `npx smoonb check` | Verificação de integridade pós-restore |
 
 ## 🏗️ Arquitetura Técnica
