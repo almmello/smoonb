@@ -53,6 +53,17 @@ npx smoonb --help
 npm install -g smoonb  # ← Isso será bloqueado!
 ```
 
+### 🔄 Atualizar para a Última Versão
+
+Para atualizar o smoonb para a versão mais recente disponível:
+
+```bash
+# Atualizar no projeto atual
+npm install smoonb@latest
+```
+
+**⚠️ IMPORTANTE:** O smoonb deve ser instalado localmente no projeto. Não é permitido usar sem instalar (ex.: `npx smoonb@latest`).
+
 **💡 Por que apenas local?**
 - **🔒 Segurança**: Evita conflitos de versão
 - **📦 Isolamento**: Cada projeto usa sua versão

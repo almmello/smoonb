@@ -1,6 +1,6 @@
 {
   "name": "smoonb",
-  "version": "0.0.57",
+  "version": "0.0.58",
   "description": "Complete Supabase backup and migration tool - EXPERIMENTAL VERSION - USE AT YOUR OWN RISK",
   "preferGlobal": false,
   "preventGlobalInstall": true,
@@ -49,8 +49,7 @@
   "bugs": {
     "url": "https://github.com/almmello/smoonb/issues"
   },
-  "homepage": "https://github.com/almmello/smoonb#readme"
-  ,
+  "homepage": "https://github.com/almmello/smoonb#readme",
   "files": [
     "bin/",
     "src/",

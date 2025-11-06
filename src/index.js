@@ -81,6 +81,9 @@ function showQuickHelp() {
    2. Clique em "Generate new token"
    3. Copie o token (formato: sbp_...)
    4. Adicione ao .env.local como SUPABASE_ACCESS_TOKEN
+
+🔄 ATUALIZAR PARA ÚLTIMA VERSÃO:
+   npm install smoonb@latest
 `));
 }
 

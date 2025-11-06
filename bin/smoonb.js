@@ -31,37 +31,12 @@ program
   })
   .addHelpText('after', () => {
     return chalk.cyan.bold(`
-                📋 CONFIGURAÇÃO AUTOMÁTICA:
-                   npx smoonb config --init       # Cria .smoonbrc com projectId, URLs, etc.
-                   # Edite o arquivo com suas credenciais Supabase
-                   npx smoonb backup              # Funciona sem --project-id!
+📋 CONFIGURAÇÃO:
+   Configure o arquivo .env.local na raiz do projeto com suas credenciais Supabase.
+   O smoonb irá mapear as variáveis interativamente na primeira execução.
 
-📝 EXEMPLO DE CONFIGURAÇÃO (.smoonbrc):
-   {
-     "supabase": {
-       "projectId": "abc123def456",
-       "url": "https://abc123def456.supabase.co",
-       "serviceKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-       "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-       "databaseUrl": "postgresql://postgres:[senha]@db.abc123def456.supabase.co:5432/postgres"
-     },
-     "backup": {
-       "includeFunctions": true,
-       "includeStorage": true,
-       "includeAuth": true,
-       "includeRealtime": true,
-       "outputDir": "./backups"
-     },
-     "restore": {
-       "cleanRestore": false,
-       "verifyAfterRestore": true
-     }
-   }
-
-                🔧 COMO CONFIGURAR:
-                   1. npx smoonb config --init
-                   2. Edite .smoonbrc com suas credenciais
-                   3. npx smoonb backup (funciona automaticamente!)
+🔄 ATUALIZAR PARA ÚLTIMA VERSÃO:
+   npm install smoonb@latest
 `);
   });
 

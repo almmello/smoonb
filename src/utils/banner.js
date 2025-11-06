@@ -21,8 +21,8 @@ function showBetaBanner() {
   
   console.log(chalk.white('🏢 Desenvolvido por: Goalmoon Tecnologia LTDA'));
   console.log(chalk.cyan('🌐 Website: https://smoonb.com'));
-  console.log(chalk.gray('📖 Documentação: https://github.com/almmello/smoonb'));
-  console.log(chalk.gray('🐛 Issues: https://github.com/almmello/smoonb/issues\n'));
+  console.log(chalk.cyan('📖 Documentação: https://github.com/almmello/smoonb'));
+  console.log(chalk.cyan('🐛 Issues: https://github.com/almmello/smoonb/issues\n'));
 }
 
 module.exports = { showBetaBanner };
