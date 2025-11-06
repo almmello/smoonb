@@ -5,8 +5,7 @@ const chalk = require('chalk');
  */
 function showBetaBanner() {
   console.log(chalk.cyan.bold('\n🚀 Supa Moonbase (smoonb)\n'));
-  console.log(chalk.white('A primeira ferramenta CLI completa para backup e migração de projetos Supabase.'));
-  console.log(chalk.white('Resolve o problema de backup incompleto das ferramentas existentes.\n'));
+  console.log(chalk.white('Backup e restauração: completo e simples, como deveria ser\n'));
   
   console.log(chalk.cyan.bold('📦 Componentes de Backup:\n'));
   console.log(chalk.white('  ✅ Database PostgreSQL (pg_dumpall + SQL separados)'));

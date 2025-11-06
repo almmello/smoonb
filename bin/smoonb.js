@@ -54,24 +54,11 @@ program
   .option('--db-url <url>', 'URL da database de destino (override)')
   .action(commands.restore);
 
-
-program
-  .command('functions')
-  .description('Gerenciar Edge Functions do Supabase')
-  .action(commands.functions);
-
 program
   .command('check')
   .description('Verificar integridade do projeto Supabase após restauração')
   .option('-o, --output <file>', 'Arquivo de saída do relatório', 'check-report.json')
   .action(commands.check);
-
-program
-  .command('config')
-  .description('Configurar credenciais e configurações do smoonb')
-  .option('--init', 'Inicializar configuração')
-  .option('--show', 'Mostrar configuração atual')
-  .action(commands.config);
 
 // Tratamento de erros
 program.on('command:*', function (operands) {

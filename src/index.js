@@ -12,9 +12,7 @@ const { showBetaBanner } = require('./utils/banner');
 // Exportar comandos
 const backupCommand = require('./commands/backup');
 const restoreCommand = require('./commands/restore');
-const functionsCommand = require('./commands/functions');
 const checkCommand = require('./commands/check');
-const configCommand = require('./commands/config');
 
 // Exportar utilitários
 const supabaseUtils = require('./utils/supabase');
@@ -220,9 +218,7 @@ module.exports = {
   commands: {
     backup: backupCommand,
     restore: restoreCommand,
-    functions: functionsCommand,
-    check: checkCommand,
-    config: configCommand
+    check: checkCommand
   },
   
   // Utilitários

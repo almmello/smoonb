@@ -2,7 +2,7 @@
 
 **Complete Supabase backup and migration tool**
 
-A primeira ferramenta CLI completa para backup e migração de projetos Supabase. Resolve o problema de backup incompleto das ferramentas existentes.
+Backup e restauração: completo e simples, como deveria ser
 
 > **Nota sobre acesso comercial:** o Supa Moonbase passará a exigir validação de conta antes de executar operações (login + verificação de assinatura) em fase futura. Nesta versão, não há autenticação implementada — este README apenas apresenta a base legal/comercial. O uso operacional será regido pelos [Termos de Serviço](https://smoonb.com/terms) e pela [Política de Privacidade](https://smoonb.com/privacy).
 
@@ -153,10 +153,6 @@ Valor atual: https://abc123.supabase.co
 Este é o valor correto do projeto alvo? (S/n): S
 ```
 
-```bash
-npx smoonb config --init
-```
-
 ## 🎯 Uso
 
 ### Backup Completo
@@ -260,15 +256,6 @@ npx smoonb check
 - ✅ Publicações Realtime
 - ✅ Buckets de Storage
 
-### Edge Functions
-
-```bash
-# Listar functions
-npx smoonb functions list
-
-# Deploy functions
-npx smoonb functions push
-```
 
 ## 🔧 Comandos Disponíveis
 
