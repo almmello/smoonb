@@ -53,6 +53,12 @@ ${chalk.yellow.bold('1. BACKUP - Fazer backup completo do projeto:')}
 ${chalk.yellow.bold('2. RESTORE - Restaurar backup em um projeto:')}
    ${chalk.white('npx smoonb restore')}
    ${chalk.gray('# Processo interativo que lista backups disponíveis e permite escolher')}
+   
+   ${chalk.white('npx smoonb restore --file "C:\\Downloads\\db_cluster-04-03-2024@14-16-59.backup.gz"')}
+   ${chalk.gray('# Importa e restaura diretamente o arquivo de backup (pula seleção)')}
+   
+   ${chalk.white('npx smoonb restore --file "backup.backup.gz" --storage "meu-projeto.storage.zip"')}
+   ${chalk.gray('# Importa e restaura backup e storage juntos')}
 
 ${chalk.yellow.bold('3. IMPORT - Importar backup do Dashboard do Supabase:')}
    ${chalk.white('npx smoonb import --file "C:\\Downloads\\db_cluster-04-03-2024@14-16-59.backup.gz"')}
@@ -103,25 +109,41 @@ ${chalk.yellow.bold('O que é capturado:')}
 program
   .command('restore')
   .description('Restaurar backup completo usando psql (modo interativo)')
+  .option('--file <path>', 'Caminho completo do arquivo .backup.gz a importar e restaurar (opcional)')
+  .option('--storage <path>', 'Caminho completo do arquivo .storage.zip a importar junto com o backup (opcional)')
   .addHelpText('after', `
 ${chalk.yellow.bold('Exemplos:')}
   ${chalk.white('npx smoonb restore')}
   ${chalk.gray('# Processo interativo que lista backups disponíveis')}
+  
+  ${chalk.white('npx smoonb restore --file "C:\\Downloads\\db_cluster-04-03-2024@14-16-59.backup.gz"')}
+  ${chalk.gray('# Importa e restaura diretamente o arquivo de backup')}
+  
+  ${chalk.white('npx smoonb restore --file "backup.backup.gz" --storage "meu-projeto.storage.zip"')}
+  ${chalk.gray('# Importa e restaura backup e storage juntos')}
 
 ${chalk.yellow.bold('Fluxo do restore:')}
   1. Validação Docker
   2. Consentimento para ler/escrever .env.local
   3. Mapeamento de variáveis de ambiente
-  4. Seleção de backup disponível
+  4. Seleção de backup disponível (pula se --file fornecido)
   5. Seleção de componentes para restaurar
   6. Resumo detalhado e confirmação
   7. Execução da restauração
+
+${chalk.yellow.bold('Quando usar --file:')}
+  • Importa automaticamente o arquivo de backup antes de restaurar
+  • Elimina a etapa de seleção de backup
+  • Se --storage fornecido, importa também o arquivo de storage
+  • Útil para restaurar backups baixados diretamente do Dashboard
 
 ${chalk.yellow.bold('Formatos suportados:')}
   • .backup.gz (compactado) - Descompacta automaticamente
   • .backup (descompactado) - Restaura diretamente
 `)
-  .action(commands.restore);
+  .action(async (options) => {
+    await commands.restore({ file: options.file, storage: options.storage });
+  });
 
 program
   .command('check')

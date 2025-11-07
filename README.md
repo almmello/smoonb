@@ -210,37 +210,56 @@ backups/backup-2025-10-31-09-37-54/
 
 ### Restauração Interativa
 
+**Restaurar backup existente:**
 ```bash
 npx smoonb restore
+```
+
+**Importar e restaurar diretamente do Dashboard:**
+```bash
+# Apenas database
+npx smoonb restore --file "C:\Downloads\db_cluster-04-03-2024@14-16-59.backup.gz"
+
+# Database e storage juntos
+npx smoonb restore --file "backup.backup.gz" --storage "meu-projeto.storage.zip"
 ```
 
 **Fluxo interativo do restore:**
 
 1. **Validação Docker** - Verifica se o Docker está rodando
-2. **Consentimento** - Pede permissão para ler/escrever `.env.local`
-3. **Mapeamento de Variáveis** - Mapeia variáveis para o projeto de destino
-4. **Backup do .env.local** - Cria backup automático
-5. **Seleção de Backup** - Lista e permite escolher qual backup restaurar
-6. **Seleção de Componentes** - Pergunta quais componentes restaurar:
+2. **Termo de Uso** - Exibe e solicita aceitação dos termos
+3. **Consentimento** - Pede permissão para ler/escrever `.env.local`
+4. **Mapeamento de Variáveis** - Mapeia variáveis para o projeto de destino
+5. **Backup do .env.local** - Cria backup automático
+6. **Seleção de Backup** - Lista e permite escolher qual backup restaurar (pula se `--file` fornecido)
+   - Se `--file` for fornecido: importa automaticamente e auto-seleciona o backup
+   - Se `--storage` for fornecido junto com `--file`: importa também o arquivo de storage
+7. **Seleção de Componentes** - Pergunta quais componentes restaurar:
    - 📊 Database (sempre disponível)
    - ⚡ Edge Functions (se disponível no backup)
    - 🔐 Auth Settings (se disponível no backup)
    - 📦 Storage (se disponível no backup)
    - 🔧 Database Extensions and Settings (se disponível no backup)
    - 🔄 Realtime Settings (se disponível no backup)
-7. **Resumo Detalhado** - Mostra backup selecionado, projeto destino e componentes
-8. **Confirmação Final** - Confirma antes de iniciar
-9. **Execução da Restauração:**
-   - 📊 Database - Restaura via `psql` (suporta `.backup.gz` e `.backup`)
-   - ⚡ Edge Functions - Copia e faz deploy no projeto destino
-   - 🔐 Auth Settings - Exibe configurações para aplicação manual
-   - 📦 Storage - Exibe informações para migração manual
-   - 🔧 Database Settings - Restaura extensões e configurações via SQL
-   - 🔄 Realtime Settings - Exibe configurações para aplicação manual
+8. **Resumo Detalhado** - Mostra backup selecionado, projeto destino e componentes
+9. **Confirmação Final** - Confirma antes de iniciar
+10. **Execução da Restauração:**
+    - 📊 Database - Restaura via `psql` (suporta `.backup.gz` e `.backup`)
+    - ⚡ Edge Functions - Copia e faz deploy no projeto destino
+    - 🔐 Auth Settings - Exibe configurações para aplicação manual
+    - 📦 Storage - Exibe informações para migração manual
+    - 🔧 Database Settings - Restaura extensões e configurações via SQL
+    - 🔄 Realtime Settings - Exibe configurações para aplicação manual
 
 **Formato de arquivos suportados:**
 - ✅ `.backup.gz` (compactado) - Descompacta automaticamente antes de restaurar
 - ✅ `.backup` (descompactado) - Restaura diretamente
+
+**Quando usar `--file`:**
+- Importa automaticamente o arquivo de backup antes de restaurar
+- Elimina a etapa de seleção de backup
+- Se `--storage` fornecido, importa também o arquivo de storage
+- Útil para restaurar backups baixados diretamente do Dashboard do Supabase
 
 ### Importar Backup do Dashboard do Supabase
 
@@ -265,7 +284,7 @@ npx smoonb import --file "backup.backup.gz" --storage "meu-projeto.storage.zip"
 6. Se fornecido, copia o arquivo de storage para a mesma pasta
 7. Deixa o backup pronto para ser encontrado pelo comando `restore`
 
-**Exemplo completo - Apenas database:**
+**Exemplo completo - Apenas database (usando import + restore):**
 ```bash
 # 1. Baixar backup do Dashboard do Supabase
 #    Arquivo: db_cluster-04-03-2024@14-16-59.backup.gz
@@ -278,7 +297,16 @@ npx smoonb restore
 # O backup importado aparecerá na lista de backups disponíveis
 ```
 
-**Exemplo completo - Database e Storage:**
+**Exemplo completo - Apenas database (usando restore diretamente):**
+```bash
+# 1. Baixar backup do Dashboard do Supabase
+#    Arquivo: db_cluster-04-03-2024@14-16-59.backup.gz
+
+# 2. Importar e restaurar diretamente (pula seleção de backup)
+npx smoonb restore --file "C:\Downloads\db_cluster-04-03-2024@14-16-59.backup.gz"
+```
+
+**Exemplo completo - Database e Storage (usando import + restore):**
 ```bash
 # 1. Baixar backup e storage do Dashboard do Supabase
 #    Arquivos: 
@@ -293,6 +321,17 @@ npx smoonb restore
 # O backup importado aparecerá na lista de backups disponíveis
 ```
 
+**Exemplo completo - Database e Storage (usando restore diretamente):**
+```bash
+# 1. Baixar backup e storage do Dashboard do Supabase
+#    Arquivos: 
+#    - db_cluster-04-03-2024@14-16-59.backup.gz
+#    - meu-projeto.storage.zip
+
+# 2. Importar e restaurar diretamente (pula seleção de backup)
+npx smoonb restore --file "C:\Downloads\db_cluster-04-03-2024@14-16-59.backup.gz" --storage "C:\Downloads\meu-projeto.storage.zip"
+```
+
 **Importante:**
 - O arquivo de backup é **obrigatório** e deve estar no formato do Dashboard: `db_cluster-DD-MM-YYYY@HH-MM-SS.backup.gz`
 - O arquivo de storage é **opcional** e deve estar no formato: `*.storage.zip`
@@ -300,6 +339,10 @@ npx smoonb restore
 - Ambos os arquivos serão copiados para a mesma pasta de backup
 - O caminho pode ser absoluto ou relativo
 - O comando criará a estrutura de pastas necessária automaticamente
+
+**Diferença entre `import` e `restore --file`:**
+- `import`: Apenas importa o arquivo e cria a estrutura de backup. Você precisa executar `restore` depois.
+- `restore --file`: Importa o arquivo automaticamente e já inicia o processo de restauração, pulando a etapa de seleção de backup.
 
 ### Verificação Pós-Restore
 
@@ -322,6 +365,7 @@ npx smoonb check
 |---------|-----------|
 | `npx smoonb backup` | Backup completo interativo usando Docker |
 | `npx smoonb restore` | Restauração interativa usando psql (Docker) |
+| `npx smoonb restore --file <path> [--storage <path>]` | Importar e restaurar diretamente arquivo .backup.gz e opcionalmente .storage.zip do Dashboard |
 | `npx smoonb import --file <path> [--storage <path>]` | Importar arquivo .backup.gz e opcionalmente .storage.zip do Dashboard do Supabase |
 | `npx smoonb check` | Verificação de integridade pós-restore |
 

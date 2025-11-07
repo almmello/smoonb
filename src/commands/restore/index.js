@@ -1,12 +1,14 @@
 const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs');
+const fsPromises = require('fs').promises;
 const { readEnvFile, writeEnvFile, backupEnvFile } = require('../../utils/env');
 const { saveEnvMap } = require('../../utils/envMap');
 const { mapEnvVariablesInteractively } = require('../../interactive/envMapper');
 const { showBetaBanner } = require('../../utils/banner');
 const { listValidBackups, showRestoreSummary } = require('./utils');
 const { confirm } = require('../../utils/prompt');
+const { ensureDir } = require('../../utils/fsx');
 const step00DockerValidation = require('../backup/steps/00-docker-validation');
 
 // Importar todas as etapas
@@ -19,7 +21,81 @@ const step06Storage = require('./steps/06-storage');
 const step07DatabaseSettings = require('./steps/07-database-settings');
 const step08RealtimeSettings = require('./steps/08-realtime-settings');
 
-module.exports = async (_options) => {
+/**
+ * Função auxiliar para importar arquivo de backup e storage (reutiliza lógica do comando import)
+ */
+async function importBackupFile(sourceFile, sourceStorageFile, outputDir) {
+  // Validar arquivo de backup
+  try {
+    await fsPromises.access(sourceFile);
+  } catch {
+    throw new Error(`Arquivo de backup não encontrado: ${sourceFile}`);
+  }
+
+  // Verificar se é um arquivo .backup.gz ou .backup
+  if (!sourceFile.endsWith('.backup.gz') && !sourceFile.endsWith('.backup')) {
+    throw new Error('Arquivo de backup deve ser .backup.gz ou .backup');
+  }
+
+  // Validar arquivo de storage se fornecido
+  if (sourceStorageFile) {
+    try {
+      await fsPromises.access(sourceStorageFile);
+    } catch {
+      throw new Error(`Arquivo de storage não encontrado: ${sourceStorageFile}`);
+    }
+
+    // Verificar se é um arquivo .storage.zip
+    if (!sourceStorageFile.endsWith('.storage.zip')) {
+      throw new Error('Arquivo de storage deve ser .storage.zip');
+    }
+  }
+
+  // Extrair informações do nome do arquivo de backup
+  // Formato esperado: db_cluster-DD-MM-YYYY@HH-MM-SS.backup.gz
+  const fileName = path.basename(sourceFile);
+  const match = fileName.match(/db_cluster-(\d{2})-(\d{2})-(\d{4})@(\d{2})-(\d{2})-(\d{2})\.backup(\.gz)?/);
+  
+  if (!match) {
+    throw new Error('Nome do arquivo de backup não está no formato esperado do Dashboard. Formato esperado: db_cluster-DD-MM-YYYY@HH-MM-SS.backup.gz');
+  }
+
+  const [, day, month, year, hour, minute, second] = match;
+  
+  // Criar nome da pasta no formato backup-YYYY-MM-DD-HH-MM-SS
+  const backupDirName = `backup-${year}-${month}-${day}-${hour}-${minute}-${second}`;
+  const backupDir = path.join(outputDir, backupDirName);
+  
+  // Criar diretório de backup
+  await ensureDir(backupDir);
+  console.log(chalk.blue(`📁 Importando backup para: ${backupDirName}`));
+  
+  // Copiar arquivo de backup para o diretório de backup
+  const destFile = path.join(backupDir, fileName);
+  await fsPromises.copyFile(sourceFile, destFile);
+  
+  // Obter tamanho do arquivo de backup
+  const stats = await fsPromises.stat(destFile);
+  const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+  
+  console.log(chalk.green(`✅ Arquivo de backup importado: ${fileName} (${sizeMB} MB)`));
+  
+  // Copiar arquivo de storage se fornecido
+  if (sourceStorageFile) {
+    const storageFileName = path.basename(sourceStorageFile);
+    const destStorageFile = path.join(backupDir, storageFileName);
+    await fsPromises.copyFile(sourceStorageFile, destStorageFile);
+    
+    const storageStats = await fsPromises.stat(destStorageFile);
+    const storageSizeMB = (storageStats.size / (1024 * 1024)).toFixed(2);
+    
+    console.log(chalk.green(`✅ Arquivo de storage importado: ${storageFileName} (${storageSizeMB} MB)`));
+  }
+  
+  return backupDir;
+}
+
+module.exports = async (options) => {
   showBetaBanner();
   
   try {
@@ -94,19 +170,42 @@ module.exports = async (_options) => {
       targetAccessToken: getValue('SUPABASE_ACCESS_TOKEN')
     };
     
-    console.log(chalk.blue(`📁 Buscando backups em: ${getValue('SMOONB_OUTPUT_DIR') || './backups'}`));
+    const outputDir = getValue('SMOONB_OUTPUT_DIR') || './backups';
+    let selectedBackup = null;
     
-    // 1. Listar backups válidos (.backup.gz)
-    const validBackups = await listValidBackups(getValue('SMOONB_OUTPUT_DIR') || './backups');
-    
-    if (validBackups.length === 0) {
-      console.error(chalk.red('❌ Nenhum backup válido encontrado'));
-      console.log(chalk.yellow('💡 Execute primeiro: npx smoonb backup'));
-      process.exit(1);
+    // Se --file foi fornecido, importar o arquivo e auto-selecionar
+    if (options.file) {
+      const sourceFile = path.resolve(options.file);
+      const sourceStorageFile = options.storage ? path.resolve(options.storage) : null;
+      
+      console.log(chalk.blue(`📁 Importando arquivo de backup...`));
+      const importedBackupDir = await importBackupFile(sourceFile, sourceStorageFile, outputDir);
+      
+      // Listar backups válidos para encontrar o backup importado
+      const validBackups = await listValidBackups(outputDir);
+      selectedBackup = validBackups.find(b => b.path === importedBackupDir);
+      
+      if (!selectedBackup) {
+        throw new Error('Não foi possível encontrar o backup importado');
+      }
+      
+      console.log(chalk.green(`✅ Backup importado e selecionado automaticamente: ${path.basename(selectedBackup.path)}`));
+    } else {
+      // Fluxo normal: listar e selecionar backup interativamente
+      console.log(chalk.blue(`📁 Buscando backups em: ${outputDir}`));
+      
+      // 1. Listar backups válidos (.backup.gz)
+      const validBackups = await listValidBackups(outputDir);
+      
+      if (validBackups.length === 0) {
+        console.error(chalk.red('❌ Nenhum backup válido encontrado'));
+        console.log(chalk.yellow('💡 Execute primeiro: npx smoonb backup'));
+        process.exit(1);
+      }
+      
+      // 2. Selecionar backup interativamente
+      selectedBackup = await step00BackupSelection(validBackups);
     }
-    
-    // 2. Selecionar backup interativamente
-    const selectedBackup = await step00BackupSelection(validBackups);
     
     // 3. Perguntar quais componentes restaurar
     const components = await step01ComponentsSelection(selectedBackup.path);
