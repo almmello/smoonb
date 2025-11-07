@@ -31,10 +31,24 @@ module.exports = async (backupPath) => {
   
   // Storage Buckets
   const storageDir = path.join(backupPath, 'storage');
-  const storageZipFiles = fs.readdirSync(backupPath).filter(f => f.endsWith('.storage.zip'));
-  let restoreStorage = false;
+  let storageZipFiles = [];
   
-  if (storageZipFiles.length > 0 || (fs.existsSync(storageDir) && fs.readdirSync(storageDir).length > 0)) {
+  // Verificar se o diretório existe e listar arquivos
+  try {
+    if (fs.existsSync(backupPath)) {
+      const files = fs.readdirSync(backupPath);
+      storageZipFiles = files.filter(f => f.endsWith('.storage.zip'));
+    }
+  } catch {
+    // Ignorar erro ao ler diretório
+    storageZipFiles = [];
+  }
+  
+  let restoreStorage = false;
+  const hasStorageDir = fs.existsSync(storageDir);
+  const hasStorageFiles = hasStorageDir && fs.readdirSync(storageDir).length > 0;
+  
+  if (storageZipFiles.length > 0 || hasStorageFiles) {
     console.log(chalk.cyan('\n📦 Storage:'));
     if (storageZipFiles.length > 0) {
       console.log(chalk.white(`   Arquivo .storage.zip encontrado: ${storageZipFiles[0]}`));
