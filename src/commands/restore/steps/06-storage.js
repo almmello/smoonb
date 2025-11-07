@@ -22,10 +22,14 @@ module.exports = async ({ backupPath, targetProject }) => {
     const manifestPath = path.join(backupPath, 'backup-manifest.json');
     const bucketMetadata = {};
     let manifest = null;
+    let sourceProjectId = null;
     
     try {
       const manifestContent = await fs.readFile(manifestPath, 'utf8');
       manifest = JSON.parse(manifestContent);
+      
+      // Obter project ID do projeto origem do manifest
+      sourceProjectId = manifest?.project_id || null;
       
       // Carregar metadados dos buckets do manifest
       const buckets = manifest?.components?.storage?.buckets || [];
@@ -107,6 +111,13 @@ module.exports = async ({ backupPath, targetProject }) => {
       throw new Error('Credenciais do Supabase não configuradas. É necessário NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY');
     }
     
+    // 4.1 Obter project ID do projeto origem e validar substituição
+    if (sourceProjectId && sourceProjectId !== targetProject.targetProjectId) {
+      console.log(chalk.cyan(`   🔄 Substituindo Project ID: ${sourceProjectId} → ${targetProject.targetProjectId}`));
+    } else if (!sourceProjectId) {
+      console.log(chalk.yellow('   ⚠️  Project ID do projeto origem não encontrado no manifest. Continuando sem substituição...'));
+    }
+    
     // 5. Extrair arquivo ZIP
     console.log(chalk.white('   - Extraindo arquivo .storage.zip...'));
     const extractDir = path.join(backupPath, 'storage_extracted');
@@ -121,20 +132,85 @@ module.exports = async ({ backupPath, targetProject }) => {
     zip.extractAllTo(extractDir, true);
     console.log(chalk.green('   ✅ Arquivo extraído com sucesso'));
     
+    // 5.1 Substituir Project ID antigo pelo novo nos diretórios e arquivos extraídos
+    // O Supabase pode incluir o project ID nos caminhos dentro do ZIP
+    if (sourceProjectId && sourceProjectId !== targetProject.targetProjectId) {
+      console.log(chalk.white('   - Substituindo referências ao Project ID antigo nos arquivos extraídos...'));
+      await replaceProjectIdInExtractedFiles(extractDir, sourceProjectId, targetProject.targetProjectId);
+      console.log(chalk.green('   ✅ Substituição de Project ID concluída'));
+    }
+    
     // 6. Ler estrutura de diretórios extraídos
-    // O formato do .storage.zip do Supabase tem a estrutura:
-    // bucket-name/
-    //   file1.jpg
-    //   folder/
-    //     file2.png
+    // O formato do .storage.zip do Supabase pode ter duas estruturas:
+    // Estrutura 1 (direta): bucket-name/file1.jpg
+    // Estrutura 2 (com Project ID): project-id/bucket-name/file1.jpg
+    // Após a substituição do Project ID, a estrutura 2 fica: project-id-novo/bucket-name/file1.jpg
     const extractedContents = await fs.readdir(extractDir);
     const bucketDirs = [];
     
-    for (const item of extractedContents) {
-      const itemPath = path.join(extractDir, item);
-      const stats = await fs.stat(itemPath);
-      if (stats.isDirectory()) {
-        bucketDirs.push(item);
+    // Verificar se a pasta raiz é o Project ID do destino (após substituição)
+    // Se for, as subpastas são os buckets reais
+    let rootDir = null;
+    if (extractedContents.length === 1) {
+      const firstItem = extractedContents[0];
+      const firstItemPath = path.join(extractDir, firstItem);
+      const firstItemStats = await fs.stat(firstItemPath);
+      
+      if (firstItemStats.isDirectory()) {
+        // Verificar se o nome da pasta raiz corresponde ao Project ID do destino
+        // Isso pode acontecer se a pasta raiz original era o Project ID antigo
+        // e foi renomeada para o Project ID novo pela função replaceProjectIdInExtractedFiles
+        if (firstItem === targetProject.targetProjectId) {
+          // Verificar se contém subpastas (buckets reais)
+          const subContents = await fs.readdir(firstItemPath);
+          const hasSubDirs = subContents.some(item => {
+            const itemPath = path.join(firstItemPath, item);
+            try {
+              const stats = fs.statSync(itemPath);
+              return stats.isDirectory();
+            } catch {
+              return false;
+            }
+          });
+          
+          if (hasSubDirs) {
+            // A pasta raiz é um wrapper do Project ID - buscar buckets nas subpastas
+            rootDir = firstItem;
+            console.log(chalk.white(`   - Detectada pasta raiz com Project ID do destino: ${firstItem}`));
+            console.log(chalk.white(`   - Buscando buckets nas subpastas...`));
+          }
+        }
+      }
+    }
+    
+    if (rootDir) {
+      // Estrutura com Project ID: project-id/bucket-name/...
+      // Listar subpastas dentro da pasta do Project ID - essas são os buckets reais
+      const projectIdPath = path.join(extractDir, rootDir);
+      const subContents = await fs.readdir(projectIdPath);
+      
+      for (const item of subContents) {
+        const itemPath = path.join(projectIdPath, item);
+        const stats = await fs.stat(itemPath);
+        if (stats.isDirectory()) {
+          bucketDirs.push({
+            name: item,
+            path: itemPath
+          });
+        }
+      }
+    } else {
+      // Estrutura direta: bucket-name/...
+      // As pastas raiz são os buckets
+      for (const item of extractedContents) {
+        const itemPath = path.join(extractDir, item);
+        const stats = await fs.stat(itemPath);
+        if (stats.isDirectory()) {
+          bucketDirs.push({
+            name: item,
+            path: itemPath
+          });
+        }
       }
     }
     
@@ -152,11 +228,12 @@ module.exports = async ({ backupPath, targetProject }) => {
     let successCount = 0;
     let totalFilesUploaded = 0;
     
-    for (const bucketName of bucketDirs) {
+    for (const bucketInfo of bucketDirs) {
+      const bucketName = bucketInfo.name;
+      const bucketPath = bucketInfo.path;
+      
       try {
         console.log(chalk.white(`\n   - Processando bucket: ${bucketName}`));
-        
-        const bucketPath = path.join(extractDir, bucketName);
         
         // 8.1 Obter metadados do bucket do backup (se disponíveis)
         const bucketMeta = bucketMetadata[bucketName] || {
@@ -249,7 +326,11 @@ module.exports = async ({ backupPath, targetProject }) => {
           
           for (const entry of entries) {
             const fullPath = path.join(dir, entry.name);
-            const relativePath = path.join(basePath, entry.name).replace(/\\/g, '/');
+            // Substituir project ID antigo pelo novo no caminho relativo
+            let relativePath = path.join(basePath, entry.name).replace(/\\/g, '/');
+            if (sourceProjectId && sourceProjectId !== targetProject.targetProjectId) {
+              relativePath = relativePath.replace(new RegExp(sourceProjectId, 'g'), targetProject.targetProjectId);
+            }
             
             if (entry.isDirectory()) {
               const subFiles = await getAllFiles(fullPath, relativePath);
@@ -380,6 +461,75 @@ module.exports = async ({ backupPath, targetProject }) => {
     throw error;
   }
 };
+
+/**
+ * Substitui o Project ID antigo pelo novo em arquivos extraídos
+ * Processa recursivamente todos os arquivos e diretórios
+ * IMPORTANTE: Processa primeiro os filhos, depois renomeia o diretório atual
+ * para evitar problemas com caminhos que mudam durante o processamento
+ */
+async function replaceProjectIdInExtractedFiles(dir, oldProjectId, newProjectId) {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  
+  // Primeiro, processar recursivamente todos os filhos (arquivos e subdiretórios)
+  for (const entry of entries) {
+    const entryPath = path.join(dir, entry.name);
+    
+    if (entry.isDirectory()) {
+      // Processar recursivamente o subdiretório ANTES de renomeá-lo
+      await replaceProjectIdInExtractedFiles(entryPath, oldProjectId, newProjectId);
+    } else {
+      // Processar arquivos: substituir project ID no conteúdo (se for texto) e no nome
+      // Renomear arquivo se contiver o project ID antigo
+      if (entry.name.includes(oldProjectId)) {
+        const newName = entry.name.replace(new RegExp(oldProjectId, 'g'), newProjectId);
+        if (newName !== entry.name) {
+          const newPath = path.join(dir, newName);
+          try {
+            await fs.rename(entryPath, newPath);
+          } catch {
+            // Ignorar erros de renomeação (pode já ter sido renomeado)
+          }
+        }
+      }
+      
+      // Substituir project ID no conteúdo de arquivos de texto
+      // Verificar extensões comuns de arquivos de texto
+      const textExtensions = ['.json', '.txt', '.md', '.html', '.css', '.js', '.xml', '.yaml', '.yml'];
+      const ext = path.extname(entry.name).toLowerCase();
+      
+      if (textExtensions.includes(ext)) {
+        try {
+          const content = await fs.readFile(entryPath, 'utf8');
+          if (content.includes(oldProjectId)) {
+            const newContent = content.replace(new RegExp(oldProjectId, 'g'), newProjectId);
+            await fs.writeFile(entryPath, newContent, 'utf8');
+          }
+        } catch {
+          // Ignorar erros ao processar arquivos (pode ser binário ou sem permissão)
+        }
+      }
+    }
+  }
+  
+  // Depois de processar todos os filhos, renomear o diretório atual se necessário
+  // Ler novamente os diretórios para pegar os nomes atualizados
+  const updatedEntries = await fs.readdir(dir, { withFileTypes: true });
+  for (const entry of updatedEntries) {
+    if (entry.isDirectory() && entry.name.includes(oldProjectId)) {
+      const entryPath = path.join(dir, entry.name);
+      const newName = entry.name.replace(new RegExp(oldProjectId, 'g'), newProjectId);
+      if (newName !== entry.name) {
+        const newPath = path.join(dir, newName);
+        try {
+          await fs.rename(entryPath, newPath);
+        } catch {
+          // Ignorar erros de renomeação (pode já ter sido renomeado)
+        }
+      }
+    }
+  }
+}
 
 /**
  * Determina o content-type baseado na extensão do arquivo
