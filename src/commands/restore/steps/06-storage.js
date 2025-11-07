@@ -147,8 +147,8 @@ module.exports = async ({ backupPath, targetProject }) => {
     // Após a substituição do Project ID, a estrutura 2 fica: project-id-novo/bucket-name/file1.jpg
     const extractedContents = await fs.readdir(extractDir);
     const bucketDirs = [];
-    
-    // Verificar se a pasta raiz é o Project ID do destino (após substituição)
+
+    // Verificar se a pasta raiz é o Project ID (antigo ou novo)
     // Se for, as subpastas são os buckets reais
     let rootDir = null;
     if (extractedContents.length === 1) {
@@ -157,10 +157,14 @@ module.exports = async ({ backupPath, targetProject }) => {
       const firstItemStats = await fs.stat(firstItemPath);
       
       if (firstItemStats.isDirectory()) {
-        // Verificar se o nome da pasta raiz corresponde ao Project ID do destino
+        // Verificar se o nome da pasta raiz corresponde ao Project ID antigo OU novo
         // Isso pode acontecer se a pasta raiz original era o Project ID antigo
-        // e foi renomeada para o Project ID novo pela função replaceProjectIdInExtractedFiles
-        if (firstItem === targetProject.targetProjectId) {
+        // e pode ou não ter sido renomeada para o Project ID novo pela função replaceProjectIdInExtractedFiles
+        const isProjectId = 
+          (sourceProjectId && firstItem === sourceProjectId) || 
+          (firstItem === targetProject.targetProjectId);
+        
+        if (isProjectId) {
           // Verificar se contém subpastas (buckets reais)
           const subContents = await fs.readdir(firstItemPath);
           const hasSubDirs = subContents.some(item => {
@@ -176,7 +180,7 @@ module.exports = async ({ backupPath, targetProject }) => {
           if (hasSubDirs) {
             // A pasta raiz é um wrapper do Project ID - buscar buckets nas subpastas
             rootDir = firstItem;
-            console.log(chalk.white(`   - Detectada pasta raiz com Project ID do destino: ${firstItem}`));
+            console.log(chalk.white(`   - Detectada pasta raiz com Project ID: ${firstItem}`));
             console.log(chalk.white(`   - Buscando buckets nas subpastas...`));
           }
         }
