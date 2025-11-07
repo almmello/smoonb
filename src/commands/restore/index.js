@@ -298,7 +298,8 @@ module.exports = async (options) => {
       stepNumber++;
       console.log(chalk.blue(`\n📦 ${stepNumber}/${totalSteps} - Restaurando Storage Buckets...`));
       const storageResult = await step06Storage({
-        backupPath: selectedBackup.path
+        backupPath: selectedBackup.path,
+        targetProject
       });
       restoreResults.storage = storageResult || { success: true };
     }
@@ -366,7 +367,14 @@ module.exports = async (options) => {
     
     if (restoreResults.storage) {
       const bucketCount = restoreResults.storage.buckets_count || 0;
-      console.log(chalk.green(`📦 Storage: ${bucketCount} bucket(s) encontrado(s) - migração manual necessária`));
+      const filesRestored = restoreResults.storage.files_restored;
+      const totalFiles = restoreResults.storage.total_files || 0;
+      
+      if (filesRestored) {
+        console.log(chalk.green(`📦 Storage: ${bucketCount} bucket(s) restaurado(s), ${totalFiles} arquivo(s) enviado(s)`));
+      } else {
+        console.log(chalk.green(`📦 Storage: ${bucketCount} bucket(s) encontrado(s) - apenas metadados (arquivo .storage.zip não encontrado)`));
+      }
     }
     
     if (restoreResults.databaseSettings) {

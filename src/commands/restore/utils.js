@@ -94,7 +94,13 @@ function showRestoreSummary(backup, components, targetProject) {
   }
   
   if (components.storage) {
-    console.log('📦 Storage Buckets: Exibir informações e instruções do Google Colab');
+    const backupPath = backup.path;
+    const storageZipFiles = fs.readdirSync(backupPath).filter(f => f.endsWith('.storage.zip'));
+    if (storageZipFiles.length > 0) {
+      console.log('📦 Storage Buckets: Restauração automática de buckets e arquivos via API');
+    } else {
+      console.log('📦 Storage Buckets: Exibir informações (apenas metadados - arquivo .storage.zip não encontrado)');
+    }
   }
   
   if (components.databaseSettings) {

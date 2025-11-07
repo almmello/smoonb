@@ -31,12 +31,21 @@ module.exports = async (backupPath) => {
   
   // Storage Buckets
   const storageDir = path.join(backupPath, 'storage');
+  const storageZipFiles = fs.readdirSync(backupPath).filter(f => f.endsWith('.storage.zip'));
   let restoreStorage = false;
-  if (fs.existsSync(storageDir) && fs.readdirSync(storageDir).length > 0) {
+  
+  if (storageZipFiles.length > 0 || (fs.existsSync(storageDir) && fs.readdirSync(storageDir).length > 0)) {
     console.log(chalk.cyan('\n📦 Storage:'));
-    console.log(chalk.white('   As informações dos buckets de Storage serão exibidas para migração manual.'));
-    console.log(chalk.white('   Os arquivos precisam ser migrados manualmente usando as ferramentas do Supabase.\n'));
-    restoreStorage = await confirm('Deseja ver informações de Storage Buckets', true);
+    if (storageZipFiles.length > 0) {
+      console.log(chalk.white(`   Arquivo .storage.zip encontrado: ${storageZipFiles[0]}`));
+      console.log(chalk.white('   Os buckets e arquivos serão restaurados automaticamente no projeto destino.'));
+      console.log(chalk.white('   O arquivo ZIP será extraído, buckets criados e arquivos enviados via API.\n'));
+    } else {
+      console.log(chalk.white('   Apenas metadados dos buckets encontrados (pasta storage).'));
+      console.log(chalk.white('   Para restaurar os arquivos, é necessário o arquivo .storage.zip do Dashboard.'));
+      console.log(chalk.white('   Apenas informações dos buckets serão exibidas.\n'));
+    }
+    restoreStorage = await confirm('Deseja restaurar Storage Buckets', true);
   }
   
   // Database Extensions and Settings
