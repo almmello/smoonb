@@ -65,11 +65,11 @@ module.exports = async (_options) => {
     // Leitura e mapeamento interativo
     const currentEnv = await readEnvFile(envPath);
     const expectedKeys = [
+      'SUPABASE_PROJECT_ID',
       'NEXT_PUBLIC_SUPABASE_URL',
       'NEXT_PUBLIC_SUPABASE_ANON_KEY',
       'SUPABASE_SERVICE_ROLE_KEY',
       'SUPABASE_DB_URL',
-      'SUPABASE_PROJECT_ID',
       'SUPABASE_ACCESS_TOKEN',
       'SMOONB_OUTPUT_DIR'
     ];
