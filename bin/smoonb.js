@@ -40,6 +40,37 @@ program
 
 🔄 ATUALIZAR PARA ÚLTIMA VERSÃO:
    npm install smoonb@latest
+
+📚 MANUAL DE USO - EXEMPLOS COMPLETOS:
+
+${chalk.yellow.bold('1. BACKUP - Fazer backup completo do projeto:')}
+   ${chalk.white('npx smoonb backup')}
+   ${chalk.gray('# Processo interativo que captura todos os componentes do Supabase')}
+   
+   ${chalk.white('npx smoonb backup --skip-realtime')}
+   ${chalk.gray('# Pula a captura interativa de Realtime Settings')}
+
+${chalk.yellow.bold('2. RESTORE - Restaurar backup em um projeto:')}
+   ${chalk.white('npx smoonb restore')}
+   ${chalk.gray('# Processo interativo que lista backups disponíveis e permite escolher')}
+
+${chalk.yellow.bold('3. IMPORT - Importar backup do Dashboard do Supabase:')}
+   ${chalk.white('npx smoonb import --file "C:\\Downloads\\db_cluster-04-03-2024@14-16-59.backup.gz"')}
+   ${chalk.gray('# Importa apenas o arquivo de database')}
+   
+   ${chalk.white('npx smoonb import --file "backup.backup.gz" --storage "meu-projeto.storage.zip"')}
+   ${chalk.gray('# Importa database e storage juntos (storage é opcional)')}
+
+${chalk.yellow.bold('4. CHECK - Verificar integridade após restauração:')}
+   ${chalk.white('npx smoonb check')}
+   ${chalk.gray('# Verifica conexão, extensões, tabelas, RLS, Realtime e Storage')}
+
+${chalk.yellow.bold('💡 DICAS IMPORTANTES:')}
+   ${chalk.white('• O comando import requer um arquivo de backup (.backup.gz), mas o storage (.storage.zip) é opcional')}
+   ${chalk.white('• O storage depende de um backup, mas o backup não depende do storage')}
+   ${chalk.white('• Use caminhos absolutos ou relativos para os arquivos no comando import')}
+   ${chalk.white('• O formato do arquivo de backup deve ser: db_cluster-DD-MM-YYYY@HH-MM-SS.backup.gz')}
+   ${chalk.white('• O formato do arquivo de storage deve ser: *.storage.zip')}
 `);
   });
 
@@ -47,28 +78,95 @@ program
 program
   .command('backup')
   .description('Fazer backup completo do projeto Supabase usando Supabase CLI')
-  .option('-o, --output <dir>', 'Diretório de saída do backup')
   .option('--skip-realtime', 'Pular captura interativa de Realtime Settings')
+  .addHelpText('after', `
+${chalk.yellow.bold('Exemplos:')}
+  ${chalk.white('npx smoonb backup')}
+  ${chalk.gray('# Processo interativo completo')}
+  
+  ${chalk.white('npx smoonb backup --skip-realtime')}
+  ${chalk.gray('# Pula configuração de Realtime Settings')}
+
+${chalk.yellow.bold('O que é capturado:')}
+  • Database PostgreSQL (pg_dumpall + SQL separado)
+  • Database Extensions and Settings
+  • Custom Roles
+  • Edge Functions (download automático)
+  • Auth Settings (via Management API)
+  • Storage Buckets (metadados via Management API)
+  • Realtime Settings (7 parâmetros interativos)
+  • Supabase .temp (arquivos temporários)
+  • Migrations (todas as migrations do projeto)
+`)
   .action(commands.backup);
 
 program
   .command('restore')
   .description('Restaurar backup completo usando psql (modo interativo)')
-  .option('--db-url <url>', 'URL da database de destino (override)')
+  .addHelpText('after', `
+${chalk.yellow.bold('Exemplos:')}
+  ${chalk.white('npx smoonb restore')}
+  ${chalk.gray('# Processo interativo que lista backups disponíveis')}
+
+${chalk.yellow.bold('Fluxo do restore:')}
+  1. Validação Docker
+  2. Consentimento para ler/escrever .env.local
+  3. Mapeamento de variáveis de ambiente
+  4. Seleção de backup disponível
+  5. Seleção de componentes para restaurar
+  6. Resumo detalhado e confirmação
+  7. Execução da restauração
+
+${chalk.yellow.bold('Formatos suportados:')}
+  • .backup.gz (compactado) - Descompacta automaticamente
+  • .backup (descompactado) - Restaura diretamente
+`)
   .action(commands.restore);
 
 program
   .command('check')
   .description('Verificar integridade do projeto Supabase após restauração')
-  .option('-o, --output <file>', 'Arquivo de saída do relatório', 'check-report.json')
+  .addHelpText('after', `
+${chalk.yellow.bold('Exemplos:')}
+  ${chalk.white('npx smoonb check')}
+  ${chalk.gray('# Verifica integridade e exibe relatório no console')}
+
+${chalk.yellow.bold('O que é verificado:')}
+  • Conexão com database
+  • Extensões PostgreSQL instaladas
+  • Tabelas criadas
+  • Políticas RLS (Row Level Security)
+  • Publicações Realtime
+  • Buckets de Storage
+`)
   .action(commands.check);
 
 program
   .command('import')
-  .description('Importar arquivo .backup.gz do Dashboard do Supabase')
-  .requiredOption('-f, --file <path>', 'Caminho completo do arquivo .backup.gz a importar')
+  .description('Importar arquivo .backup.gz e opcionalmente .storage.zip do Dashboard do Supabase')
+  .requiredOption('--file <path>', 'Caminho completo do arquivo .backup.gz a importar')
+  .option('--storage <path>', 'Caminho completo do arquivo .storage.zip a importar (opcional)')
+  .addHelpText('after', `
+${chalk.yellow.bold('Exemplos:')}
+  ${chalk.white('npx smoonb import --file "C:\\Downloads\\db_cluster-04-03-2024@14-16-59.backup.gz"')}
+  ${chalk.gray('# Importa apenas o arquivo de database')}
+  
+  ${chalk.white('npx smoonb import --file "backup.backup.gz" --storage "meu-projeto.storage.zip"')}
+  ${chalk.gray('# Importa database e storage juntos')}
+
+${chalk.yellow.bold('Formato dos arquivos:')}
+  • Backup: db_cluster-DD-MM-YYYY@HH-MM-SS.backup.gz (obrigatório)
+  • Storage: *.storage.zip (opcional)
+
+${chalk.yellow.bold('Importante:')}
+  • O arquivo de backup é obrigatório
+  • O arquivo de storage é opcional e depende de um backup
+  • Ambos os arquivos serão copiados para a mesma pasta de backup
+  • O backup importado ficará disponível para o comando restore
+  • Use caminhos absolutos ou relativos
+`)
   .action(async (options) => {
-    await commands.import({ file: options.file });
+    await commands.import({ file: options.file, storage: options.storage });
   });
 
 // Tratamento de erros

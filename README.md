@@ -244,20 +244,28 @@ npx smoonb restore
 
 ### Importar Backup do Dashboard do Supabase
 
-Se você baixou um backup diretamente do Dashboard do Supabase (formato `.backup.gz`), você pode importá-lo para o formato esperado pelo smoonb:
+Se você baixou um backup diretamente do Dashboard do Supabase (formato `.backup.gz`), você pode importá-lo para o formato esperado pelo smoonb. O comando também suporta importar arquivos de storage (`.storage.zip`) opcionalmente.
 
+**Importar apenas database:**
 ```bash
 npx smoonb import --file "caminho/completo/para/db_cluster-04-03-2024@14-16-59.backup.gz"
 ```
 
-**O que o comando faz:**
-1. Lê o arquivo `.backup.gz` do Dashboard
-2. Extrai informações do nome do arquivo (data e hora)
-3. Cria uma pasta de backup no formato esperado (`backup-YYYY-MM-DD-HH-MM-SS`)
-4. Copia o arquivo para a pasta criada
-5. Deixa o backup pronto para ser encontrado pelo comando `restore`
+**Importar database e storage juntos:**
+```bash
+npx smoonb import --file "backup.backup.gz" --storage "meu-projeto.storage.zip"
+```
 
-**Exemplo completo:**
+**O que o comando faz:**
+1. Lê o arquivo `.backup.gz` do Dashboard (obrigatório)
+2. Se fornecido, lê o arquivo `.storage.zip` do Dashboard (opcional)
+3. Extrai informações do nome do arquivo de backup (data e hora)
+4. Cria uma pasta de backup no formato esperado (`backup-YYYY-MM-DD-HH-MM-SS`)
+5. Copia o arquivo de backup para a pasta criada
+6. Se fornecido, copia o arquivo de storage para a mesma pasta
+7. Deixa o backup pronto para ser encontrado pelo comando `restore`
+
+**Exemplo completo - Apenas database:**
 ```bash
 # 1. Baixar backup do Dashboard do Supabase
 #    Arquivo: db_cluster-04-03-2024@14-16-59.backup.gz
@@ -270,8 +278,26 @@ npx smoonb restore
 # O backup importado aparecerá na lista de backups disponíveis
 ```
 
+**Exemplo completo - Database e Storage:**
+```bash
+# 1. Baixar backup e storage do Dashboard do Supabase
+#    Arquivos: 
+#    - db_cluster-04-03-2024@14-16-59.backup.gz
+#    - meu-projeto.storage.zip
+
+# 2. Importar ambos os arquivos
+npx smoonb import --file "C:\Downloads\db_cluster-04-03-2024@14-16-59.backup.gz" --storage "C:\Downloads\meu-projeto.storage.zip"
+
+# 3. Restaurar o backup importado
+npx smoonb restore
+# O backup importado aparecerá na lista de backups disponíveis
+```
+
 **Importante:**
-- O arquivo deve estar no formato do Dashboard: `db_cluster-DD-MM-YYYY@HH-MM-SS.backup.gz`
+- O arquivo de backup é **obrigatório** e deve estar no formato do Dashboard: `db_cluster-DD-MM-YYYY@HH-MM-SS.backup.gz`
+- O arquivo de storage é **opcional** e deve estar no formato: `*.storage.zip`
+- O storage depende de um backup, mas o backup não depende do storage
+- Ambos os arquivos serão copiados para a mesma pasta de backup
 - O caminho pode ser absoluto ou relativo
 - O comando criará a estrutura de pastas necessária automaticamente
 
@@ -296,7 +322,7 @@ npx smoonb check
 |---------|-----------|
 | `npx smoonb backup` | Backup completo interativo usando Docker |
 | `npx smoonb restore` | Restauração interativa usando psql (Docker) |
-| `npx smoonb import --file <path>` | Importar arquivo .backup.gz do Dashboard do Supabase |
+| `npx smoonb import --file <path> [--storage <path>]` | Importar arquivo .backup.gz e opcionalmente .storage.zip do Dashboard do Supabase |
 | `npx smoonb check` | Verificação de integridade pós-restore |
 
 ## 🏗️ Arquitetura Técnica

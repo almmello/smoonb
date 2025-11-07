@@ -66,8 +66,7 @@ module.exports = async (options) => {
     const second = String(now.getSeconds()).padStart(2, '0');
 
     // Resolver diretório de saída
-    const defaultOutput = options.output || defaultOutputDir;
-    const backupDir = path.join(defaultOutput, `backup-${year}-${month}-${day}-${hour}-${minute}-${second}`);
+    const backupDir = path.join(defaultOutputDir, `backup-${year}-${month}-${day}-${hour}-${minute}-${second}`);
     await ensureDir(backupDir);
 
     // Backup e mapeamento do .env.local
@@ -98,7 +97,7 @@ module.exports = async (options) => {
     }
 
     // Recalcular outputDir a partir do ENV mapeado
-    const resolvedOutputDir = options.output || getValue('SMOONB_OUTPUT_DIR') || defaultOutputDir;
+    const resolvedOutputDir = getValue('SMOONB_OUTPUT_DIR') || defaultOutputDir;
 
     // Se mudou o outputDir, movemos o backupDir inicial para o novo local mantendo timestamp
     const finalBackupDir = backupDir.startsWith(path.resolve(resolvedOutputDir))

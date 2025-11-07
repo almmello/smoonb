@@ -6,34 +6,54 @@ const { readEnvFile } = require('../utils/env');
 const { showBetaBanner } = require('../utils/banner');
 
 /**
- * Comando para importar arquivo .backup.gz do Dashboard do Supabase
+ * Comando para importar arquivo .backup.gz e opcionalmente .storage.zip do Dashboard do Supabase
  */
 module.exports = async (options) => {
   showBetaBanner();
   
   try {
-    // Validar que o arquivo foi fornecido
+    // Validar que o arquivo de backup foi fornecido
     if (!options.file) {
-      console.error(chalk.red('❌ Arquivo não fornecido'));
-      console.log(chalk.yellow('💡 Use: npx smoonb --import --file <caminho-completo-do-arquivo>'));
-      console.log(chalk.gray('   Exemplo: npx smoonb --import --file "C:\\Downloads\\db_cluster-04-03-2024@14-16-59.backup.gz"'));
+      console.error(chalk.red('❌ Arquivo de backup não fornecido'));
+      console.log(chalk.yellow('💡 Use: npx smoonb import --file <caminho-do-backup> [--storage <caminho-do-storage>]'));
+      console.log(chalk.white('   Exemplo: npx smoonb import --file "C:\\Downloads\\db_cluster-04-03-2024@14-16-59.backup.gz"'));
+      console.log(chalk.white('   Exemplo com storage: npx smoonb import --file "backup.backup.gz" --storage "meu-projeto.storage.zip"'));
       process.exit(1);
     }
 
     const sourceFile = path.resolve(options.file);
     
-    // Verificar se o arquivo existe
+    // Verificar se o arquivo de backup existe
     try {
       await fs.access(sourceFile);
     } catch {
-      console.error(chalk.red(`❌ Arquivo não encontrado: ${sourceFile}`));
+      console.error(chalk.red(`❌ Arquivo de backup não encontrado: ${sourceFile}`));
       process.exit(1);
     }
 
-    // Verificar se é um arquivo .backup.gz
+    // Verificar se é um arquivo .backup.gz ou .backup
     if (!sourceFile.endsWith('.backup.gz') && !sourceFile.endsWith('.backup')) {
-      console.error(chalk.red('❌ Arquivo deve ser .backup.gz ou .backup'));
+      console.error(chalk.red('❌ Arquivo de backup deve ser .backup.gz ou .backup'));
       process.exit(1);
+    }
+
+    // Validar arquivo de storage se fornecido
+    let sourceStorageFile = null;
+    if (options.storage) {
+      sourceStorageFile = path.resolve(options.storage);
+      
+      try {
+        await fs.access(sourceStorageFile);
+      } catch {
+        console.error(chalk.red(`❌ Arquivo de storage não encontrado: ${sourceStorageFile}`));
+        process.exit(1);
+      }
+
+      // Verificar se é um arquivo .storage.zip
+      if (!sourceStorageFile.endsWith('.storage.zip')) {
+        console.error(chalk.red('❌ Arquivo de storage deve ser .storage.zip'));
+        process.exit(1);
+      }
     }
 
     // Ler .env.local para obter SMOONB_OUTPUT_DIR
@@ -48,15 +68,15 @@ module.exports = async (options) => {
       console.log(chalk.yellow('⚠️  Não foi possível ler .env.local, usando diretório padrão: ./backups'));
     }
 
-    // Extrair informações do nome do arquivo
+    // Extrair informações do nome do arquivo de backup
     // Formato esperado: db_cluster-DD-MM-YYYY@HH-MM-SS.backup.gz
     const fileName = path.basename(sourceFile);
     const match = fileName.match(/db_cluster-(\d{2})-(\d{2})-(\d{4})@(\d{2})-(\d{2})-(\d{2})\.backup(\.gz)?/);
     
     if (!match) {
-      console.error(chalk.red('❌ Nome do arquivo não está no formato esperado do Dashboard'));
+      console.error(chalk.red('❌ Nome do arquivo de backup não está no formato esperado do Dashboard'));
       console.log(chalk.yellow('💡 Formato esperado: db_cluster-DD-MM-YYYY@HH-MM-SS.backup.gz'));
-      console.log(chalk.gray(`   Arquivo recebido: ${fileName}`));
+      console.log(chalk.white(`   Arquivo recebido: ${fileName}`));
       process.exit(1);
     }
 
@@ -70,17 +90,31 @@ module.exports = async (options) => {
     await ensureDir(backupDir);
     console.log(chalk.blue(`📁 Criando diretório de backup: ${backupDirName}`));
     
-    // Copiar arquivo para o diretório de backup
+    // Copiar arquivo de backup para o diretório de backup
     const destFile = path.join(backupDir, fileName);
     await fs.copyFile(sourceFile, destFile);
     
-    // Obter tamanho do arquivo
+    // Obter tamanho do arquivo de backup
     const stats = await fs.stat(destFile);
     const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
     
-    console.log(chalk.green(`✅ Arquivo importado com sucesso!`));
+    console.log(chalk.green(`✅ Arquivo de backup importado com sucesso!`));
+    console.log(chalk.blue(`📦 Backup: ${fileName} (${sizeMB} MB)`));
+    
+    // Copiar arquivo de storage se fornecido
+    if (sourceStorageFile) {
+      const storageFileName = path.basename(sourceStorageFile);
+      const destStorageFile = path.join(backupDir, storageFileName);
+      await fs.copyFile(sourceStorageFile, destStorageFile);
+      
+      const storageStats = await fs.stat(destStorageFile);
+      const storageSizeMB = (storageStats.size / (1024 * 1024)).toFixed(2);
+      
+      console.log(chalk.green(`✅ Arquivo de storage importado com sucesso!`));
+      console.log(chalk.blue(`📦 Storage: ${storageFileName} (${storageSizeMB} MB)`));
+    }
+    
     console.log(chalk.blue(`📁 Localização: ${backupDir}`));
-    console.log(chalk.blue(`📦 Arquivo: ${fileName} (${sizeMB} MB)`));
     console.log(chalk.cyan(`\n💡 Próximo passo: Execute 'npx smoonb restore' para restaurar este backup`));
     
   } catch (error) {

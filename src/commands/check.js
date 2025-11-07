@@ -7,7 +7,7 @@ const { IntrospectionService } = require('../services/introspect');
 const { showBetaBanner } = require('../utils/banner');
 
 // Exportar FUNÇÃO em vez de objeto Command
-module.exports = async (options) => {
+module.exports = async () => {
   showBetaBanner();
   
   try {
@@ -37,7 +37,7 @@ module.exports = async (options) => {
     const report = await performChecks(config, databaseUrl);
 
     // Salvar relatório
-    const reportPath = path.resolve(options.output || 'check-report.json');
+    const reportPath = path.resolve('check-report.json');
     await writeJson(reportPath, report);
 
     // Mostrar resumo
