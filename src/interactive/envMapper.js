@@ -38,22 +38,22 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
       'NEXT_PUBLIC_SUPABASE_URL': {
         notFound: 'Não foi encontrada uma entrada para a variável NEXT_PUBLIC_SUPABASE_URL.',
         help: currentProjectId 
-          ? `Acesse: https://supabase.com/dashboard/project/${currentProjectId}/settings/api`
-          : 'Acesse: Dashboard -> Project Settings -> API -> Project URL',
+          ? `https://supabase.com/dashboard/project/${currentProjectId}/settings/api`
+          : 'Dashboard -> Project Settings -> API -> Project URL',
         link: currentProjectId ? `https://supabase.com/dashboard/project/${currentProjectId}/settings/api` : null
       },
       'NEXT_PUBLIC_SUPABASE_ANON_KEY': {
         notFound: 'Não foi encontrada uma entrada para a variável NEXT_PUBLIC_SUPABASE_ANON_KEY.',
         help: currentProjectId
-          ? `Acesse: https://supabase.com/dashboard/project/${currentProjectId}/settings/api-keys`
-          : 'Acesse: Dashboard -> Project Settings -> API -> API Keys -> anon public',
+          ? `https://supabase.com/dashboard/project/${currentProjectId}/settings/api-keys`
+          : 'Dashboard -> Project Settings -> API -> API Keys -> anon public',
         link: currentProjectId ? `https://supabase.com/dashboard/project/${currentProjectId}/settings/api-keys` : null
       },
       'SUPABASE_SERVICE_ROLE_KEY': {
         notFound: 'Não foi encontrada uma entrada para a variável SUPABASE_SERVICE_ROLE_KEY.',
         help: currentProjectId
-          ? `Acesse: https://supabase.com/dashboard/project/${currentProjectId}/settings/api-keys`
-          : 'Acesse: Dashboard -> Project Settings -> API -> API Keys -> service_role secret',
+          ? `https://supabase.com/dashboard/project/${currentProjectId}/settings/api-keys`
+          : 'Dashboard -> Project Settings -> API -> API Keys -> service_role secret',
         link: currentProjectId ? `https://supabase.com/dashboard/project/${currentProjectId}/settings/api-keys` : null
       },
       'SUPABASE_DB_URL': {
@@ -65,7 +65,7 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
       },
       'SUPABASE_ACCESS_TOKEN': {
         notFound: 'Não foi encontrada uma entrada para a variável SUPABASE_ACCESS_TOKEN.',
-        help: 'Acesse: https://supabase.com/dashboard/account/tokens',
+        help: 'https://supabase.com/dashboard/account/tokens',
         link: 'https://supabase.com/dashboard/account/tokens'
       },
       'SMOONB_OUTPUT_DIR': {
@@ -91,8 +91,8 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
     // Se existir chave exatamente igual, pular seleção e ir direto para confirmação
     if (Object.prototype.hasOwnProperty.call(finalEnv, expected)) {
       clientKey = expected;
-    } else {
-      // Opção explícita para adicionar nova chave
+    } else if (allKeys.length > 0) {
+      // Só mostrar seleção se houver chaves disponíveis no env
       const choices = [
         ...allKeys.map((k, idx) => ({ name: `${idx + 1}. ${k}`, value: k })),
         new inquirer.Separator(),
@@ -119,19 +119,31 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
         }
         finalEnv[clientKey] = '';
       }
+    } else {
+      // Se não há chaves no env, criar nova chave diretamente
+      clientKey = expected;
+      finalEnv[clientKey] = '';
     }
 
     const currentValue = finalEnv[clientKey] ?? '';
     const currentProjectId = getProjectId();
     const instructions = getVariableInstructions(expected, currentProjectId);
 
-    // Se não tem valor, mostrar mensagem específica
+    // Se não tem valor, mostrar mensagem específica e pular confirmação
     if (!currentValue) {
       console.log(chalk.yellow(instructions.notFound));
       if (instructions.help) {
-        console.log(chalk.white(instructions.help));
-      }
-      if (instructions.link) {
+        // Se o help contém link (https://), mostrar como link
+        if (instructions.help.includes('https://')) {
+          console.log(chalk.cyan(`🔗 ${instructions.help}`));
+        } else {
+          console.log(chalk.white(instructions.help));
+          // Se há link separado e o help não contém link, mostrar link separado
+          if (instructions.link && !instructions.help.includes('https://')) {
+            console.log(chalk.cyan(`🔗 ${instructions.link}`));
+          }
+        }
+      } else if (instructions.link) {
         console.log(chalk.cyan(`🔗 ${instructions.link}`));
       }
     } else {

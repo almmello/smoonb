@@ -81,10 +81,12 @@ async function writeEnvFile(filePath, entries, _options = {}) {
 async function backupEnvFile(srcPath, destPath) {
   await fsp.mkdir(path.dirname(destPath), { recursive: true });
   try {
+    // Verificar se o arquivo existe antes de fazer backup
+    await fsp.access(srcPath);
     await fsp.copyFile(srcPath, destPath);
   } catch (e) {
     if (e.code === 'ENOENT') {
-      await fsp.writeFile(destPath, '', 'utf8');
+      // Arquivo não existe, não fazer backup de arquivo vazio
       return;
     }
     throw e;

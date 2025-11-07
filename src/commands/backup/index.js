@@ -73,8 +73,16 @@ module.exports = async (options) => {
     const envPath = path.join(process.cwd(), '.env.local');
     const envBackupPath = path.join(backupDir, 'env', '.env.local');
     await ensureDir(path.dirname(envBackupPath));
-    await backupEnvFile(envPath, envBackupPath);
-    console.log(chalk.blue(`📁 Backup do .env.local: ${path.relative(process.cwd(), envBackupPath)}`));
+    
+    // Verificar se o arquivo existe antes de fazer backup
+    try {
+      await fs.access(envPath);
+      await backupEnvFile(envPath, envBackupPath);
+      console.log(chalk.blue(`📁 Backup do .env.local: ${path.relative(process.cwd(), envBackupPath)}`));
+    } catch {
+      // Arquivo não existe, não fazer backup
+      console.log(chalk.yellow('⚠️  Arquivo .env.local não encontrado. Será criado durante o mapeamento.'));
+    }
 
     const expectedKeys = [
       'SUPABASE_PROJECT_ID',

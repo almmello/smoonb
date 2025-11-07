@@ -135,8 +135,16 @@ module.exports = async (options) => {
     // Backup do .env.local
     const envPath = path.join(process.cwd(), '.env.local');
     const envBackupPath = path.join(processDir, 'env', '.env.local');
-    await backupEnvFile(envPath, envBackupPath);
-    console.log(chalk.blue(`📁 Backup do .env.local: ${path.relative(process.cwd(), envBackupPath)}`));
+    
+    // Verificar se o arquivo existe antes de fazer backup
+    try {
+      await fsPromises.access(envPath);
+      await backupEnvFile(envPath, envBackupPath);
+      console.log(chalk.blue(`📁 Backup do .env.local: ${path.relative(process.cwd(), envBackupPath)}`));
+    } catch {
+      // Arquivo não existe, não fazer backup
+      console.log(chalk.yellow('⚠️  Arquivo .env.local não encontrado. Será criado durante o mapeamento.'));
+    }
 
     // Leitura e mapeamento interativo
     const currentEnv = await readEnvFile(envPath);
