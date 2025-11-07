@@ -149,7 +149,7 @@ module.exports = async ({ backupPath, targetProject }) => {
     const bucketDirs = [];
 
     // Verificar se a pasta raiz é o Project ID (antigo ou novo)
-    // Se for, as subpastas são os buckets reais
+    // Se for, as subpastas são os buckets reais - NUNCA tratar a pasta raiz como bucket
     let rootDir = null;
     if (extractedContents.length === 1) {
       const firstItem = extractedContents[0];
@@ -158,35 +158,19 @@ module.exports = async ({ backupPath, targetProject }) => {
       
       if (firstItemStats.isDirectory()) {
         // Verificar se o nome da pasta raiz corresponde ao Project ID antigo OU novo
-        // Isso pode acontecer se a pasta raiz original era o Project ID antigo
-        // e pode ou não ter sido renomeada para o Project ID novo pela função replaceProjectIdInExtractedFiles
         const isProjectId = 
           (sourceProjectId && firstItem === sourceProjectId) || 
           (firstItem === targetProject.targetProjectId);
         
         if (isProjectId) {
-          // Verificar se contém subpastas (buckets reais)
-          const subContents = await fs.readdir(firstItemPath);
-          const hasSubDirs = subContents.some(item => {
-            const itemPath = path.join(firstItemPath, item);
-            try {
-              const stats = fs.statSync(itemPath);
-              return stats.isDirectory();
-            } catch {
-              return false;
-            }
-          });
-          
-          if (hasSubDirs) {
-            // A pasta raiz é um wrapper do Project ID - buscar buckets nas subpastas
-            rootDir = firstItem;
-            console.log(chalk.white(`   - Detectada pasta raiz com Project ID: ${firstItem}`));
-            console.log(chalk.white(`   - Buscando buckets nas subpastas...`));
-          }
+          // A pasta raiz é um wrapper do Project ID - SEMPRE buscar buckets nas subpastas
+          rootDir = firstItem;
+          console.log(chalk.white(`   - Detectada pasta raiz com Project ID: ${firstItem}`));
+          console.log(chalk.white(`   - Buscando buckets nas subpastas...`));
         }
       }
     }
-    
+
     if (rootDir) {
       // Estrutura com Project ID: project-id/bucket-name/...
       // Listar subpastas dentro da pasta do Project ID - essas são os buckets reais
@@ -202,6 +186,13 @@ module.exports = async ({ backupPath, targetProject }) => {
             path: itemPath
           });
         }
+      }
+      
+      // Se não encontrou buckets nas subpastas, avisar e retornar erro
+      if (bucketDirs.length === 0) {
+        console.log(chalk.red(`   ❌ Erro: Nenhum bucket encontrado nas subpastas de ${rootDir}`));
+        console.log(chalk.red(`   ❌ A pasta raiz é um Project ID e não deve ser tratada como bucket`));
+        return { success: false, buckets_count: 0 };
       }
     } else {
       // Estrutura direta: bucket-name/...
