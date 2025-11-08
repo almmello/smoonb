@@ -23,7 +23,7 @@ O smoonb faz backup completo de todos os componentes do seu projeto Supabase:
 - ✅ **Custom Roles** (roles personalizados do PostgreSQL)
 - ✅ **Edge Functions** (download automático do servidor)
 - ✅ **Auth Settings** (configurações de autenticação via Management API)
-- ✅ **Storage Buckets** (metadados e configurações via Management API)
+- ✅ **Storage Buckets** (backup completo: metadados, configurações e todos os arquivos via Management API + Supabase Client, cria ZIP no padrão do Dashboard)
 - ✅ **Realtime Settings** (7 parâmetros capturados interativamente)
 - ✅ **Supabase .temp** (arquivos temporários do Supabase CLI)
 - ✅ **Migrations** (todas as migrations do projeto via `supabase migration fetch`)
@@ -169,7 +169,7 @@ npx smoonb backup
 4. **Backup do .env.local** - Cria backup automático antes de alterações
 5. **Seleção de Componentes** - Pergunta quais componentes incluir:
    - ⚡ Edge Functions (explicação sobre reset de link e download)
-   - 📦 Storage (explicação sobre metadados)
+   - 📦 Storage (explicação sobre backup completo: download de arquivos + ZIP no padrão do Dashboard)
    - 🔐 Auth Settings (explicação sobre configurações)
    - 🔄 Realtime Settings (explicação sobre captura interativa de 7 parâmetros)
    - 🗑️ Opções de limpeza (functions, .temp, migrations após backup)
@@ -181,7 +181,7 @@ npx smoonb backup
    - 🔧 3/10 - Backup Database Extensions and Settings
    - 🔐 4/10 - Backup Auth Settings (se selecionado)
    - 🔄 5/10 - Backup Realtime Settings (se selecionado) - 7 parâmetros capturados interativamente
-   - 📦 6/10 - Backup Storage (se selecionado)
+   - 📦 6/10 - Backup Storage (se selecionado) - Download completo de arquivos + ZIP no padrão do Dashboard
    - 👥 7/10 - Backup Custom Roles
    - ⚡ 8/10 - Backup Edge Functions (se selecionado)
    - 📁 9/10 - Backup Supabase .temp (se selecionado)
@@ -199,6 +199,11 @@ backups/backup-2025-10-31-09-37-54/
 ├── auth-settings.json             # Configurações de Auth
 ├── realtime-settings.json         # Configurações de Realtime
 ├── storage/                       # Metadados de Storage
+│   └── [bucket-name].json         # Metadados de cada bucket
+├── [project-id].storage.zip       # Backup completo de Storage (padrão Dashboard)
+├── storage_temp/                  # Estrutura temporária (opcional, pode ser removida)
+│   └── [project-id]/              # Estrutura de arquivos baixados
+│       └── [bucket-name]/        # Arquivos de cada bucket
 ├── edge-functions/                # Edge Functions baixadas
 │   └── [nome-da-function]/
 ├── supabase-temp/                 # Arquivos .temp do Supabase CLI
@@ -247,7 +252,7 @@ npx smoonb restore --file "backup.backup.gz" --storage "meu-projeto.storage.zip"
     - 📊 Database - Restaura via `psql` (suporta `.backup.gz` e `.backup`)
     - ⚡ Edge Functions - Copia e faz deploy no projeto destino
     - 🔐 Auth Settings - Exibe configurações para aplicação manual
-    - 📦 Storage - Exibe informações para migração manual
+    - 📦 Storage - Restaura buckets e arquivos do ZIP (se disponível) ou exibe informações para migração manual
     - 🔧 Database Settings - Restaura extensões e configurações via SQL
     - 🔄 Realtime Settings - Exibe configurações para aplicação manual
 
@@ -432,7 +437,17 @@ restore/
 - **Reset de Link**: Garante link limpo com o projeto
 - **Backup Completo**: Todas as migrations do servidor
 
-#### Auth, Storage, Realtime
+#### Storage
+- **Backup Completo**: Download de todos os arquivos de todos os buckets
+- **Estrutura Temporária**: Cria `storage_temp/project-id/bucket-name/arquivos...` dentro do backupDir
+- **ZIP no Padrão Dashboard**: Cria `{project-id}.storage.zip` com estrutura `project-id/bucket-name/arquivos...`
+- **Compatível com Restore**: O ZIP criado é compatível com o processo de restore (mesmo formato do Dashboard)
+- **Pergunta Interativa**: Após criar o ZIP, pergunta se deseja limpar a estrutura temporária
+- **Fallback**: Se não houver credenciais do Supabase, faz backup apenas de metadados
+- **Management API**: Usa Personal Access Token para listar buckets e objetos
+- **Supabase Client**: Usa Service Role Key para download de arquivos
+
+#### Auth, Realtime
 - **Management API**: Usa Personal Access Token
 - **JSON Export**: Configurações exportadas como JSON
 - **Realtime Settings**: Captura interativa de 7 parâmetros:
@@ -460,7 +475,8 @@ restore/
 
 #### Outros Componentes
 - **Database Settings**: Restaura via SQL
-- **Auth/Storage/Realtime**: Exibe informações para configuração manual no Dashboard
+- **Storage**: Restaura buckets e arquivos do ZIP (se disponível) ou exibe informações para configuração manual
+- **Auth/Realtime**: Exibe informações para configuração manual no Dashboard
 
 ### Multiplataforma
 
@@ -495,10 +511,10 @@ npx smoonb restore
 # 6. Verificar integridade
 npx smoonb check
 
-# 7. Aplicar configurações manuais
+# 7. Aplicar configurações manuais (se necessário)
 # - Auth Settings: Dashboard → Authentication → Settings
-# - Storage: Dashboard → Storage → Buckets
 # - Realtime: Dashboard → Database → Replication
+# Nota: Storage é restaurado automaticamente do ZIP se disponível
 ```
 
 ## 🎨 Experiência do Usuário

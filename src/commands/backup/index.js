@@ -119,6 +119,8 @@ module.exports = async (options) => {
     const projectId = getValue('SUPABASE_PROJECT_ID');
     const accessToken = getValue('SUPABASE_ACCESS_TOKEN');
     const databaseUrl = getValue('SUPABASE_DB_URL');
+    const supabaseUrl = getValue('NEXT_PUBLIC_SUPABASE_URL');
+    const supabaseServiceKey = getValue('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!databaseUrl) {
       console.log(chalk.red('❌ DATABASE_URL NÃO CONFIGURADA'));
@@ -187,6 +189,8 @@ module.exports = async (options) => {
       projectId,
       accessToken,
       databaseUrl,
+      supabaseUrl,
+      supabaseServiceKey,
       backupDir: finalBackupDir,
       outputDir: resolvedOutputDir,
       options: { ...options, flags },
@@ -326,7 +330,11 @@ module.exports = async (options) => {
     
     if (flags?.includeStorage && manifest.components.storage) {
       const storageResult = manifest.components.storage;
-      console.log(chalk.green(`📦 Storage: ${storageResult.buckets?.length || 0} buckets verificados via API`));
+      if (storageResult.zipFile) {
+        console.log(chalk.green(`📦 Storage: ${storageResult.buckets?.length || 0} buckets, ${storageResult.totalFiles || 0} arquivo(s) baixado(s), ZIP: ${storageResult.zipFile} (${storageResult.zipSizeMB || 0} MB)`));
+      } else {
+        console.log(chalk.green(`📦 Storage: ${storageResult.buckets?.length || 0} buckets verificados via API (apenas metadados)`));
+      }
     }
     
     console.log(chalk.green(`👥 Custom Roles: ${rolesResult.roles?.length || 0} roles exportados via SQL`));
