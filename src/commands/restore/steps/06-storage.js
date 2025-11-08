@@ -100,6 +100,7 @@ module.exports = async ({ backupPath, targetProject }) => {
     
     // 3. Selecionar o primeiro arquivo .storage.zip encontrado
     const storageZipFile = path.join(backupPath, storageZipFiles[0]);
+    const storageZipBaseName = path.basename(storageZipFiles[0], '.storage.zip');
     console.log(chalk.white(`   - Arquivo de storage encontrado: ${storageZipFiles[0]}`));
     
     // 4. Validar credenciais do projeto destino
@@ -155,17 +156,30 @@ module.exports = async ({ backupPath, targetProject }) => {
       const firstItem = extractedContents[0];
       const firstItemPath = path.join(extractDir, firstItem);
       const firstItemStats = await fs.stat(firstItemPath);
-      
+
       if (firstItemStats.isDirectory()) {
         // Verificar se o nome da pasta raiz corresponde ao Project ID antigo OU novo
-        const isProjectId = 
-          (sourceProjectId && firstItem === sourceProjectId) || 
-          (firstItem === targetProject.targetProjectId);
-        
+        const matchesSourceProjectId = sourceProjectId && firstItem === sourceProjectId;
+        const matchesTargetProjectId = firstItem === targetProject.targetProjectId;
+        const matchesZipFileName = firstItem === storageZipBaseName;
+        const matchesProjectIdPattern = isLikelyProjectId(firstItem);
+
+        const isProjectId =
+          matchesSourceProjectId ||
+          matchesTargetProjectId ||
+          matchesZipFileName ||
+          matchesProjectIdPattern;
+
         if (isProjectId) {
           // A pasta raiz é um wrapper do Project ID - SEMPRE buscar buckets nas subpastas
           rootDir = firstItem;
-          console.log(chalk.white(`   - Detectada pasta raiz com Project ID: ${firstItem}`));
+          const reasons = [];
+          if (matchesSourceProjectId) reasons.push('manifest');
+          if (matchesTargetProjectId) reasons.push('projeto destino');
+          if (matchesZipFileName) reasons.push('nome do arquivo ZIP');
+          if (matchesProjectIdPattern) reasons.push('formato de Project ID');
+          const reasonText = reasons.length ? ` (${reasons.join(', ')})` : '';
+          console.log(chalk.white(`   - Detectada pasta raiz com Project ID: ${firstItem}${reasonText}`));
           console.log(chalk.white(`   - Buscando buckets nas subpastas...`));
         }
       }
@@ -550,4 +564,13 @@ function getContentType(fileName) {
   };
   
   return contentTypes[ext] || 'application/octet-stream';
+}
+
+function isLikelyProjectId(name) {
+  if (!name || typeof name !== 'string') {
+    return false;
+  }
+
+  // Project IDs do Supabase são normalmente strings de 20 caracteres alfanuméricos minúsculos
+  return /^[a-z0-9]{20}$/.test(name);
 }
