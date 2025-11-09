@@ -2,20 +2,22 @@ const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs').promises;
 const { execSync } = require('child_process');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 2: Backup Database Separado (SQL files para troubleshooting)
  */
 module.exports = async ({ databaseUrl, backupDir, accessToken }) => {
   try {
-    console.log(chalk.white('   - Criando backups SQL separados via Supabase CLI...'));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.white(`   - ${getT('backup.steps.database.separated.creating')}`));
     
     const dbUrl = databaseUrl;
     const files = [];
     let totalSizeKB = 0;
     
     // 1. Backup do Schema
-    console.log(chalk.white('   - Exportando schema...'));
+    console.log(chalk.white(`   - ${getT('backup.steps.database.separated.exportingSchema')}`));
     const schemaFile = path.join(backupDir, 'schema.sql');
     
     try {
@@ -29,11 +31,11 @@ module.exports = async ({ databaseUrl, backupDir, accessToken }) => {
       totalSizeKB += parseFloat(sizeKB);
       console.log(chalk.green(`     ✅ Schema: ${sizeKB} KB`));
     } catch (error) {
-      console.log(chalk.yellow(`     ⚠️ Erro no schema: ${error.message}`));
+      console.log(chalk.yellow(`     ⚠️ ${getT('backup.steps.database.separated.schemaError', { message: error.message })}`));
     }
     
     // 2. Backup dos Dados
-    console.log(chalk.white('   - Exportando dados...'));
+    console.log(chalk.white(`   - ${getT('backup.steps.database.separated.exportingData')}`));
     const dataFile = path.join(backupDir, 'data.sql');
     
     try {
@@ -47,11 +49,11 @@ module.exports = async ({ databaseUrl, backupDir, accessToken }) => {
       totalSizeKB += parseFloat(sizeKB);
       console.log(chalk.green(`     ✅ Data: ${sizeKB} KB`));
     } catch (error) {
-      console.log(chalk.yellow(`     ⚠️ Erro nos dados: ${error.message}`));
+      console.log(chalk.yellow(`     ⚠️ ${getT('backup.steps.database.separated.dataError', { message: error.message })}`));
     }
     
     // 3. Backup dos Roles
-    console.log(chalk.white('   - Exportando roles...'));
+    console.log(chalk.white(`   - ${getT('backup.steps.database.separated.exportingRoles')}`));
     const rolesFile = path.join(backupDir, 'roles.sql');
     
     try {
@@ -65,7 +67,7 @@ module.exports = async ({ databaseUrl, backupDir, accessToken }) => {
       totalSizeKB += parseFloat(sizeKB);
       console.log(chalk.green(`     ✅ Roles: ${sizeKB} KB`));
     } catch (error) {
-      console.log(chalk.yellow(`     ⚠️ Erro nos roles: ${error.message}`));
+      console.log(chalk.yellow(`     ⚠️ ${getT('backup.steps.database.separated.rolesError', { message: error.message })}`));
     }
     
     return { 
@@ -75,7 +77,8 @@ module.exports = async ({ databaseUrl, backupDir, accessToken }) => {
     };
     
   } catch (error) {
-    console.log(chalk.yellow(`     ⚠️ Erro nos backups SQL separados: ${error.message}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.yellow(`     ⚠️ ${getT('backup.steps.database.separated.error', { message: error.message })}`));
     return { success: false, files: [], totalSizeKB: '0.0' };
   }
 };

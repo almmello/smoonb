@@ -3,6 +3,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 const { extractPasswordFromDbUrl, ensureCleanLink } = require('../../../utils/supabaseLink');
 const { cleanDir, countFiles, copyDirSafe } = require('../../../utils/fsExtra');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 10: Backup Migrations (NOVA ETAPA INDEPENDENTE)
@@ -10,6 +11,7 @@ const { cleanDir, countFiles, copyDirSafe } = require('../../../utils/fsExtra');
 module.exports = async (context) => {
   const { projectId, accessToken, databaseUrl, backupDir } = context;
   try {
+    const getT = global.smoonbI18n?.t || t;
     // Reset de link ao projeto de ORIGEM
     const dbPassword = extractPasswordFromDbUrl(databaseUrl);
     await ensureCleanLink(projectId, accessToken, dbPassword);
@@ -17,10 +19,10 @@ module.exports = async (context) => {
     // Limpar migrations local (opcional, mas recomendado para garantir servidor como fonte da verdade)
     const migrationsDir = path.join(process.cwd(), 'supabase', 'migrations');
     await cleanDir(migrationsDir);
-    console.log(chalk.white('   - Limpando supabase/migrations...'));
+    console.log(chalk.white(`   - ${getT('backup.steps.migrations.cleaning')}`));
     
     // Baixar todas as migrations do servidor usando migration fetch
-    console.log(chalk.white('   - Baixando todas as migrations do servidor usando migration fetch...'));
+    console.log(chalk.white(`   - ${getT('backup.steps.migrations.downloading')}`));
     
     const env = {
       ...process.env,
@@ -36,22 +38,23 @@ module.exports = async (context) => {
         env
       });
     } catch (error) {
-      console.log(chalk.yellow(`   ⚠️ Erro ao executar migration fetch: ${error.message}`));
-      console.log(chalk.yellow('   💡 Verifique se o projeto está linkado corretamente e se o token está válido.'));
+      console.log(chalk.yellow(`   ⚠️ ${getT('backup.steps.migrations.fetchError', { message: error.message })}`));
+      console.log(chalk.yellow(`   💡 ${getT('backup.steps.migrations.fetchTip')}`));
       return { success: false };
     }
     
     // Contar arquivos baixados
     const fileCount = await countFiles(migrationsDir);
-    console.log(chalk.white(`   - Arquivos baixados: ${fileCount} migrations`));
+    console.log(chalk.white(`   - ${getT('backup.steps.migrations.downloaded', { count: fileCount })}`));
     
     // Copiar migrations para o backup
     const backupMigrationsDir = path.join(backupDir, 'migrations');
     const copiedCount = await copyDirSafe(migrationsDir, backupMigrationsDir);
-    console.log(chalk.white(`   - Copiando supabase/migrations → backups/backup-${path.basename(backupDir)}/migrations (${copiedCount} arquivos)...`));
+    const relativePath = path.relative(process.cwd(), backupMigrationsDir);
+    console.log(chalk.white(`   - ${getT('backup.steps.migrations.copying', { path: relativePath, count: copiedCount })}`));
     
     if (copiedCount > 0) {
-      console.log(chalk.green(`   ✅ ${copiedCount} migration(s) copiada(s)`));
+      console.log(chalk.green(`   ✅ ${getT('backup.steps.migrations.copied', { count: copiedCount })}`));
     }
     
     // Usar flag de limpeza do contexto (já foi perguntado no início)
@@ -59,7 +62,7 @@ module.exports = async (context) => {
     
     if (shouldClean) {
       await cleanDir(migrationsDir);
-      console.log(chalk.gray('   - supabase/migrations apagado.'));
+      console.log(chalk.gray(`   - ${getT('backup.steps.migrations.cleaned')}`));
     }
     
     return {
@@ -67,7 +70,8 @@ module.exports = async (context) => {
       file_count: copiedCount
     };
   } catch (error) {
-    console.log(chalk.yellow(`   ⚠️ Erro no backup das migrations: ${error.message}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.yellow(`   ⚠️ ${getT('backup.steps.migrations.error', { message: error.message })}`));
     return { success: false };
   }
 };

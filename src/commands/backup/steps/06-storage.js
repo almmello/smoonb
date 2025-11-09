@@ -5,6 +5,7 @@ const AdmZip = require('adm-zip');
 const { createClient } = require('@supabase/supabase-js');
 const { ensureDir, writeJson } = require('../../../utils/fsx');
 const { confirm } = require('../../../utils/prompt');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 6: Backup Storage via Supabase API
@@ -12,10 +13,11 @@ const { confirm } = require('../../../utils/prompt');
  */
 module.exports = async ({ projectId, accessToken, backupDir, supabaseUrl, supabaseServiceKey }) => {
   try {
+    const getT = global.smoonbI18n?.t || t;
     const storageDir = path.join(backupDir, 'storage');
     await ensureDir(storageDir);
 
-    console.log(chalk.white('   - Listando buckets de Storage via Management API...'));
+    console.log(chalk.white(`   - ${getT('backup.steps.storage.listing')}`));
     
     // Usar fetch direto para Management API com Personal Access Token
     const storageResponse = await fetch(`https://api.supabase.com/v1/projects/${projectId}/storage/buckets`, {
@@ -26,25 +28,25 @@ module.exports = async ({ projectId, accessToken, backupDir, supabaseUrl, supaba
     });
     
     if (!storageResponse.ok) {
-      console.log(chalk.yellow(`     ⚠️ Erro ao listar buckets: ${storageResponse.status} ${storageResponse.statusText}`));
+      console.log(chalk.yellow(`     ⚠️ ${getT('backup.steps.storage.listBucketsError', { status: storageResponse.status, statusText: storageResponse.statusText })}`));
       return { success: false, buckets: [] };
     }
 
     const buckets = await storageResponse.json();
 
     if (!buckets || buckets.length === 0) {
-      console.log(chalk.white('   - Nenhum bucket encontrado'));
+      console.log(chalk.white(`   - ${getT('backup.steps.storage.noBuckets')}`));
       await writeJson(path.join(storageDir, 'README.md'), {
         message: 'Nenhum bucket de Storage encontrado neste projeto'
       });
       return { success: true, buckets: [] };
     }
 
-    console.log(chalk.white(`   - Encontrados ${buckets.length} buckets`));
+    console.log(chalk.white(`   - ${getT('backup.steps.storage.found', { count: buckets.length })}`));
 
     // Validar credenciais do Supabase para download de arquivos
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.log(chalk.yellow('   ⚠️  Credenciais do Supabase não disponíveis. Fazendo backup apenas de metadados...'));
+      console.log(chalk.yellow(`   ⚠️  ${getT('backup.steps.storage.credentialsNotAvailable')}`));
       return await backupMetadataOnly(buckets, storageDir, projectId, accessToken);
     }
 
@@ -64,7 +66,7 @@ module.exports = async ({ projectId, accessToken, backupDir, supabaseUrl, supaba
 
     for (const bucket of buckets || []) {
       try {
-        console.log(chalk.white(`   - Processando bucket: ${bucket.name}`));
+        console.log(chalk.white(`   - ${getT('backup.steps.storage.processing', { bucketName: bucket.name })}`));
         
         // Listar objetos do bucket via Management API com Personal Access Token
         const objectsResponse = await fetch(`https://api.supabase.com/v1/projects/${projectId}/storage/buckets/${bucket.name}/objects`, {
@@ -97,12 +99,12 @@ module.exports = async ({ projectId, accessToken, backupDir, supabaseUrl, supaba
         await ensureDir(bucketDir);
         
         // Listar todos os arquivos recursivamente usando Supabase client
-        console.log(chalk.white(`     - Listando arquivos do bucket ${bucket.name}...`));
+        console.log(chalk.white(`     - ${getT('backup.steps.storage.listingFiles', { bucketName: bucket.name })}`));
         const allFiles = await listAllFilesRecursively(supabase, bucket.name, '');
         
         let filesDownloaded = 0;
         if (allFiles.length > 0) {
-          console.log(chalk.white(`     - Baixando ${allFiles.length} arquivo(s) do bucket ${bucket.name}...`));
+          console.log(chalk.white(`     - ${getT('backup.steps.storage.downloading', { count: allFiles.length, bucketName: bucket.name })}`));
           
           for (const filePath of allFiles) {
             try {
@@ -112,7 +114,7 @@ module.exports = async ({ projectId, accessToken, backupDir, supabaseUrl, supaba
                 .download(filePath);
 
               if (downloadError) {
-                console.log(chalk.yellow(`       ⚠️  Erro ao baixar ${filePath}: ${downloadError.message}`));
+                console.log(chalk.yellow(`       ⚠️  ${getT('backup.steps.storage.downloadError', { path: filePath, message: downloadError.message })}`));
                 continue;
               }
 
@@ -129,10 +131,10 @@ module.exports = async ({ projectId, accessToken, backupDir, supabaseUrl, supaba
 
               // Mostrar progresso a cada 10 arquivos ou se for o último
               if (filesDownloaded % 10 === 0 || filesDownloaded === allFiles.length) {
-                console.log(chalk.white(`       - Baixados ${filesDownloaded}/${allFiles.length} arquivo(s)...`));
+                console.log(chalk.white(`       - ${getT('backup.steps.storage.downloaded', { current: filesDownloaded, total: allFiles.length })}`));
               }
             } catch (fileError) {
-              console.log(chalk.yellow(`       ⚠️  Erro ao processar arquivo ${filePath}: ${fileError.message}`));
+              console.log(chalk.yellow(`       ⚠️  ${getT('backup.steps.storage.processFileError', { path: filePath, message: fileError.message })}`));
             }
           }
         }
@@ -145,14 +147,14 @@ module.exports = async ({ projectId, accessToken, backupDir, supabaseUrl, supaba
           totalFiles: allFiles.length
         });
 
-        console.log(chalk.green(`     ✅ Bucket ${bucket.name}: ${filesDownloaded}/${allFiles.length} arquivo(s) baixado(s)`));
+        console.log(chalk.green(`     ✅ ${getT('backup.steps.storage.bucketDone', { bucketName: bucket.name, downloaded: filesDownloaded, total: allFiles.length })}`));
       } catch (error) {
-        console.log(chalk.yellow(`     ⚠️ Erro ao processar bucket ${bucket.name}: ${error.message}`));
+        console.log(chalk.yellow(`     ⚠️ ${getT('backup.steps.storage.processBucketError', { bucketName: bucket.name, message: error.message })}`));
       }
     }
 
     // Criar ZIP no padrão do Dashboard: {project-id}.storage.zip
-    console.log(chalk.white('\n   - Criando arquivo ZIP no padrão do Dashboard...'));
+    console.log(chalk.white(`\n   - ${getT('backup.steps.storage.creatingZip')}`));
     const zipFileName = `${projectId}.storage.zip`;
     const zipFilePath = path.join(backupDir, zipFileName);
     
@@ -167,25 +169,24 @@ module.exports = async ({ projectId, accessToken, backupDir, supabaseUrl, supaba
     const zipStats = await fs.stat(zipFilePath);
     const zipSizeMB = (zipStats.size / (1024 * 1024)).toFixed(2);
     
-    console.log(chalk.green(`   ✅ Arquivo ZIP criado: ${zipFileName} (${zipSizeMB} MB)`));
+    console.log(chalk.green(`   ✅ ${getT('backup.steps.storage.zipCreated', { fileName: zipFileName, size: zipSizeMB })}`));
 
     // Perguntar ao usuário se deseja limpar a estrutura temporária
-    const tempDirName = path.basename(tempStorageDir);
-    const shouldCleanup = await confirm(`   Deseja limpar ${tempDirName} após o backup`, false);
+    const shouldCleanup = await confirm(`   ${getT('backup.steps.storage.cleanup')}`, false);
     
     if (shouldCleanup) {
-      console.log(chalk.white(`   - Limpando estrutura temporária...`));
+      console.log(chalk.white(`   - ${getT('backup.steps.storage.cleanupRemoving')}`));
       try {
         await fs.rm(tempStorageDir, { recursive: true, force: true });
-        console.log(chalk.green(`   ✅ Estrutura temporária removida`));
+        console.log(chalk.green(`   ✅ ${getT('backup.steps.storage.cleanupRemoved')}`));
       } catch (cleanupError) {
-        console.log(chalk.yellow(`   ⚠️  Erro ao limpar estrutura temporária: ${cleanupError.message}`));
+        console.log(chalk.yellow(`   ⚠️  ${getT('backup.steps.storage.cleanupError', { message: cleanupError.message })}`));
       }
     } else {
-      console.log(chalk.white(`   ℹ️  Estrutura temporária mantida em: ${path.relative(process.cwd(), tempStorageDir)}`));
+      console.log(chalk.white(`   ℹ️  ${getT('backup.steps.storage.tempKept', { path: path.relative(process.cwd(), tempStorageDir) })}`));
     }
 
-    console.log(chalk.green(`✅ Storage backupado: ${processedBuckets.length} buckets, ${totalFilesDownloaded} arquivo(s) baixado(s)`));
+    console.log(chalk.green(`✅ ${getT('backup.steps.storage.done', { buckets: processedBuckets.length, files: totalFilesDownloaded })}`));
     return { 
       success: true, 
       buckets: processedBuckets,
@@ -195,7 +196,8 @@ module.exports = async ({ projectId, accessToken, backupDir, supabaseUrl, supaba
       tempDirCleaned: shouldCleanup
     };
   } catch (error) {
-    console.log(chalk.yellow(`⚠️ Erro no backup do Storage: ${error.message}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.yellow(`⚠️ ${getT('backup.steps.storage.error', { message: error.message })}`));
     return { success: false, buckets: [] };
   }
 };
@@ -254,6 +256,7 @@ async function backupMetadataOnly(buckets, storageDir, projectId, accessToken) {
  */
 async function listAllFilesRecursively(supabase, bucketName, folderPath = '') {
   const allFiles = [];
+  const getT = global.smoonbI18n?.t || t;
   
   try {
     // Listar arquivos e pastas no caminho atual
@@ -265,7 +268,7 @@ async function listAllFilesRecursively(supabase, bucketName, folderPath = '') {
       });
 
     if (error) {
-      console.log(chalk.yellow(`       ⚠️  Erro ao listar ${folderPath || 'raiz'}: ${error.message}`));
+      console.log(chalk.yellow(`       ⚠️  ${getT('backup.steps.storage.listError', { path: folderPath || 'raiz', message: error.message })}`));
       return allFiles;
     }
 
@@ -286,7 +289,7 @@ async function listAllFilesRecursively(supabase, bucketName, folderPath = '') {
       }
     }
   } catch (error) {
-    console.log(chalk.yellow(`       ⚠️  Erro ao processar ${folderPath || 'raiz'}: ${error.message}`));
+    console.log(chalk.yellow(`       ⚠️  ${getT('backup.steps.storage.processError', { path: folderPath || 'raiz', message: error.message })}`));
   }
 
   return allFiles;

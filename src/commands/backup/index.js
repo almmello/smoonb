@@ -79,10 +79,10 @@ module.exports = async (options) => {
     try {
       await fs.access(envPath);
       await backupEnvFile(envPath, envBackupPath);
-      console.log(chalk.blue(`📁 Backup do .env.local: ${path.relative(process.cwd(), envBackupPath)}`));
+      console.log(chalk.blue(`📁 ${getT('env.mapping.backupCreated', { path: path.relative(process.cwd(), envBackupPath) })}`));
     } catch {
       // Arquivo não existe, não fazer backup
-      console.log(chalk.yellow('⚠️  Arquivo .env.local não encontrado. Será criado durante o mapeamento.'));
+      console.log(chalk.yellow(`⚠️  ${getT('env.mapping.fileNotFound')}`));
     }
 
     const expectedKeys = [
@@ -98,7 +98,7 @@ module.exports = async (options) => {
     const { finalEnv, dePara } = await mapEnvVariablesInteractively(currentEnv, expectedKeys);
     await writeEnvFile(envPath, finalEnv);
     await saveEnvMap(dePara, path.join(backupDir, 'env', 'env-map.json'));
-    console.log(chalk.green('✅ .env.local atualizado com sucesso. Nenhuma chave renomeada; valores sincronizados.'));
+    console.log(chalk.green(`✅ ${getT('env.mapping.updated')}`));
 
     function getValue(expectedKey) {
       const clientKey = Object.keys(dePara).find(k => dePara[k] === expectedKey);
@@ -124,33 +124,33 @@ module.exports = async (options) => {
     const supabaseServiceKey = getValue('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!databaseUrl) {
-      console.log(chalk.red('❌ DATABASE_URL NÃO CONFIGURADA'));
+      console.log(chalk.red(`❌ ${getT('backup.error.databaseUrlNotConfigured')}`));
       console.log('');
-      console.log(chalk.yellow('📋 Para fazer backup completo do Supabase, você precisa:'));
-      console.log(chalk.yellow('   1. Configurar SUPABASE_DB_URL no .env.local'));
-      console.log(chalk.yellow('   2. Repetir o comando de backup'));
+      console.log(chalk.yellow(`📋 ${getT('backup.error.databaseUrlInstructions')}`));
+      console.log(chalk.yellow(`   1. ${getT('backup.error.databaseUrlStep1')}`));
+      console.log(chalk.yellow(`   2. ${getT('backup.error.databaseUrlStep2')}`));
       console.log('');
-      console.log(chalk.blue('💡 Exemplo de configuração:'));
-      console.log(chalk.gray('   "databaseUrl": "postgresql://postgres:[senha]@db.[projeto].supabase.co:5432/postgres"'));
+      console.log(chalk.blue(`💡 ${getT('backup.error.databaseUrlExample')}:`));
+      console.log(chalk.gray(`   ${getT('backup.error.databaseUrlExampleValue')}`));
       console.log('');
-      console.log(chalk.red('🚫 Backup cancelado - Configuração incompleta'));
+      console.log(chalk.red(`🚫 ${getT('backup.error.databaseUrlCancelled')}`));
       process.exit(1);
     }
 
     if (!accessToken) {
-      console.log(chalk.red('❌ ACCESS_TOKEN NÃO CONFIGURADO'));
+      console.log(chalk.red(`❌ ${getT('backup.error.accessTokenNotConfigured')}`));
       console.log('');
-      console.log(chalk.yellow('📋 Para fazer backup completo do Supabase, você precisa:'));
-      console.log(chalk.yellow('   1. Obter Personal Access Token do Supabase'));
-      console.log(chalk.yellow('   2. Configurar SUPABASE_ACCESS_TOKEN no .env.local'));
-      console.log(chalk.yellow('   3. Repetir o comando de backup'));
+      console.log(chalk.yellow(`📋 ${getT('backup.error.accessTokenInstructions')}`));
+      console.log(chalk.yellow(`   1. ${getT('backup.error.accessTokenStep1')}`));
+      console.log(chalk.yellow(`   2. ${getT('backup.error.accessTokenStep2')}`));
+      console.log(chalk.yellow(`   3. ${getT('backup.error.accessTokenStep3')}`));
       console.log('');
-      console.log(chalk.blue('🔗 Como obter o token:'));
-      console.log(chalk.gray('   1. Acesse: https://supabase.com/dashboard/account/tokens'));
-      console.log(chalk.gray('   2. Clique: "Generate new token"'));
-      console.log(chalk.gray('   3. Copie o token (formato: sbp_...)'));
+      console.log(chalk.blue(`🔗 ${getT('backup.error.accessTokenHowTo')}:`));
+      console.log(chalk.gray(`   ${getT('backup.error.accessTokenStep1Detail')}`));
+      console.log(chalk.gray(`   ${getT('backup.error.accessTokenStep2Detail')}`));
+      console.log(chalk.gray(`   ${getT('backup.error.accessTokenStep3Detail')}`));
       console.log('');
-      console.log(chalk.red('🚫 Backup cancelado - Token não configurado'));
+      console.log(chalk.red(`🚫 ${getT('backup.error.accessTokenCancelled')}`));
       process.exit(1);
     }
 
@@ -158,32 +158,32 @@ module.exports = async (options) => {
     const flags = await askComponentsFlags();
 
     // Mostrar resumo e pedir confirmação final
-    console.log(chalk.cyan('\n📋 RESUMO DAS CONFIGURAÇÕES:\n'));
-    console.log(chalk.white(`   ✅ Edge Functions: ${flags.includeFunctions ? 'Sim' : 'Não'}`));
+    console.log(chalk.cyan(`\n📋 ${getT('backup.summary.title')}\n`));
+    console.log(chalk.white(`   ✅ ${getT('backup.summary.edgeFunctions', { value: flags.includeFunctions ? getT('backup.summary.yes') : getT('backup.summary.no') })}`));
     if (flags.includeFunctions) {
-      console.log(chalk.white(`      🗑️  Limpar após backup: ${flags.cleanFunctions ? 'Sim' : 'Não'}`));
+      console.log(chalk.white(`      🗑️  ${getT('backup.summary.edgeFunctionsCleanup', { value: flags.cleanFunctions ? getT('backup.summary.yes') : getT('backup.summary.no') })}`));
     }
-    console.log(chalk.white(`   ✅ Supabase .temp: ${flags.includeTemp ? 'Sim' : 'Não'}`));
+    console.log(chalk.white(`   ✅ ${getT('backup.summary.temp', { value: flags.includeTemp ? getT('backup.summary.yes') : getT('backup.summary.no') })}`));
     if (flags.includeTemp) {
-      console.log(chalk.white(`      🗑️  Apagar após backup: ${flags.cleanTemp ? 'Sim' : 'Não'}`));
+      console.log(chalk.white(`      🗑️  ${getT('backup.summary.tempCleanup', { value: flags.cleanTemp ? getT('backup.summary.yes') : getT('backup.summary.no') })}`));
     }
-    console.log(chalk.white(`   ✅ Migrations: ${flags.includeMigrations ? 'Sim' : 'Não'}`));
+    console.log(chalk.white(`   ✅ ${getT('backup.summary.migrations', { value: flags.includeMigrations ? getT('backup.summary.yes') : getT('backup.summary.no') })}`));
     if (flags.includeMigrations) {
-      console.log(chalk.white(`      🗑️  Apagar após backup: ${flags.cleanMigrations ? 'Sim' : 'Não'}`));
+      console.log(chalk.white(`      🗑️  ${getT('backup.summary.migrationsCleanup', { value: flags.cleanMigrations ? getT('backup.summary.yes') : getT('backup.summary.no') })}`));
     }
-    console.log(chalk.white(`   ✅ Storage: ${flags.includeStorage ? 'Sim' : 'Não'}`));
-    console.log(chalk.white(`   ✅ Auth: ${flags.includeAuth ? 'Sim' : 'Não'}`));
-    console.log(chalk.white(`   ✅ Realtime: ${flags.includeRealtime ? 'Sim' : 'Não'}`));
-    console.log(chalk.white(`   📁 Diretório de backup: ${finalBackupDir}\n`));
+    console.log(chalk.white(`   ✅ ${getT('backup.summary.storage', { value: flags.includeStorage ? getT('backup.summary.yes') : getT('backup.summary.no') })}`));
+    console.log(chalk.white(`   ✅ ${getT('backup.summary.auth', { value: flags.includeAuth ? getT('backup.summary.yes') : getT('backup.summary.no') })}`));
+    console.log(chalk.white(`   ✅ ${getT('backup.summary.realtime', { value: flags.includeRealtime ? getT('backup.summary.yes') : getT('backup.summary.no') })}`));
+    console.log(chalk.white(`   📁 ${getT('backup.summary.backupDir', { path: finalBackupDir })}\n`));
 
-    const finalOk = await confirm('Deseja iniciar o backup com estas configurações?', true);
+    const finalOk = await confirm(getT('backup.summary.confirm'), true);
 
     if (!finalOk) {
-      console.log(chalk.red('🚫 Operação cancelada pelo usuário.'));
+      console.log(chalk.red(`🚫 ${getT('disclaimer.operationCancelled')}`));
       process.exit(1);
     }
 
-    console.log(chalk.blue(`\n🚀 Iniciando backup do projeto: ${projectId}`));
+    console.log(chalk.blue(`\n🚀 ${getT('backup.start.title', { projectId })}`));
 
     // Criar contexto compartilhado para as etapas
     const context = {
@@ -214,8 +214,8 @@ module.exports = async (options) => {
     };
 
     // Executar todas as etapas na ordem
-    console.log(chalk.blue(`📁 Diretório: ${finalBackupDir}`));
-    console.log(chalk.white(`🐳 Backup via Docker Desktop`));
+    console.log(chalk.blue(`📁 ${getT('backup.start.directory', { path: finalBackupDir })}`));
+    console.log(chalk.white(`🐳 ${getT('backup.start.docker')}`));
 
     // Contar etapas totais para numeração
     // Etapas fixas: Database, Database Separado, Database Settings, Custom Roles (4)
@@ -225,13 +225,13 @@ module.exports = async (options) => {
 
     // 1. Backup Database via pg_dumpall Docker
     stepNumber++;
-    console.log(chalk.blue(`\n📊 ${stepNumber}/${totalSteps} - Backup da Database PostgreSQL via pg_dumpall Docker...`));
+    console.log(chalk.blue(`\n📊 ${stepNumber}/${totalSteps} - ${getT('backup.steps.database.title')}`));
     const databaseResult = await step01Database(context);
     manifest.components.database = databaseResult;
 
     // 2. Backup Database Separado
     stepNumber++;
-    console.log(chalk.blue(`\n📊 ${stepNumber}/${totalSteps} - Backup da Database PostgreSQL (arquivos SQL separados)...`));
+    console.log(chalk.blue(`\n📊 ${stepNumber}/${totalSteps} - ${getT('backup.steps.database.separated.title')}`));
     const dbSeparatedResult = await step02DatabaseSeparated(context);
     manifest.components.database_separated = {
       success: dbSeparatedResult.success,
@@ -242,14 +242,14 @@ module.exports = async (options) => {
 
     // 3. Backup Database Settings
     stepNumber++;
-    console.log(chalk.blue(`\n🔧 ${stepNumber}/${totalSteps} - Backup das Database Extensions and Settings via SQL...`));
+    console.log(chalk.blue(`\n🔧 ${stepNumber}/${totalSteps} - ${getT('backup.steps.databaseSettings.title')}`));
     const databaseSettingsResult = await step03DatabaseSettings(context);
     manifest.components.database_settings = databaseSettingsResult;
 
     // 4. Backup Auth Settings
     if (flags?.includeAuth) {
       stepNumber++;
-      console.log(chalk.blue(`\n🔐 ${stepNumber}/${totalSteps} - Backup das Auth Settings via API...`));
+      console.log(chalk.blue(`\n🔐 ${stepNumber}/${totalSteps} - ${getT('backup.steps.auth.title')}`));
       const authResult = await step04AuthSettings(context);
       manifest.components.auth_settings = authResult;
     }
@@ -257,7 +257,7 @@ module.exports = async (options) => {
     // 5. Backup Realtime Settings
     if (flags?.includeRealtime) {
       stepNumber++;
-      console.log(chalk.blue(`\n🔄 ${stepNumber}/${totalSteps} - Backup das Realtime Settings via Captura Interativa...`));
+      console.log(chalk.blue(`\n🔄 ${stepNumber}/${totalSteps} - ${getT('backup.steps.realtime.title')}`));
       const realtimeResult = await step05RealtimeSettings(context);
       manifest.components.realtime = realtimeResult;
     }
@@ -265,21 +265,21 @@ module.exports = async (options) => {
     // 6. Backup Storage
     if (flags?.includeStorage) {
       stepNumber++;
-      console.log(chalk.blue(`\n📦 ${stepNumber}/${totalSteps} - Backup do Storage via API...`));
+      console.log(chalk.blue(`\n📦 ${stepNumber}/${totalSteps} - ${getT('backup.steps.storage.title')}`));
       const storageResult = await step06Storage(context);
       manifest.components.storage = storageResult;
     }
 
     // 7. Backup Custom Roles
     stepNumber++;
-    console.log(chalk.blue(`\n👥 ${stepNumber}/${totalSteps} - Backup dos Custom Roles via SQL...`));
+    console.log(chalk.blue(`\n👥 ${stepNumber}/${totalSteps} - ${getT('backup.steps.roles.title')}`));
     const rolesResult = await step07CustomRoles(context);
     manifest.components.custom_roles = rolesResult;
 
     // 8. Backup Edge Functions
     if (flags?.includeFunctions) {
       stepNumber++;
-      console.log(chalk.blue(`\n⚡ ${stepNumber}/${totalSteps} - Backup das Edge Functions via Docker...`));
+      console.log(chalk.blue(`\n⚡ ${stepNumber}/${totalSteps} - ${getT('backup.steps.functions.title')}`));
       const functionsResult = await step08EdgeFunctions(context);
       manifest.components.edge_functions = functionsResult;
     }
@@ -287,7 +287,7 @@ module.exports = async (options) => {
     // 9. Backup Supabase .temp
     if (flags?.includeTemp) {
       stepNumber++;
-      console.log(chalk.blue(`\n📁 ${stepNumber}/${totalSteps} - Backup do Supabase .temp...`));
+      console.log(chalk.blue(`\n📁 ${stepNumber}/${totalSteps} - ${getT('backup.steps.temp.title')}`));
       const supabaseTempResult = await step09SupabaseTemp(context);
       manifest.components.supabase_temp = supabaseTempResult;
     }
@@ -295,7 +295,7 @@ module.exports = async (options) => {
     // 10. Backup Migrations
     if (flags?.includeMigrations) {
       stepNumber++;
-      console.log(chalk.blue(`\n📋 ${stepNumber}/${totalSteps} - Backup das Migrations...`));
+      console.log(chalk.blue(`\n📋 ${stepNumber}/${totalSteps} - ${getT('backup.steps.migrations.title')}`));
       const migrationsResult = await step10Migrations(context);
       manifest.components.migrations = migrationsResult;
     }
@@ -304,27 +304,24 @@ module.exports = async (options) => {
     await writeJson(path.join(finalBackupDir, 'backup-manifest.json'), manifest);
 
     // Exibir resumo final (na ordem de captura)
-    console.log(chalk.green('\n🎉 BACKUP COMPLETO FINALIZADO VIA DOCKER!'));
-    console.log(chalk.blue(`📁 Localização: ${finalBackupDir}`));
-    console.log(chalk.green(`📊 Database: ${databaseResult.fileName} (${databaseResult.size} KB) - Idêntico ao Dashboard`));
-    console.log(chalk.green(`📊 Database SQL: ${dbSeparatedResult.files?.length || 0} arquivos separados (${dbSeparatedResult.totalSizeKB} KB) - Para troubleshooting`));
-    console.log(chalk.green(`🔧 Database Settings: ${databaseSettingsResult.fileName} (${databaseSettingsResult.size} KB) - Extensions e Configurações`));
+    console.log(chalk.green(`\n🎉 ${getT('backup.complete.title')}`));
+    console.log(chalk.blue(`📁 ${getT('backup.complete.location', { path: finalBackupDir })}`));
+    console.log(chalk.green(`📊 ${getT('backup.complete.database', { fileName: databaseResult.fileName, size: `${databaseResult.size} KB` })}`));
+    console.log(chalk.green(`📊 ${getT('backup.complete.databaseSql', { count: dbSeparatedResult.files?.length || 0, size: `${dbSeparatedResult.totalSizeKB} KB` })}`));
+    console.log(chalk.green(`🔧 ${getT('backup.complete.databaseSettings', { fileName: databaseSettingsResult.fileName, size: `${databaseSettingsResult.size} KB` })}`));
     
     if (flags?.includeAuth && manifest.components.auth_settings) {
-      const authResult = manifest.components.auth_settings;
-      console.log(chalk.green(`🔐 Auth Settings: ${authResult.success ? 'Exportadas via API' : 'Falharam'}`));
+      console.log(chalk.green(`🔐 ${getT('backup.complete.auth')}`));
     }
     
     // Determinar mensagem correta baseada no método usado
     if (flags?.includeRealtime && manifest.components.realtime) {
       const realtimeResult = manifest.components.realtime;
-      let realtimeMessage = 'Falharam';
-      if (realtimeResult.success) {
-        if (options.skipRealtime) {
-          realtimeMessage = 'Configurações copiadas do backup anterior';
-        } else {
-          realtimeMessage = 'Configurações capturadas interativamente';
-        }
+      let realtimeMessage = getT('backup.complete.realtime');
+      if (!realtimeResult.success) {
+        realtimeMessage = 'Falharam';
+      } else if (options.skipRealtime) {
+        realtimeMessage = 'Configurações copiadas do backup anterior';
       }
       console.log(chalk.green(`🔄 Realtime: ${realtimeMessage}`));
     }
@@ -332,27 +329,27 @@ module.exports = async (options) => {
     if (flags?.includeStorage && manifest.components.storage) {
       const storageResult = manifest.components.storage;
       if (storageResult.zipFile) {
-        console.log(chalk.green(`📦 Storage: ${storageResult.buckets?.length || 0} buckets, ${storageResult.totalFiles || 0} arquivo(s) baixado(s), ZIP: ${storageResult.zipFile} (${storageResult.zipSizeMB || 0} MB)`));
+        console.log(chalk.green(`📦 ${getT('backup.complete.storage', { buckets: storageResult.buckets?.length || 0, files: storageResult.totalFiles || 0, zipFile: storageResult.zipFile, size: `${storageResult.zipSizeMB || 0} MB` })}`));
       } else {
         console.log(chalk.green(`📦 Storage: ${storageResult.buckets?.length || 0} buckets verificados via API (apenas metadados)`));
       }
     }
     
-    console.log(chalk.green(`👥 Custom Roles: ${rolesResult.roles?.length || 0} roles exportados via SQL`));
+    console.log(chalk.green(`👥 ${getT('backup.complete.roles', { count: rolesResult.roles?.length || 0 })}`));
     
     if (flags?.includeFunctions && manifest.components.edge_functions) {
       const functionsResult = manifest.components.edge_functions;
-      console.log(chalk.green(`⚡ Edge Functions: ${functionsResult.success_count || 0}/${functionsResult.functions_count || 0} functions baixadas via Docker`));
+      console.log(chalk.green(`⚡ ${getT('backup.complete.functions', { downloaded: functionsResult.success_count || 0, total: functionsResult.functions_count || 0 })}`));
     }
     
     if (flags?.includeTemp && manifest.components.supabase_temp) {
       const tempResult = manifest.components.supabase_temp;
-      console.log(chalk.green(`📁 Supabase .temp: ${tempResult.file_count || 0} arquivo(s) copiado(s)`));
+      console.log(chalk.green(`📁 ${getT('backup.complete.temp', { count: tempResult.file_count || 0 })}`));
     }
     
     if (flags?.includeMigrations && manifest.components.migrations) {
       const migrationsResult = manifest.components.migrations;
-      console.log(chalk.green(`📋 Migrations: ${migrationsResult.file_count || 0} migration(s) copiada(s)`));
+      console.log(chalk.green(`📋 ${getT('backup.complete.migrations', { count: migrationsResult.file_count || 0 })}`));
     }
 
     // report.json

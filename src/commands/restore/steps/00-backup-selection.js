@@ -1,12 +1,14 @@
 const chalk = require('chalk');
 const readline = require('readline');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 0: Seleção interativa de backup
  */
 module.exports = async (backups) => {
-  console.log(chalk.blue('\n📋 Backups disponíveis:'));
-  console.log(chalk.blue('═'.repeat(80)));
+  const getT = global.smoonbI18n?.t || t;
+  console.log(chalk.blue(`\n📋 ${getT('restore.steps.backupSelection.title')}`));
+  console.log(chalk.blue(getT('restore.steps.backupSelection.separator')));
   
   backups.forEach((backup, index) => {
     const date = new Date(backup.created).toLocaleString('pt-BR');

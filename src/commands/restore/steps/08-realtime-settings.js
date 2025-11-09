@@ -2,6 +2,7 @@ const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs');
 const inquirer = require('inquirer');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 8: Restaurar Realtime Settings (interativo - exibir URL e valores)
@@ -9,19 +10,20 @@ const inquirer = require('inquirer');
 module.exports = async ({ backupPath, targetProject }) => {
   
   try {
+    const getT = global.smoonbI18n?.t || t;
     const realtimeSettingsPath = path.join(backupPath, 'realtime-settings.json');
     
     if (!fs.existsSync(realtimeSettingsPath)) {
-      console.log(chalk.yellow('   ⚠️  Nenhuma configuração de Realtime encontrada no backup'));
+      console.log(chalk.yellow(`   ⚠️  ${getT('restore.steps.realtime.notFound')}`));
       return;
     }
     
     const realtimeSettings = JSON.parse(fs.readFileSync(realtimeSettingsPath, 'utf8'));
     const dashboardUrl = `https://supabase.com/dashboard/project/${targetProject.targetProjectId}/realtime/settings`;
     
-    console.log(chalk.green('\n   ✅ URL para configuração manual:'));
+    console.log(chalk.green(`\n   ✅ ${getT('restore.steps.realtime.urlTitle')}`));
     console.log(chalk.cyan(`   ${dashboardUrl}`));
-    console.log(chalk.yellow('\n   📋 Configure manualmente as seguintes opções:'));
+    console.log(chalk.yellow(`\n   📋 ${getT('restore.steps.realtime.configureTitle')}`));
     
     if (realtimeSettings.realtime_settings?.settings) {
       Object.values(realtimeSettings.realtime_settings.settings).forEach((setting) => {
@@ -32,7 +34,7 @@ module.exports = async ({ backupPath, targetProject }) => {
       });
     }
     
-    console.log(chalk.yellow('\n   ⚠️  Após configurar, pressione Enter para continuar...'));
+    console.log(chalk.yellow(`\n   ⚠️  ${getT('restore.steps.realtime.pressEnter')}`));
     
     await inquirer.prompt([{
       type: 'input',
@@ -40,10 +42,11 @@ module.exports = async ({ backupPath, targetProject }) => {
       message: 'Pressione Enter para continuar'
     }]);
     
-    console.log(chalk.green('   ✅ Realtime Settings processados'));
+    console.log(chalk.green(`   ✅ ${getT('restore.steps.realtime.success')}`));
     
   } catch (error) {
-    console.error(chalk.red(`   ❌ Erro ao processar Realtime Settings: ${error.message}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.error(chalk.red(`   ❌ ${getT('restore.steps.realtime.error', { message: error.message })}`));
   }
 };
 

@@ -1,13 +1,15 @@
 const chalk = require('chalk');
 const path = require('path');
 const { writeJson } = require('../../../utils/fsx');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 4: Backup Auth Settings via Management API
  */
 module.exports = async ({ projectId, accessToken, backupDir }) => {
   try {
-    console.log(chalk.white('   - Exportando configurações de Auth via Management API...'));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.white(`   - ${getT('backup.steps.auth.exporting')}`));
     
     // Usar fetch direto para Management API com Personal Access Token
     const authResponse = await fetch(`https://api.supabase.com/v1/projects/${projectId}/config/auth`, {
@@ -18,7 +20,7 @@ module.exports = async ({ projectId, accessToken, backupDir }) => {
     });
     
     if (!authResponse.ok) {
-      console.log(chalk.yellow(`     ⚠️ Erro ao obter Auth Settings: ${authResponse.status} ${authResponse.statusText}`));
+      console.log(chalk.yellow(`     ⚠️ ${getT('backup.steps.auth.getError', { status: authResponse.status, statusText: authResponse.statusText })}`));
       return { success: false };
     }
 
@@ -36,7 +38,8 @@ module.exports = async ({ projectId, accessToken, backupDir }) => {
     return { success: true };
 
   } catch (error) {
-    console.log(chalk.yellow(`   ⚠️ Erro no backup das Auth Settings: ${error.message}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.yellow(`   ⚠️ ${getT('backup.steps.auth.error', { message: error.message })}`));
     return { success: false };
   }
 };

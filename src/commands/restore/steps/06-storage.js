@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const AdmZip = require('adm-zip');
 const { createClient } = require('@supabase/supabase-js');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 6: Restaurar Storage Buckets e arquivos
@@ -12,6 +13,7 @@ const { createClient } = require('@supabase/supabase-js');
 module.exports = async ({ backupPath, targetProject }) => {
   
   try {
+    const getT = global.smoonbI18n?.t || t;
     // 1. Verificar se existe arquivo .storage.zip na pasta do backup
     const storageZipFiles = await fs.readdir(backupPath).then(files => 
       files.filter(f => f.endsWith('.storage.zip'))
@@ -79,21 +81,22 @@ module.exports = async ({ backupPath, targetProject }) => {
         const buckets = manifest?.components?.storage?.buckets || [];
         
         if (buckets.length === 0) {
-          console.log(chalk.yellow('   ⚠️  Nenhum bucket de Storage encontrado no backup'));
+          console.log(chalk.yellow(`   ⚠️  ${getT('restore.steps.storage.noBuckets')}`));
           return { success: false, buckets_count: 0 };
         }
         
-        console.log(chalk.yellow('\n   ⚠️  Arquivo .storage.zip não encontrado'));
-        console.log(chalk.white('   ℹ️  Apenas metadados dos buckets foram encontrados'));
-        console.log(chalk.white('   ℹ️  Para restaurar os arquivos, é necessário o arquivo .storage.zip do Dashboard'));
-        console.log(chalk.green(`\n   ✅ ${buckets.length} bucket(s) encontrado(s) no backup (apenas metadados)`));
+        console.log(chalk.yellow(`\n   ⚠️  ${getT('restore.steps.storage.zipNotFound')}`));
+        console.log(chalk.white(`   ℹ️  ${getT('restore.steps.storage.metadataOnly')}`));
+        console.log(chalk.white(`   ℹ️  ${getT('restore.steps.storage.zipRequired')}`));
+        console.log(chalk.green(`\n   ✅ ${getT('restore.steps.storage.bucketsFoundMetadata', { count: buckets.length })}`));
         buckets.forEach(bucket => {
-          console.log(chalk.white(`   - ${bucket.name} (${bucket.public ? 'público' : 'privado'})`));
+          const visibility = bucket.public ? getT('restore.steps.storage.public') : getT('restore.steps.storage.private');
+          console.log(chalk.white(`   - ${getT('restore.steps.storage.bucketInfo', { name: bucket.name, visibility })}`));
         });
         
         return { success: true, buckets_count: buckets.length, files_restored: false };
       } catch {
-        console.log(chalk.yellow('   ⚠️  Nenhum bucket de Storage encontrado no backup'));
+        console.log(chalk.yellow(`   ⚠️  ${getT('restore.steps.storage.noBucketsInBackup')}`));
         return { success: false, buckets_count: 0 };
       }
     }
@@ -101,7 +104,7 @@ module.exports = async ({ backupPath, targetProject }) => {
     // 3. Selecionar o primeiro arquivo .storage.zip encontrado
     const storageZipFile = path.join(backupPath, storageZipFiles[0]);
     const storageZipBaseName = path.basename(storageZipFiles[0], '.storage.zip');
-    console.log(chalk.white(`   - Arquivo de storage encontrado: ${storageZipFiles[0]}`));
+    console.log(chalk.white(`   - ${getT('restore.steps.storage.fileFound', { fileName: storageZipFiles[0] })}`));
     
     // 4. Validar credenciais do projeto destino
     if (!targetProject.targetProjectId || !targetProject.targetAccessToken) {
@@ -114,13 +117,13 @@ module.exports = async ({ backupPath, targetProject }) => {
     
     // 4.1 Obter project ID do projeto origem e validar substituição
     if (sourceProjectId && sourceProjectId !== targetProject.targetProjectId) {
-      console.log(chalk.cyan(`   🔄 Substituindo Project ID: ${sourceProjectId} → ${targetProject.targetProjectId}`));
+      console.log(chalk.cyan(`   🔄 ${getT('restore.steps.storage.replacingProjectId', { source: sourceProjectId, target: targetProject.targetProjectId })}`));
     } else if (!sourceProjectId) {
-      console.log(chalk.yellow('   ⚠️  Project ID do projeto origem não encontrado no manifest. Continuando sem substituição...'));
+      console.log(chalk.yellow(`   ⚠️  ${getT('restore.steps.storage.projectIdNotFound')}`));
     }
     
     // 5. Extrair arquivo ZIP
-    console.log(chalk.white('   - Extraindo arquivo .storage.zip...'));
+    console.log(chalk.white(`   - ${getT('restore.steps.storage.extracting')}`));
     const extractDir = path.join(backupPath, 'storage_extracted');
     
     try {
@@ -131,14 +134,14 @@ module.exports = async ({ backupPath, targetProject }) => {
     
     const zip = new AdmZip(storageZipFile);
     zip.extractAllTo(extractDir, true);
-    console.log(chalk.green('   ✅ Arquivo extraído com sucesso'));
+    console.log(chalk.green(`   ✅ ${getT('restore.steps.storage.extracted')}`));
     
     // 5.1 Substituir Project ID antigo pelo novo nos diretórios e arquivos extraídos
     // O Supabase pode incluir o project ID nos caminhos dentro do ZIP
     if (sourceProjectId && sourceProjectId !== targetProject.targetProjectId) {
-      console.log(chalk.white('   - Substituindo referências ao Project ID antigo nos arquivos extraídos...'));
+      console.log(chalk.white(`   - ${getT('restore.steps.storage.replacing')}`));
       await replaceProjectIdInExtractedFiles(extractDir, sourceProjectId, targetProject.targetProjectId);
-      console.log(chalk.green('   ✅ Substituição de Project ID concluída'));
+      console.log(chalk.green(`   ✅ ${getT('restore.steps.storage.replaced')}`));
     }
     
     // 6. Ler estrutura de diretórios extraídos
@@ -179,8 +182,8 @@ module.exports = async ({ backupPath, targetProject }) => {
           if (matchesZipFileName) reasons.push('nome do arquivo ZIP');
           if (matchesProjectIdPattern) reasons.push('formato de Project ID');
           const reasonText = reasons.length ? ` (${reasons.join(', ')})` : '';
-          console.log(chalk.white(`   - Detectada pasta raiz com Project ID: ${firstItem}${reasonText}`));
-          console.log(chalk.white(`   - Buscando buckets nas subpastas...`));
+          console.log(chalk.white(`   - ${getT('restore.steps.storage.detectedProjectId', { projectId: firstItem, reason: reasonText })}`));
+          console.log(chalk.white(`   - ${getT('restore.steps.storage.searchingBuckets')}`));
         }
       }
     }
@@ -204,8 +207,8 @@ module.exports = async ({ backupPath, targetProject }) => {
       
       // Se não encontrou buckets nas subpastas, avisar e retornar erro
       if (bucketDirs.length === 0) {
-        console.log(chalk.red(`   ❌ Erro: Nenhum bucket encontrado nas subpastas de ${rootDir}`));
-        console.log(chalk.red(`   ❌ A pasta raiz é um Project ID e não deve ser tratada como bucket`));
+        console.log(chalk.red(`   ❌ ${getT('restore.steps.storage.noBucketsInSubfolders', { rootDir })}`));
+        console.log(chalk.red(`   ❌ ${getT('restore.steps.storage.rootIsProjectId')}`));
         return { success: false, buckets_count: 0 };
       }
     } else {
@@ -224,11 +227,11 @@ module.exports = async ({ backupPath, targetProject }) => {
     }
     
     if (bucketDirs.length === 0) {
-      console.log(chalk.yellow('   ⚠️  Nenhum bucket encontrado no arquivo .storage.zip'));
+      console.log(chalk.yellow(`   ⚠️  ${getT('restore.steps.storage.noBucketsInZip')}`));
       return { success: false, buckets_count: 0 };
     }
     
-    console.log(chalk.white(`   - Encontrados ${bucketDirs.length} bucket(s) no arquivo ZIP`));
+    console.log(chalk.white(`   - ${getT('restore.steps.storage.bucketsFoundInZip', { count: bucketDirs.length })}`));
     
     // 7. Criar cliente Supabase para o projeto destino
     const supabase = createClient(targetProject.targetUrl, targetProject.targetServiceKey);
@@ -242,7 +245,7 @@ module.exports = async ({ backupPath, targetProject }) => {
       const bucketPath = bucketInfo.path;
       
       try {
-        console.log(chalk.white(`\n   - Processando bucket: ${bucketName}`));
+        console.log(chalk.white(`\n   - ${getT('restore.steps.storage.processingBucket', { bucketName })}`));
         
         // 8.1 Obter metadados do bucket do backup (se disponíveis)
         const bucketMeta = bucketMetadata[bucketName] || {
@@ -255,7 +258,7 @@ module.exports = async ({ backupPath, targetProject }) => {
         const { data: existingBuckets, error: listError } = await supabase.storage.listBuckets();
         
         if (listError) {
-          throw new Error(`Erro ao listar buckets: ${listError.message}`);
+          throw new Error(getT('restore.steps.edgeFunctions.listBucketsError', { message: listError.message }));
         }
         
         const existingBucket = existingBuckets?.find(b => b.name === bucketName);
@@ -263,8 +266,11 @@ module.exports = async ({ backupPath, targetProject }) => {
         
         if (!bucketExists) {
           // Criar bucket via Management API com configurações do backup
-          console.log(chalk.white(`     - Criando bucket ${bucketName}...`));
-          console.log(chalk.white(`       Configurações: ${bucketMeta.public ? 'público' : 'privado'}, limite: ${bucketMeta.file_size_limit || 'sem limite'}, tipos: ${bucketMeta.allowed_mime_types?.join(', ') || 'todos'}`));
+          console.log(chalk.white(`     - ${getT('restore.steps.storage.creatingBucket', { bucketName })}`));
+          const visibility = bucketMeta.public ? getT('restore.steps.storage.public') : getT('restore.steps.storage.private');
+          const limit = bucketMeta.file_size_limit || getT('restore.steps.storage.noLimit');
+          const types = bucketMeta.allowed_mime_types?.join(', ') || getT('restore.steps.storage.allTypes');
+          console.log(chalk.white(`       ${getT('restore.steps.storage.bucketConfig', { visibility, limit, types })}`));
           
           const createResponse = await fetch(
             `https://api.supabase.com/v1/projects/${targetProject.targetProjectId}/storage/buckets`,
@@ -285,13 +291,13 @@ module.exports = async ({ backupPath, targetProject }) => {
           
           if (!createResponse.ok) {
             const errorText = await createResponse.text();
-            throw new Error(`Erro ao criar bucket: ${createResponse.status} ${errorText}`);
+            throw new Error(getT('restore.steps.edgeFunctions.createBucketError', { status: createResponse.status, errorText }));
           }
           
-          console.log(chalk.green(`     ✅ Bucket ${bucketName} criado com configurações do backup`));
+          console.log(chalk.green(`     ✅ ${getT('restore.steps.storage.bucketCreated', { bucketName })}`));
         } else {
           // Bucket já existe - verificar e atualizar configurações se necessário
-          console.log(chalk.white(`     - Bucket ${bucketName} já existe`));
+          console.log(chalk.white(`     - ${getT('restore.steps.storage.bucketExists', { bucketName })}`));
           
           const needsUpdate = 
             existingBucket.public !== bucketMeta.public ||
@@ -299,7 +305,7 @@ module.exports = async ({ backupPath, targetProject }) => {
             JSON.stringify(existingBucket.allowed_mime_types || []) !== JSON.stringify(bucketMeta.allowed_mime_types || []);
           
           if (needsUpdate) {
-            console.log(chalk.white(`     - Atualizando configurações do bucket para corresponder ao backup...`));
+            console.log(chalk.white(`     - ${getT('restore.steps.storage.updating')}`));
             
             const updateResponse = await fetch(
               `https://api.supabase.com/v1/projects/${targetProject.targetProjectId}/storage/buckets/${bucketName}`,
@@ -319,12 +325,12 @@ module.exports = async ({ backupPath, targetProject }) => {
             
             if (!updateResponse.ok) {
               const errorText = await updateResponse.text();
-              console.log(chalk.yellow(`       ⚠️  Não foi possível atualizar configurações: ${errorText}`));
+              console.log(chalk.yellow(`       ⚠️  ${getT('restore.steps.storage.updateError', { errorText })}`));
             } else {
-              console.log(chalk.green(`       ✅ Configurações do bucket atualizadas`));
+              console.log(chalk.green(`       ✅ ${getT('restore.steps.storage.bucketUpdated')}`));
             }
           } else {
-            console.log(chalk.white(`     - Configurações do bucket já estão corretas`));
+            console.log(chalk.white(`     - ${getT('restore.steps.storage.bucketConfigCorrect')}`));
           }
         }
         
@@ -356,7 +362,7 @@ module.exports = async ({ backupPath, targetProject }) => {
         }
         
         const filesToUpload = await getAllFiles(bucketPath);
-        console.log(chalk.white(`     - Encontrados ${filesToUpload.length} arquivo(s) para upload`));
+        console.log(chalk.white(`     - ${getT('restore.steps.storage.filesFoundForUpload', { count: filesToUpload.length })}`));
         
         // 8.4 Fazer upload de cada arquivo
         // Criar mapa de metadados dos objetos do backup (se disponível)
@@ -427,25 +433,25 @@ module.exports = async ({ backupPath, targetProject }) => {
               .upload(storagePath, fileContent, uploadOptions);
             
             if (uploadError) {
-              console.log(chalk.yellow(`       ⚠️  Erro ao fazer upload de ${storagePath}: ${uploadError.message}`));
+              console.log(chalk.yellow(`       ⚠️  ${getT('restore.steps.storage.uploadError', { path: storagePath, message: uploadError.message })}`));
             } else {
               filesUploaded++;
               if (filesToUpload.length <= 10 || filesUploaded % Math.ceil(filesToUpload.length / 10) === 0) {
-                const metaInfo = objectMeta ? ' (metadados preservados)' : '';
-                console.log(chalk.white(`       - Upload: ${storagePath}${metaInfo}`));
+                const metaInfo = objectMeta ? ` ${getT('restore.steps.storage.metadataPreserved')}` : '';
+                console.log(chalk.white(`       - ${getT('restore.steps.storage.uploadProgress', { path: storagePath, metaInfo })}`));
               }
             }
           } catch (fileError) {
-            console.log(chalk.yellow(`       ⚠️  Erro ao processar arquivo ${file.storagePath}: ${fileError.message}`));
+            console.log(chalk.yellow(`       ⚠️  ${getT('restore.steps.storage.fileError', { path: file.storagePath, message: fileError.message })}`));
           }
         }
         
-        console.log(chalk.green(`     ✅ Bucket ${bucketName}: ${filesUploaded}/${filesToUpload.length} arquivo(s) enviado(s)`));
+        console.log(chalk.green(`     ✅ ${getT('restore.steps.storage.bucketDone', { bucketName, uploaded: filesUploaded, total: filesToUpload.length })}`));
         successCount++;
         totalFilesUploaded += filesUploaded;
         
       } catch (bucketError) {
-        console.log(chalk.red(`     ❌ Erro ao processar bucket ${bucketName}: ${bucketError.message}`));
+        console.log(chalk.red(`     ❌ ${getT('restore.steps.storage.bucketError', { bucketName, message: bucketError.message })}`));
       }
     }
     
@@ -456,7 +462,7 @@ module.exports = async ({ backupPath, targetProject }) => {
       // Ignorar erro de limpeza
     }
     
-    console.log(chalk.green(`\n   ✅ Restauração de Storage concluída: ${successCount}/${bucketDirs.length} bucket(s) processado(s), ${totalFilesUploaded} arquivo(s) enviado(s)`));
+    console.log(chalk.green(`\n   ✅ ${getT('restore.steps.storage.restoreComplete', { success: successCount, total: bucketDirs.length, files: totalFilesUploaded })}`));
     
     return {
       success: true,
@@ -466,7 +472,8 @@ module.exports = async ({ backupPath, targetProject }) => {
     };
     
   } catch (error) {
-    console.error(chalk.red(`   ❌ Erro ao processar Storage: ${error.message}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.error(chalk.red(`   ❌ ${getT('restore.steps.storage.error', { message: error.message })}`));
     throw error;
   }
 };

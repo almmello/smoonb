@@ -42,24 +42,62 @@ for (const file of filesToCheck) {
     const content = fs.readFileSync(filePath, 'utf8');
     const lines = content.split('\n');
     const constDeclarations = new Map();
+    let scopeDepth = 0;
+    const scopeStack = [];
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+      const trimmedLine = line.trim();
+      
+      // Detectar abertura de escopos (funções, try, catch, if, for, while, etc)
+      if (trimmedLine.match(/^\s*(function|async\s+function|try|catch|if|for|while|switch)\s*\(/)) {
+        scopeDepth++;
+        scopeStack.push({ type: 'block', start: i + 1 });
+      }
+      // Detectar abertura de blocos com {
+      if (trimmedLine.includes('{')) {
+        const openBraces = (trimmedLine.match(/\{/g) || []).length;
+        for (let j = 0; j < openBraces; j++) {
+          scopeDepth++;
+          scopeStack.push({ type: 'brace', start: i + 1 });
+        }
+      }
+      // Detectar fechamento de blocos com }
+      if (trimmedLine.includes('}')) {
+        const closeBraces = (trimmedLine.match(/\}/g) || []).length;
+        for (let j = 0; j < closeBraces; j++) {
+          if (scopeStack.length > 0) {
+            const closedScope = scopeStack.pop();
+            // Limpar declarações do escopo fechado
+            for (const [varName, info] of constDeclarations.entries()) {
+              if (info.scopeStart === closedScope.start) {
+                constDeclarations.delete(varName);
+              }
+            }
+          }
+          scopeDepth = Math.max(0, scopeDepth - 1);
+        }
+      }
+      
       const constMatch = line.match(/const\s+(\w+)\s*=/);
       if (constMatch) {
         const varName = constMatch[1];
         const lineNum = i + 1;
         
-        // Verificar se já foi declarada no mesmo escopo (aproximação simples)
+        // Verificar se já foi declarada no mesmo escopo
         if (constDeclarations.has(varName)) {
-          const prevLine = constDeclarations.get(varName);
-          // Verificar se não está em um bloco diferente (try/catch, função, etc)
-          const isSameScope = Math.abs(lineNum - prevLine) < 50; // Aproximação
-          if (isSameScope) {
-            console.log(chalk.yellow(`⚠️  Possível declaração duplicada: ${varName} na linha ${lineNum} (anterior: ${prevLine})`));
+          const prevInfo = constDeclarations.get(varName);
+          // Verificar se está no mesmo escopo (mesmo depth e próximo)
+          if (prevInfo.scopeDepth === scopeDepth && Math.abs(lineNum - prevInfo.line) < 100) {
+            // Verificar se não está em um catch block (onde é comum redeclarar)
+            const isInCatch = trimmedLine.includes('catch') || 
+                             lines.slice(Math.max(0, i - 5), i).some(l => l.includes('catch'));
+            if (!isInCatch) {
+              console.log(chalk.yellow(`⚠️  Possível declaração duplicada: ${varName} na linha ${lineNum} (anterior: ${prevInfo.line})`));
+            }
           }
         }
-        constDeclarations.set(varName, lineNum);
+        constDeclarations.set(varName, { line: lineNum, scopeDepth, scopeStart: scopeStack.length > 0 ? scopeStack[scopeStack.length - 1].start : 0 });
       }
     }
     

@@ -1,6 +1,7 @@
 const inquirer = require('inquirer');
 const chalk = require('chalk');
 const { confirm } = require('../utils/prompt');
+const { t } = require('../i18n');
 
 async function mapEnvVariablesInteractively(env, expectedKeys) {
   const finalEnv = { ...env };
@@ -83,8 +84,10 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
     };
   }
 
+  const getT = global.smoonbI18n?.t || t;
+  
   for (const expected of expectedKeys) {
-    console.log(chalk.blue(`\n🔧 Mapeando variável: ${expected}`));
+    console.log(chalk.blue(`\n🔧 ${getT('env.mapping.title', { variable: expected })}`));
 
     let clientKey = undefined;
 
@@ -96,13 +99,13 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
       const choices = [
         ...allKeys.map((k, idx) => ({ name: `${idx + 1}. ${k}`, value: k })),
         new inquirer.Separator(),
-        { name: 'Adicione uma nova chave para mim', value: '__ADD_NEW__' }
+        { name: getT('env.mapping.addNew'), value: '__ADD_NEW__' }
       ];
 
       const { chosen } = await inquirer.prompt([{
         type: 'list',
         name: 'chosen',
-        message: `Selecione a chave correspondente para: ${expected}`,
+        message: getT('env.mapping.selectKey', { expected }),
         choices,
         loop: false,
         prefix: ''
@@ -131,7 +134,7 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
 
     // Se não tem valor, mostrar mensagem específica e pular confirmação
     if (!currentValue) {
-      console.log(chalk.yellow(instructions.notFound));
+      console.log(chalk.yellow(getT('env.mapping.notFound', { variable: expected })));
       if (instructions.help) {
         // Se o help contém link (https://), mostrar como link
         if (instructions.help.includes('https://')) {
@@ -148,7 +151,7 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
       }
     } else {
       // Se tem valor, perguntar se está correto
-      const isCorrect = await confirm(`Valor atual: ${currentValue}\nEste é o valor correto do projeto alvo?`, true);
+      const isCorrect = await confirm(`${getT('env.mapping.currentValue', { value: currentValue })}\n${getT('env.mapping.isCorrect')}`, true);
       if (isCorrect) {
         finalEnv[clientKey] = currentValue;
         if (expected === 'SUPABASE_PROJECT_ID') {
@@ -209,51 +212,53 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
 }
 
 async function askComponentsFlags() {
+  const getT = global.smoonbI18n?.t || t;
+  
   // Explicação sobre Edge Functions
-  console.log(chalk.cyan('\n⚡ Edge Functions:'));
-  console.log(chalk.white('   Vamos apagar as funções existentes na pasta supabase/functions, fazer um reset no link'));
-  console.log(chalk.white('   entre a ferramenta e o projeto, e baixar novamente as funções do servidor.'));
-  console.log(chalk.white('   Você terá a opção de manter ou apagar as funções na pasta após o backup.\n'));
+  console.log(chalk.cyan(`\n⚡ ${getT('backup.components.edgeFunctions.title')}`));
+  console.log(chalk.white(`   ${getT('backup.components.edgeFunctions.description1')}`));
+  console.log(chalk.white(`   ${getT('backup.components.edgeFunctions.description2')}`));
+  console.log(chalk.white(`   ${getT('backup.components.edgeFunctions.description3')}\n`));
 
-  const includeFunctions = await confirm('Deseja incluir Edge Functions', true);
+  const includeFunctions = await confirm(getT('backup.components.edgeFunctions.include'), true);
   
   // Pergunta de limpeza de functions imediatamente após
   let cleanFunctions = false;
   if (includeFunctions) {
-    cleanFunctions = await confirm('Deseja limpar supabase/functions após o backup', false);
+    cleanFunctions = await confirm(getT('backup.components.edgeFunctions.cleanup'), false);
   }
 
   // Explicação sobre .temp
-  console.log(chalk.cyan('\n📁 Supabase .temp:'));
-  console.log(chalk.white('   Vamos copiar os arquivos existentes (se existirem) na pasta supabase/.temp.'));
-  console.log(chalk.white('   Você terá a opção de manter ou apagar os arquivos nesta pasta após o backup.\n'));
+  console.log(chalk.cyan(`\n📁 ${getT('backup.components.temp.title')}`));
+  console.log(chalk.white(`   ${getT('backup.components.temp.description1')}`));
+  console.log(chalk.white(`   ${getT('backup.components.temp.description2')}\n`));
 
-  const includeTemp = await confirm('Deseja incluir Supabase .temp', true);
+  const includeTemp = await confirm(getT('backup.components.temp.include'), true);
   
   // Pergunta de limpeza de .temp imediatamente após
   let cleanTemp = false;
   if (includeTemp) {
-    cleanTemp = await confirm('Deseja apagar supabase/.temp após o backup', false);
+    cleanTemp = await confirm(getT('backup.components.temp.cleanup'), false);
   }
 
   // Explicação sobre Migrations
-  console.log(chalk.cyan('\n📋 Migrations:'));
-  console.log(chalk.white('   Vamos apagar as migrations existentes (se existirem) na pasta supabase/migrations,'));
-  console.log(chalk.white('   fazer um reset no link entre a ferramenta e o projeto, e baixar novamente as migrations'));
-  console.log(chalk.white('   do servidor. Você terá a opção de manter ou apagar as migrations na pasta após o backup.\n'));
+  console.log(chalk.cyan(`\n📋 ${getT('backup.components.migrations.title')}`));
+  console.log(chalk.white(`   ${getT('backup.components.migrations.description1')}`));
+  console.log(chalk.white(`   ${getT('backup.components.migrations.description2')}`));
+  console.log(chalk.white(`   ${getT('backup.components.migrations.description3')}\n`));
 
-  const includeMigrations = await confirm('Deseja incluir Migrations', true);
+  const includeMigrations = await confirm(getT('backup.components.migrations.include'), true);
   
   // Pergunta de limpeza de migrations imediatamente após
   let cleanMigrations = false;
   if (includeMigrations) {
-    cleanMigrations = await confirm('Deseja apagar supabase/migrations após o backup', false);
+    cleanMigrations = await confirm(getT('backup.components.migrations.cleanup'), false);
   }
 
   // Continuar com outras perguntas
-  const includeStorage = await confirm('Deseja incluir Storage', true);
-  const includeAuth = await confirm('Deseja incluir Auth', true);
-  const includeRealtime = await confirm('Deseja incluir Realtime', true);
+  const includeStorage = await confirm(getT('backup.components.storage.include'), true);
+  const includeAuth = await confirm(getT('backup.components.auth.include'), true);
+  const includeRealtime = await confirm(getT('backup.components.realtime.include'), true);
 
   return {
     includeFunctions,

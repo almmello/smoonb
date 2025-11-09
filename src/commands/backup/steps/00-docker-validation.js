@@ -1,14 +1,16 @@
 const chalk = require('chalk');
 const { canPerformCompleteBackup } = require('../../../utils/docker');
 const { showDockerMessagesAndExit } = require('../utils');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 0: Validação Docker
  * Deve ocorrer antes de tudo
  */
 module.exports = async () => {
-  console.log(chalk.blue('\n🐳 Validação Docker...'));
-  console.log(chalk.cyan('🔍 Verificando dependências Docker...'));
+  const getT = global.smoonbI18n?.t || t;
+  console.log(chalk.blue(`\n🐳 ${getT('docker.validation.title')}`));
+  console.log(chalk.cyan(`🔍 ${getT('docker.validation.checking')}`));
   
   const backupCapability = await canPerformCompleteBackup();
 
@@ -16,8 +18,8 @@ module.exports = async () => {
     showDockerMessagesAndExit(backupCapability.reason);
   }
   
-  console.log(chalk.green('✅ Docker Desktop detectado e funcionando'));
-  console.log(chalk.white(`🐳 Versão: ${backupCapability.dockerStatus.version}`));
+  console.log(chalk.green(`✅ ${getT('docker.validation.detected')}`));
+  console.log(chalk.white(`🐳 ${getT('docker.validation.version', { version: backupCapability.dockerStatus.version })}`));
   
   return { success: true };
 };

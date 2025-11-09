@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const { promisify } = require('util');
 const { exec } = require('child_process');
+const { t } = require('../../../i18n');
 
 const execAsync = promisify(exec);
 
@@ -11,7 +12,8 @@ const execAsync = promisify(exec);
  */
 module.exports = async ({ databaseUrl, backupDir, accessToken }) => {
   try {
-    console.log(chalk.white('   - Exportando Custom Roles via Docker...'));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.white(`   - ${getT('backup.steps.roles.exporting')}`));
     
     const customRolesFile = path.join(backupDir, 'custom-roles.sql');
     
@@ -28,11 +30,12 @@ module.exports = async ({ databaseUrl, backupDir, accessToken }) => {
       
       return { success: true, roles: [{ filename: 'custom-roles.sql', sizeKB }] };
     } catch (error) {
-      console.log(chalk.yellow(`     ⚠️ Erro ao exportar Custom Roles via Docker: ${error.message}`));
+      console.log(chalk.yellow(`     ⚠️ ${getT('backup.steps.roles.exportError', { message: error.message })}`));
       return { success: false, roles: [] };
     }
   } catch (error) {
-    console.log(chalk.yellow(`     ⚠️ Erro no backup dos Custom Roles: ${error.message}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.yellow(`     ⚠️ ${getT('backup.steps.roles.error', { message: error.message })}`));
     return { success: false, roles: [] };
   }
 };

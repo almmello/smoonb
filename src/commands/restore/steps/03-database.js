@@ -1,20 +1,22 @@
 const chalk = require('chalk');
 const path = require('path');
 const { execSync } = require('child_process');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 3: Restaurar Database via psql
  */
 module.exports = async ({ backupFilePath, targetDatabaseUrl }) => {
   try {
+    const getT = global.smoonbI18n?.t || t;
     const backupDirAbs = path.resolve(path.dirname(backupFilePath));
     const fileName = path.basename(backupFilePath);
     let uncompressedFile = fileName;
     
     // Verificar se é arquivo .backup.gz (compactado) ou .backup (descompactado)
     if (fileName.endsWith('.backup.gz')) {
-      console.log(chalk.white('   - Arquivo .backup.gz detectado'));
-      console.log(chalk.white('   - Extraindo arquivo .gz...'));
+      console.log(chalk.white(`   - ${getT('restore.steps.database.detectedGz')}`));
+      console.log(chalk.white(`   - ${getT('restore.steps.database.extractingGz')}`));
       
       const unzipCmd = [
         'docker run --rm',
@@ -24,10 +26,10 @@ module.exports = async ({ backupFilePath, targetDatabaseUrl }) => {
       
       execSync(unzipCmd, { stdio: 'pipe' });
       uncompressedFile = fileName.replace('.gz', '');
-      console.log(chalk.white('   - Arquivo descompactado: ' + uncompressedFile));
+      console.log(chalk.white(`   - ${getT('restore.steps.database.uncompressed', { file: uncompressedFile })}`));
     } else if (fileName.endsWith('.backup')) {
-      console.log(chalk.white('   - Arquivo .backup detectado (já descompactado)'));
-      console.log(chalk.white('   - Prosseguindo com restauração direta'));
+      console.log(chalk.white(`   - ${getT('restore.steps.database.detectedBackup')}`));
+      console.log(chalk.white(`   - ${getT('restore.steps.database.proceeding')}`));
     } else {
       throw new Error(`Formato de arquivo inválido. Esperado .backup.gz ou .backup, recebido: ${fileName}`);
     }
@@ -49,29 +51,30 @@ module.exports = async ({ backupFilePath, targetDatabaseUrl }) => {
       `-f /host/${uncompressedFile}`
     ].join(' ');
     
-    console.log(chalk.cyan('   - Executando psql via Docker...'));
-    console.log(chalk.cyan('   ℹ️ Seguindo documentação oficial Supabase'));
-    console.log(chalk.yellow('   ⚠️ AVISO: Erros como "object already exists" são ESPERADOS'));
-    console.log(chalk.yellow('   ⚠️ Isto acontece porque o backup contém CREATE para todos os schemas'));
-    console.log(chalk.yellow('   ⚠️ Supabase já tem auth e storage criados, então esses erros são normais'));
+    console.log(chalk.cyan(`   - ${getT('restore.steps.database.executing')}`));
+    console.log(chalk.cyan(`   ℹ️ ${getT('restore.steps.database.followingDocs')}`));
+    console.log(chalk.yellow(`   ⚠️ ${getT('restore.steps.database.warning')}`));
+    console.log(chalk.yellow(`   ⚠️ ${getT('restore.steps.database.warningReason1')}`));
+    console.log(chalk.yellow(`   ⚠️ ${getT('restore.steps.database.warningReason2')}`));
     
     // Executar comando de restauração
     execSync(restoreCmd, { stdio: 'inherit', encoding: 'utf8' });
     
-    console.log(chalk.green('   ✅ Database restaurada com sucesso!'));
-    console.log(chalk.gray('   ℹ️ Erros "already exists" são normais e não afetam a restauração'));
+    console.log(chalk.green(`   ✅ ${getT('restore.steps.database.success')}`));
+    console.log(chalk.gray(`   ℹ️ ${getT('restore.steps.database.normalErrors')}`));
     
   } catch (error) {
     // Erros esperados conforme documentação oficial Supabase
+    const getT = global.smoonbI18n?.t || t;
     if (error.message.includes('already exists') || 
         error.message.includes('constraint') ||
         error.message.includes('duplicate') ||
         error.stdout?.includes('already exists')) {
-      console.log(chalk.yellow('   ⚠️ Erros esperados encontrados (conforme documentação Supabase)'));
-      console.log(chalk.green('   ✅ Database restaurada com sucesso!'));
-      console.log(chalk.gray('   ℹ️ Erros são ignorados pois são comandos de CREATE que já existem'));
+      console.log(chalk.yellow(`   ⚠️ ${getT('restore.steps.database.expectedErrors')}`));
+      console.log(chalk.green(`   ✅ ${getT('restore.steps.database.success')}`));
+      console.log(chalk.gray(`   ℹ️ ${getT('restore.steps.database.errorsIgnored')}`));
     } else {
-      console.error(chalk.red(`   ❌ Erro inesperado na restauração: ${error.message}`));
+      console.error(chalk.red(`   ❌ ${getT('restore.steps.database.error', { message: error.message })}`));
       throw error;
     }
   }

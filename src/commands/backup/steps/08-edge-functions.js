@@ -4,6 +4,7 @@ const fs = require('fs').promises;
 const { ensureDir, writeJson } = require('../../../utils/fsx');
 const { extractPasswordFromDbUrl, ensureCleanLink } = require('../../../utils/supabaseLink');
 const { cleanDir } = require('../../../utils/fsExtra');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 8: Backup Edge Functions via Docker (reset link + limpeza opcional)
@@ -42,21 +43,23 @@ module.exports = async (context) => {
     
     // Se o usuário escolheu limpar APÓS, podemos limpar ANTES também para garantir ambiente limpo
     // Mas se escolheu NÃO limpar, preservamos o que já existe
+    const getT = global.smoonbI18n?.t || t;
+    
     if (shouldCleanAfter) {
       // Limpar antes se o usuário escolheu limpar após (garante ambiente limpo)
       await cleanDir(supabaseFunctionsDir);
-      console.log(chalk.white('   - Pasta supabase/functions limpa antes do backup.'));
+      console.log(chalk.white(`   - ${getT('backup.steps.functions.cleanBefore')}`));
     } else {
       // Apenas garantir que o diretório existe
       await fs.mkdir(supabaseFunctionsDir, { recursive: true });
       if (existingFunctionsBefore.length > 0) {
-        console.log(chalk.white(`   - Preservando ${existingFunctionsBefore.length} função(ões) existente(s) na pasta supabase/functions.`));
+        console.log(chalk.white(`   - ${getT('backup.steps.functions.preserving', { count: existingFunctionsBefore.length })}`));
       } else {
-        console.log(chalk.white('   - Pasta supabase/functions preparada (será preservada após backup).'));
+        console.log(chalk.white(`   - ${getT('backup.steps.functions.prepared')}`));
       }
     }
 
-    console.log(chalk.white('   - Listando Edge Functions via Management API...'));
+    console.log(chalk.white(`   - ${getT('backup.steps.functions.listing')}`));
     
     // Usar fetch direto para Management API com Personal Access Token
     const functionsResponse = await fetch(`https://api.supabase.com/v1/projects/${projectId}/functions`, {
@@ -67,14 +70,14 @@ module.exports = async (context) => {
     });
     
     if (!functionsResponse.ok) {
-      console.log(chalk.yellow(`     ⚠️ Erro ao listar Edge Functions: ${functionsResponse.status} ${functionsResponse.statusText}`));
+      console.log(chalk.yellow(`     ⚠️ ${getT('backup.steps.functions.listError', { status: functionsResponse.status, statusText: functionsResponse.statusText })}`));
       return { success: false, reason: 'api_error', functions: [] };
     }
 
     const functions = await functionsResponse.json();
     
     if (!functions || functions.length === 0) {
-      console.log(chalk.white('   - Nenhuma Edge Function encontrada'));
+      console.log(chalk.white(`   - ${getT('backup.steps.functions.noneFound')}`));
       await writeJson(path.join(functionsDir, 'README.md'), {
         message: 'Nenhuma Edge Function encontrada neste projeto'
       });
@@ -154,7 +157,7 @@ module.exports = async (context) => {
         });
         
       } catch (error) {
-        console.log(chalk.yellow(`     ⚠️ Erro ao baixar ${func.name}: ${error.message}`));
+        console.log(chalk.yellow(`     ⚠️ ${getT('backup.steps.functions.downloadError', { funcName: func.name, message: error.message })}`));
         errorCount++;
       }
     }
@@ -167,11 +170,11 @@ module.exports = async (context) => {
     // Nota: shouldCleanAfter já foi definido acima
     if (shouldCleanAfter) {
       await cleanDir(supabaseFunctionsDir);
-      console.log(chalk.white('   - supabase/functions limpo após o backup.'));
+      console.log(chalk.white(`   - ${getT('backup.steps.functions.cleanAfter')}`));
     } else {
       // Preservar tudo: tanto as funções que já existiam quanto as que foram baixadas
       // As funções baixadas não foram removidas individualmente (linha acima foi ajustada)
-      console.log(chalk.white('   - supabase/functions preservada conforme solicitado.'));
+      console.log(chalk.white(`   - ${getT('backup.steps.functions.preserved')}`));
     }
     
     return { 
@@ -185,7 +188,8 @@ module.exports = async (context) => {
     };
 
   } catch (error) {
-    console.log(chalk.yellow(`   ⚠️ Erro durante backup de Edge Functions: ${error.message}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.yellow(`   ⚠️ ${getT('backup.steps.functions.error', { message: error.message })}`));
     console.log('⏭️  Continuando com outros componentes...');
     return { success: false, reason: 'download_error', error: error.message, functions: [] };
   }

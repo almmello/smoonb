@@ -2,13 +2,15 @@ const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs').promises;
 const { execSync } = require('child_process');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 3: Backup Database Extensions and Settings via SQL
  */
 module.exports = async ({ databaseUrl, projectId, backupDir }) => {
   try {
-    console.log(chalk.white('   - Capturando Database Extensions and Settings...'));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.white(`   - ${getT('backup.steps.databaseSettings.capturing')}`));
     
     // Extrair credenciais da databaseUrl
     const urlMatch = databaseUrl.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
@@ -125,7 +127,7 @@ AND EXISTS (
       '-A'  // Unaligned output
     ].join(' ');
     
-    console.log(chalk.white('   - Executando queries de configurações via Docker...'));
+    console.log(chalk.white(`   - ${getT('backup.steps.databaseSettings.executing')}`));
     const output = execSync(dockerCmd, { stdio: 'pipe', encoding: 'utf8' });
     
     // Processar output e criar JSON estruturado
@@ -171,7 +173,8 @@ AND EXISTS (
     
     return { success: true, size: sizeKB, fileName: fileName };
   } catch (error) {
-    console.log(chalk.yellow(`     ⚠️ Erro no backup das Database Settings: ${error.message}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.yellow(`     ⚠️ ${getT('backup.steps.databaseSettings.error', { message: error.message })}`));
     return { success: false };
   }
 };

@@ -2,13 +2,15 @@ const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs').promises;
 const { execSync } = require('child_process');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 1: Backup Database via pg_dumpall Docker (idêntico ao Dashboard)
  */
 module.exports = async ({ databaseUrl, backupDir }) => {
   try {
-    console.log(chalk.white('   - Criando backup completo via pg_dumpall...'));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.white(`   - ${getT('backup.steps.database.creating')}`));
     
     // Extrair credenciais da databaseUrl
     const urlMatch = databaseUrl.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
@@ -45,7 +47,7 @@ module.exports = async ({ databaseUrl, backupDir }) => {
       `-f /host/${fileName}`
     ].join(' ');
     
-    console.log(chalk.white('   - Executando pg_dumpall via Docker...'));
+    console.log(chalk.white(`   - ${getT('backup.steps.database.executing')}`));
     execSync(dockerCmd, { stdio: 'pipe' });
     
     // Compactar igual ao Supabase Dashboard
@@ -65,7 +67,8 @@ module.exports = async ({ databaseUrl, backupDir }) => {
     
     return { success: true, size: sizeKB, fileName: finalFileName };
   } catch (error) {
-    console.log(chalk.yellow(`     ⚠️ Erro no backup do database: ${error.message}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.yellow(`     ⚠️ ${getT('backup.steps.database.error', { message: error.message })}`));
     return { success: false };
   }
 };

@@ -3,16 +3,18 @@ const path = require('path');
 const fs = require('fs').promises;
 const { execSync } = require('child_process');
 const { copyDirectoryRecursive } = require('../utils');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 4: Restaurar Edge Functions via supabase functions deploy
  */
 module.exports = async ({ backupPath, targetProject }) => {
   try {
+    const getT = global.smoonbI18n?.t || t;
     const edgeFunctionsDir = path.join(backupPath, 'edge-functions');
     
     if (!await fs.access(edgeFunctionsDir).then(() => true).catch(() => false)) {
-      console.log(chalk.yellow('   ⚠️  Nenhuma Edge Function encontrada no backup'));
+      console.log(chalk.yellow(`   ⚠️  ${getT('restore.steps.edgeFunctions.notFound')}`));
       return { success: false, functions_count: 0, success_count: 0 };
     }
     
@@ -28,11 +30,11 @@ module.exports = async ({ backupPath, targetProject }) => {
     }
     
     if (functions.length === 0) {
-      console.log(chalk.yellow('   ⚠️  Nenhuma Edge Function encontrada no backup'));
+      console.log(chalk.yellow(`   ⚠️  ${getT('restore.steps.edgeFunctions.notFound')}`));
       return { success: false, functions_count: 0, success_count: 0 };
     }
     
-    console.log(chalk.white(`   - Encontradas ${functions.length} Edge Function(s)`));
+    console.log(chalk.white(`   - ${getT('restore.steps.edgeFunctions.found', { count: functions.length })}`));
     
     // COPIAR Edge Functions de backups/backup-XXX/edge-functions para supabase/functions
     const supabaseFunctionsDir = path.join(process.cwd(), 'supabase', 'functions');
@@ -41,7 +43,7 @@ module.exports = async ({ backupPath, targetProject }) => {
     await fs.mkdir(supabaseFunctionsDir, { recursive: true });
     
     // Limpar supabase/functions antes de copiar (necessário para garantir ambiente limpo)
-    console.log(chalk.cyan('   - Limpando supabase/functions antes de copiar...'));
+    console.log(chalk.cyan(`   - ${getT('restore.steps.edgeFunctions.cleaningBefore')}`));
     try {
       await fs.rm(supabaseFunctionsDir, { recursive: true, force: true });
       await fs.mkdir(supabaseFunctionsDir, { recursive: true });
@@ -54,13 +56,13 @@ module.exports = async ({ backupPath, targetProject }) => {
       const backupFuncPath = path.join(edgeFunctionsDir, funcName);
       const targetFuncPath = path.join(supabaseFunctionsDir, funcName);
       
-      console.log(chalk.white(`   - Copiando ${funcName} para supabase/functions...`));
+      console.log(chalk.white(`   - ${getT('restore.steps.edgeFunctions.copying', { funcName })}`));
       
       // Copiar recursivamente
       await copyDirectoryRecursive(backupFuncPath, targetFuncPath);
     }
     
-    console.log(chalk.white(`   - Linkando com projeto ${targetProject.targetProjectId}...`));
+    console.log(chalk.white(`   - ${getT('restore.steps.edgeFunctions.linking', { projectId: targetProject.targetProjectId })}`));
     
     // Linkar com o projeto destino
     try {
@@ -71,13 +73,13 @@ module.exports = async ({ backupPath, targetProject }) => {
         env: { ...process.env, SUPABASE_ACCESS_TOKEN: targetProject.targetAccessToken || '' }
       });
     } catch {
-      console.log(chalk.yellow('   ⚠️  Link pode já existir, continuando...'));
+      console.log(chalk.yellow(`   ⚠️  ${getT('restore.steps.edgeFunctions.linkMayExist')}`));
     }
     
     // Deploy das Edge Functions
     let successCount = 0;
     for (const funcName of functions) {
-      console.log(chalk.white(`   - Deployando ${funcName}...`));
+      console.log(chalk.white(`   - ${getT('restore.steps.edgeFunctions.deploying', { funcName })}`));
       
       try {
         execSync(`supabase functions deploy ${funcName}`, {
@@ -88,22 +90,22 @@ module.exports = async ({ backupPath, targetProject }) => {
           env: { ...process.env, SUPABASE_ACCESS_TOKEN: targetProject.targetAccessToken || '' }
         });
         
-        console.log(chalk.green(`   ✅ ${funcName} deployada com sucesso!`));
+        console.log(chalk.green(`   ✅ ${getT('restore.steps.edgeFunctions.deployed', { funcName })}`));
         successCount++;
       } catch (deployError) {
-        console.log(chalk.yellow(`   ⚠️  ${funcName} - deploy falhou: ${deployError.message}`));
+        console.log(chalk.yellow(`   ⚠️  ${getT('restore.steps.edgeFunctions.deployFailed', { funcName, message: deployError.message })}`));
       }
     }
     
     // Limpar supabase/functions após deploy (arquivos temporários não são mais necessários)
-    console.log(chalk.cyan('   - Limpando supabase/functions após deploy...'));
+    console.log(chalk.cyan(`   - ${getT('restore.steps.edgeFunctions.cleaningAfter')}`));
     try {
       await fs.rm(supabaseFunctionsDir, { recursive: true, force: true });
     } catch {
       // Ignorar erro de limpeza
     }
     
-    console.log(chalk.green('   ✅ Edge Functions restauradas com sucesso!'));
+    console.log(chalk.green(`   ✅ ${getT('restore.steps.edgeFunctions.success')}`));
     
     return {
       success: true,
@@ -112,7 +114,8 @@ module.exports = async ({ backupPath, targetProject }) => {
     };
     
   } catch (error) {
-    console.error(chalk.red(`   ❌ Erro ao restaurar Edge Functions: ${error.message}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.error(chalk.red(`   ❌ ${getT('restore.steps.edgeFunctions.error', { message: error.message })}`));
     throw error;
   }
 };

@@ -2,13 +2,15 @@ const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs').promises;
 const { captureRealtimeSettings } = require('../../../utils/realtime-settings');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 5: Backup Realtime Settings via Captura Interativa
  */
 module.exports = async ({ projectId, backupDir, options }) => {
   try {
-    console.log(chalk.white('   - Capturando Realtime Settings interativamente...'));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.white(`   - ${getT('backup.steps.realtime.capturing')}`));
     
     const result = await captureRealtimeSettings(projectId, backupDir, options?.skipRealtime);
     
@@ -19,7 +21,8 @@ module.exports = async ({ projectId, backupDir, options }) => {
     
     return { success: true, settings: result };
   } catch (error) {
-    console.log(chalk.yellow(`     ⚠️ Erro ao capturar Realtime Settings: ${error.message}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.yellow(`     ⚠️ ${getT('backup.steps.realtime.error', { message: error.message })}`));
     return { success: false };
   }
 };

@@ -2,6 +2,7 @@ const chalk = require('chalk');
 const path = require('path');
 const { copyDirSafe } = require('../../../utils/fsExtra');
 const { cleanDir } = require('../../../utils/fsExtra');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 9: Backup Supabase .temp (NOVA ETAPA INDEPENDENTE)
@@ -9,17 +10,18 @@ const { cleanDir } = require('../../../utils/fsExtra');
 module.exports = async (context) => {
   const { backupDir } = context;
   try {
+    const getT = global.smoonbI18n?.t || t;
     const tempDir = path.join(process.cwd(), 'supabase', '.temp');
     const backupTempDir = path.join(backupDir, 'supabase-temp');
     
     const fileCount = await copyDirSafe(tempDir, backupTempDir);
-    
-    console.log(chalk.white(`   - Copiando supabase/.temp → backups/backup-${path.basename(backupDir)}/supabase-temp (${fileCount} arquivos)...`));
+    const relativePath = path.relative(process.cwd(), backupTempDir);
+    console.log(chalk.white(`   - ${getT('backup.steps.temp.copying', { path: relativePath, count: fileCount })}`));
     
     if (fileCount === 0) {
-      console.log(chalk.white('   - Nenhum arquivo encontrado em supabase/.temp'));
+      console.log(chalk.white(`   - ${getT('backup.steps.temp.noFiles')}`));
     } else {
-      console.log(chalk.green(`   ✅ ${fileCount} arquivo(s) copiado(s)`));
+      console.log(chalk.green(`   ✅ ${getT('backup.steps.temp.copied', { count: fileCount })}`));
     }
     
     // Usar flag de limpeza do contexto (já foi perguntado no início)
@@ -27,7 +29,7 @@ module.exports = async (context) => {
     
     if (shouldClean) {
       await cleanDir(tempDir);
-      console.log(chalk.white('   - supabase/.temp apagado.'));
+      console.log(chalk.white(`   - ${getT('backup.steps.temp.cleaned')}`));
     }
     
     return {
@@ -35,7 +37,8 @@ module.exports = async (context) => {
       file_count: fileCount
     };
   } catch (error) {
-    console.log(chalk.yellow(`   ⚠️ Erro no backup do supabase/.temp: ${error.message}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.yellow(`   ⚠️ ${getT('backup.steps.temp.error', { message: error.message })}`));
     return { success: false };
   }
 };

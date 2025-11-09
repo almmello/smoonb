@@ -2,31 +2,33 @@ const path = require('path');
 const fs = require('fs');
 const chalk = require('chalk');
 const { confirm } = require('../../../utils/prompt');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 1: Perguntar quais componentes restaurar
  */
 module.exports = async (backupPath) => {
+  const getT = global.smoonbI18n?.t || t;
   // Database (sempre disponível)
-  const restoreDatabase = await confirm('Deseja restaurar Database', true);
+  const restoreDatabase = await confirm(getT('restore.steps.components.database.include'), true);
   
   // Edge Functions
   const edgeFunctionsDir = path.join(backupPath, 'edge-functions');
   let restoreEdgeFunctions = false;
   if (fs.existsSync(edgeFunctionsDir) && fs.readdirSync(edgeFunctionsDir).length > 0) {
-    console.log(chalk.cyan('\n⚡ Edge Functions:'));
-    console.log(chalk.white('   As Edge Functions serão copiadas para supabase/functions e implantadas no projeto destino.'));
-    console.log(chalk.white('   A pasta supabase/functions será limpa antes do processo.\n'));
-    restoreEdgeFunctions = await confirm('Deseja restaurar Edge Functions', true);
+    console.log(chalk.cyan(`\n⚡ ${getT('restore.steps.components.edgeFunctions.title')}`));
+    console.log(chalk.white(`   ${getT('restore.steps.components.edgeFunctions.description1')}`));
+    console.log(chalk.white(`   ${getT('restore.steps.components.edgeFunctions.description2')}\n`));
+    restoreEdgeFunctions = await confirm(getT('restore.steps.components.edgeFunctions.include'), true);
   }
-  
+
   // Auth Settings
   let restoreAuthSettings = false;
   if (fs.existsSync(path.join(backupPath, 'auth-settings.json'))) {
-    console.log(chalk.cyan('\n🔐 Auth Settings:'));
-    console.log(chalk.white('   As configurações de Auth serão exibidas para configuração manual no Dashboard.'));
-    console.log(chalk.white('   Algumas configurações não podem ser aplicadas automaticamente por questões de segurança.\n'));
-    restoreAuthSettings = await confirm('Deseja ver as configurações de Auth Settings', true);
+    console.log(chalk.cyan(`\n🔐 ${getT('restore.steps.components.auth.title')}`));
+    console.log(chalk.white(`   ${getT('restore.steps.components.auth.description1')}`));
+    console.log(chalk.white(`   ${getT('restore.steps.components.auth.description2')}\n`));
+    restoreAuthSettings = await confirm(getT('restore.steps.components.auth.include'), true);
   }
   
   // Storage Buckets
@@ -49,37 +51,37 @@ module.exports = async (backupPath) => {
   const hasStorageFiles = hasStorageDir && fs.readdirSync(storageDir).length > 0;
   
   if (storageZipFiles.length > 0 || hasStorageFiles) {
-    console.log(chalk.cyan('\n📦 Storage:'));
+    console.log(chalk.cyan(`\n📦 ${getT('restore.steps.components.storage.title')}`));
     if (storageZipFiles.length > 0) {
-      console.log(chalk.white(`   Arquivo .storage.zip encontrado: ${storageZipFiles[0]}`));
-      console.log(chalk.white('   Os buckets e arquivos serão restaurados automaticamente no projeto destino.'));
-      console.log(chalk.white('   O arquivo ZIP será extraído, buckets criados e arquivos enviados via API.\n'));
+      console.log(chalk.white(`   ${getT('restore.steps.components.storage.zipFound', { fileName: storageZipFiles[0] })}`));
+      console.log(chalk.white(`   ${getT('restore.steps.components.storage.withZip.description1')}`));
+      console.log(chalk.white(`   ${getT('restore.steps.components.storage.withZip.description2')}\n`));
     } else {
-      console.log(chalk.white('   Apenas metadados dos buckets encontrados (pasta storage).'));
-      console.log(chalk.white('   Para restaurar os arquivos, é necessário o arquivo .storage.zip do Dashboard.'));
-      console.log(chalk.white('   Apenas informações dos buckets serão exibidas.\n'));
+      console.log(chalk.white(`   ${getT('restore.steps.components.storage.metadataOnly.description1')}`));
+      console.log(chalk.white(`   ${getT('restore.steps.components.storage.metadataOnly.description2')}`));
+      console.log(chalk.white(`   ${getT('restore.steps.components.storage.metadataOnly.description3')}\n`));
     }
-    restoreStorage = await confirm('Deseja restaurar Storage Buckets', true);
+    restoreStorage = await confirm(getT('restore.steps.components.storage.include'), true);
   }
-  
+
   // Database Extensions and Settings
   const dbSettingsFiles = fs.readdirSync(backupPath)
     .filter(file => file.startsWith('database-settings-') && file.endsWith('.json'));
   let restoreDatabaseSettings = false;
   if (dbSettingsFiles.length > 0) {
-    console.log(chalk.cyan('\n🔧 Database Extensions and Settings:'));
-    console.log(chalk.white('   As extensões e configurações do banco de dados serão restauradas via SQL.'));
-    console.log(chalk.white('   Isso inclui extensões PostgreSQL e configurações específicas do projeto.\n'));
-    restoreDatabaseSettings = await confirm('Deseja restaurar Database Extensions and Settings', true);
+    console.log(chalk.cyan(`\n🔧 ${getT('restore.steps.components.databaseSettings.title')}`));
+    console.log(chalk.white(`   ${getT('restore.steps.components.databaseSettings.description1')}`));
+    console.log(chalk.white(`   ${getT('restore.steps.components.databaseSettings.description2')}\n`));
+    restoreDatabaseSettings = await confirm(getT('restore.steps.components.databaseSettings.include'), true);
   }
-  
+
   // Realtime Settings
   let restoreRealtimeSettings = false;
   if (fs.existsSync(path.join(backupPath, 'realtime-settings.json'))) {
-    console.log(chalk.cyan('\n🔄 Realtime Settings:'));
-    console.log(chalk.white('   As configurações de Realtime serão exibidas para configuração manual no Dashboard.'));
-    console.log(chalk.white('   Algumas configurações precisam ser aplicadas manualmente.\n'));
-    restoreRealtimeSettings = await confirm('Deseja ver as configurações de Realtime Settings', true);
+    console.log(chalk.cyan(`\n🔄 ${getT('restore.steps.components.realtime.title')}`));
+    console.log(chalk.white(`   ${getT('restore.steps.components.realtime.description1')}`));
+    console.log(chalk.white(`   ${getT('restore.steps.components.realtime.description2')}\n`));
+    restoreRealtimeSettings = await confirm(getT('restore.steps.components.realtime.include'), true);
   }
   
   return {

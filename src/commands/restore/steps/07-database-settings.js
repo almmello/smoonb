@@ -2,17 +2,19 @@ const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
+const { t } = require('../../../i18n');
 
 /**
  * Etapa 7: Restaurar Database Settings (via SQL)
  */
 module.exports = async ({ backupPath, targetProject }) => {
   try {
+    const getT = global.smoonbI18n?.t || t;
     const files = fs.readdirSync(backupPath);
     const dbSettingsFile = files.find(f => f.startsWith('database-settings-') && f.endsWith('.json'));
     
     if (!dbSettingsFile) {
-      console.log(chalk.yellow('   ⚠️  Nenhuma configuração de Database encontrada no backup'));
+      console.log(chalk.yellow(`   ⚠️  ${getT('restore.steps.databaseSettings.notFound')}`));
       return { success: false };
     }
     
@@ -22,18 +24,18 @@ module.exports = async ({ backupPath, targetProject }) => {
     const extensions = dbSettings.extensions || [];
     
     if (extensions.length > 0) {
-      console.log(chalk.white(`   - Habilitando ${extensions.length} extension(s)...`));
+      console.log(chalk.white(`   - ${getT('restore.steps.databaseSettings.enabling', { count: extensions.length })}`));
       
       for (const ext of extensions) {
         const extName = typeof ext === 'string' ? ext : ext.name;
-        console.log(chalk.white(`     - ${extName}`));
+        console.log(chalk.white(`     ${getT('restore.steps.databaseSettings.extension', { extName })}`));
         
         const sqlCommand = `CREATE EXTENSION IF NOT EXISTS ${extName};`;
         
         const urlMatch = targetProject.targetDatabaseUrl.match(/postgresql:\/\/([^@:]+):([^@]+)@(.+)$/);
         
         if (!urlMatch) {
-          console.log(chalk.yellow(`     ⚠️  URL inválida para ${extName}`));
+          console.log(chalk.yellow(`     ⚠️  ${getT('restore.steps.databaseSettings.invalidUrl', { extName })}`));
           continue;
         }
         
@@ -49,17 +51,18 @@ module.exports = async ({ backupPath, targetProject }) => {
         try {
           execSync(dockerCmd, { stdio: 'pipe', encoding: 'utf8' });
         } catch {
-          console.log(chalk.yellow(`     ⚠️  ${extName} - extension já existe ou não pode ser habilitada`));
+          console.log(chalk.yellow(`     ⚠️  ${getT('restore.steps.databaseSettings.extensionExists', { extName })}`));
         }
       }
     }
     
-    console.log(chalk.green('   ✅ Database Settings restaurados com sucesso!'));
+    console.log(chalk.green(`   ✅ ${getT('restore.steps.databaseSettings.success')}`));
     
     return { success: true, extensions_count: extensions.length };
     
   } catch (error) {
-    console.error(chalk.red(`   ❌ Erro ao restaurar Database Settings: ${error.message}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.error(chalk.red(`   ❌ ${getT('restore.steps.databaseSettings.error', { message: error.message })}`));
     throw error;
   }
 };
