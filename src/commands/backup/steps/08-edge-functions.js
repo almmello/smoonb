@@ -79,7 +79,7 @@ module.exports = async (context) => {
     if (!functions || functions.length === 0) {
       console.log(chalk.white(`   - ${getT('backup.steps.functions.noneFound')}`));
       await writeJson(path.join(functionsDir, 'README.md'), {
-        message: 'Nenhuma Edge Function encontrada neste projeto'
+        message: getT('backup.steps.functions.noFunctionsMessage')
       });
       return { success: true, reason: 'no_functions', functions: [] };
     }

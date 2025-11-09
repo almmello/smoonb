@@ -6,7 +6,7 @@ const { cleanDir, countFiles, copyDirSafe } = require('../../../utils/fsExtra');
 const { t } = require('../../../i18n');
 
 /**
- * Etapa 10: Backup Migrations (NOVA ETAPA INDEPENDENTE)
+ * Etapa 10: Migrations Backup (NOVA ETAPA INDEPENDENTE)
  */
 module.exports = async (context) => {
   const { projectId, accessToken, databaseUrl, backupDir } = context;

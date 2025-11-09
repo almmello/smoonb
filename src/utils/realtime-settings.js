@@ -1,6 +1,7 @@
 const readline = require('readline');
 const fs = require('fs').promises;
 const path = require('path');
+const { t } = require('../i18n');
 
 /**
  * Captura configurações de Realtime Settings interativamente
@@ -16,8 +17,10 @@ async function captureRealtimeSettings(projectId, backupDir, skipInteractive = f
   // Tentar ler configurações de backup anterior
   const previousSettings = await getPreviousRealtimeSettings(backupDir);
   
+  const getT = global.smoonbI18n?.t || t;
+  
   if (skipInteractive && previousSettings) {
-    console.log('📋 Copiando Realtime Settings do backup anterior...');
+    console.log(`📋 ${getT('utils.realtime.copying')}`);
     await fs.writeFile(settingsFile, JSON.stringify(previousSettings, null, 2));
     return previousSettings;
   }
@@ -25,23 +28,23 @@ async function captureRealtimeSettings(projectId, backupDir, skipInteractive = f
   if (previousSettings && !skipInteractive) {
     const shouldReuse = await askToReusePreviousSettings();
     if (shouldReuse) {
-      console.log('📋 Reutilizando configurações de Realtime Settings do backup anterior...');
+      console.log(`📋 ${getT('utils.realtime.reusing')}`);
       await fs.writeFile(settingsFile, JSON.stringify(previousSettings, null, 2));
       return previousSettings;
     }
   }
   
   // Capturar configurações interativamente
-  console.log('\n🔧 Configurações de Realtime Settings');
-  console.log('═'.repeat(50));
-  console.log(`📱 Acesse: ${dashboardUrl}`);
-  console.log('📝 Anote os valores dos 7 parâmetros abaixo:\n');
+  console.log(`\n🔧 ${getT('utils.realtime.configTitle')}`);
+  console.log(getT('utils.realtime.separator'));
+  console.log(`📱 ${getT('utils.realtime.access', { url: dashboardUrl })}`);
+  console.log(`📝 ${getT('utils.realtime.note')}\n`);
   
   const settings = await captureSettingsInteractively(projectId, previousSettings);
   
   // Salvar configurações
   await fs.writeFile(settingsFile, JSON.stringify(settings, null, 2));
-  console.log('\n✅ Configurações de Realtime Settings salvas!');
+  console.log(`\n✅ ${getT('utils.realtime.saved')}`);
   
   return settings;
 }
@@ -87,13 +90,14 @@ async function getPreviousRealtimeSettings(backupDir) {
  * @returns {Promise<boolean>} true se deve reutilizar
  */
 async function askToReusePreviousSettings() {
+  const getT = global.smoonbI18n?.t || t;
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
   });
   
   return new Promise((resolve) => {
-    rl.question('🔄 Foi identificada uma gravação anterior de Realtime Settings.\n   Deseja reutilizar as configurações anteriores? (S/n): ', (answer) => {
+    rl.question(`🔄 ${getT('utils.realtime.previousFound')}\n   ${getT('utils.realtime.reuse')} (S/n): `, (answer) => {
       rl.close();
       const shouldReuse = !answer.toLowerCase().startsWith('n');
       resolve(shouldReuse);
@@ -121,8 +125,10 @@ async function captureSettingsInteractively(projectId, previousSettings) {
     });
   };
   
+  const getT = global.smoonbI18n?.t || t;
+  
   try {
-    console.log('📋 Responda as perguntas abaixo (pressione Enter para usar o valor padrão):\n');
+    console.log(`📋 ${getT('utils.realtime.questions')}\n`);
     
     // Valores padrão baseados na imagem ou configurações anteriores
     const defaults = previousSettings?.realtime_settings?.settings || {

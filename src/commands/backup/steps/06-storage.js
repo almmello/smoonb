@@ -37,7 +37,7 @@ module.exports = async ({ projectId, accessToken, backupDir, supabaseUrl, supaba
     if (!buckets || buckets.length === 0) {
       console.log(chalk.white(`   - ${getT('backup.steps.storage.noBuckets')}`));
       await writeJson(path.join(storageDir, 'README.md'), {
-        message: 'Nenhum bucket de Storage encontrado neste projeto'
+        message: getT('backup.steps.storage.noBucketsMessage')
       });
       return { success: true, buckets: [] };
     }

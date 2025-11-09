@@ -98,13 +98,15 @@ async function checkDatabaseConnection(databaseUrl) {
       `psql "${databaseUrl}" -t -c "SELECT 1 as test_connection;"`
     );
     
+    const getT = global.smoonbI18n?.t || t;
     if (stdout.trim() === '1') {
-      return { status: 'ok', message: 'Conexão estabelecida com sucesso' };
+      return { status: 'ok', message: getT('check.connectionSuccess') };
     } else {
-      return { status: 'error', message: 'Resposta inesperada da database' };
+      return { status: 'error', message: getT('check.unexpectedResponse') };
     }
   } catch (error) {
-    return { status: 'error', message: `Falha na conexão: ${error.message}` };
+    const getT = global.smoonbI18n?.t || t;
+    return { status: 'error', message: getT('check.connectionError', { message: error.message }) };
   }
 }
 

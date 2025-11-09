@@ -1,6 +1,7 @@
 const chalk = require('chalk');
 const fs = require('fs');
 const path = require('path');
+const { t } = require('../../i18n');
 
 /**
  * Listar backups válidos (aceita .backup.gz e .backup)
@@ -67,17 +68,18 @@ function formatBytes(bytes) {
  * Mostrar resumo da restauração
  */
 function showRestoreSummary(backup, components, targetProject) {
-  console.log(chalk.blue('\n📋 Resumo da Restauração:'));
-  console.log(chalk.blue('═'.repeat(80)));
-  console.log(chalk.cyan(`📦 Backup: ${backup.name}`));
-  console.log(chalk.cyan(`📤 Projeto Origem: ${backup.projectId}`));
-  console.log(chalk.cyan(`📥 Projeto Destino: ${targetProject.targetProjectId}`));
+  const getT = global.smoonbI18n?.t || t;
+  console.log(chalk.blue(`\n📋 ${getT('restore.utils.summaryTitle')}`));
+  console.log(chalk.blue(getT('restore.utils.summarySeparator')));
+  console.log(chalk.cyan(`📦 ${getT('restore.utils.backup', { name: backup.name })}`));
+  console.log(chalk.cyan(`📤 ${getT('restore.utils.sourceProject', { projectId: backup.projectId })}`));
+  console.log(chalk.cyan(`📥 ${getT('restore.utils.targetProject', { projectId: targetProject.targetProjectId })}`));
   console.log('');
-  console.log(chalk.cyan('Componentes que serão restaurados:'));
+  console.log(chalk.cyan(getT('restore.utils.componentsTitle')));
   console.log('');
   
   if (components.database) {
-    console.log('✅ Database (psql -f via Docker)');
+    console.log(`✅ ${getT('restore.utils.database')}`);
   }
   
   if (components.edgeFunctions) {
@@ -85,30 +87,30 @@ function showRestoreSummary(backup, components, targetProject) {
     const functions = fs.readdirSync(edgeFunctionsDir).filter(item => 
       fs.statSync(path.join(edgeFunctionsDir, item)).isDirectory()
     );
-    console.log(`⚡ Edge Functions: ${functions.length} function(s)`);
+    console.log(`⚡ ${getT('restore.utils.edgeFunctions', { count: functions.length })}`);
     functions.forEach(func => console.log(`   - ${func}`));
   }
   
   if (components.authSettings) {
-    console.log('🔐 Auth Settings: Exibir URL e valores para configuração manual');
+    console.log(`🔐 ${getT('restore.utils.authSettings')}`);
   }
   
   if (components.storage) {
     const backupPath = backup.path;
     const storageZipFiles = fs.readdirSync(backupPath).filter(f => f.endsWith('.storage.zip'));
     if (storageZipFiles.length > 0) {
-      console.log('📦 Storage Buckets: Restauração automática de buckets e arquivos via API');
+      console.log(`📦 ${getT('restore.utils.storageBuckets')}`);
     } else {
-      console.log('📦 Storage Buckets: Exibir informações (apenas metadados - arquivo .storage.zip não encontrado)');
+      console.log(`📦 ${getT('restore.utils.storageMetadataOnly')}`);
     }
   }
   
   if (components.databaseSettings) {
-    console.log('🔧 Database Extensions and Settings: Restaurar via SQL');
+    console.log(`🔧 ${getT('restore.utils.databaseSettings')}`);
   }
   
   if (components.realtimeSettings) {
-    console.log('🔄 Realtime Settings: Exibir URL e valores para configuração manual');
+    console.log(`🔄 ${getT('restore.utils.realtimeSettings')}`);
   }
   
   console.log('');

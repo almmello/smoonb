@@ -108,11 +108,12 @@ module.exports = async ({ backupPath, targetProject }) => {
     
     // 4. Validar credenciais do projeto destino
     if (!targetProject.targetProjectId || !targetProject.targetAccessToken) {
-      throw new Error('Credenciais do projeto destino não configuradas. É necessário SUPABASE_PROJECT_ID e SUPABASE_ACCESS_TOKEN');
+      const getT = global.smoonbI18n?.t || t;
+      throw new Error(getT('error.storageCredentialsNotConfigured'));
     }
     
     if (!targetProject.targetUrl || !targetProject.targetServiceKey) {
-      throw new Error('Credenciais do Supabase não configuradas. É necessário NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY');
+      throw new Error(getT('error.supabaseCredentialsNotConfigured'));
     }
     
     // 4.1 Obter project ID do projeto origem e validar substituição

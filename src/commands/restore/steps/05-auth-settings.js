@@ -40,7 +40,7 @@ module.exports = async ({ backupPath, targetProject }) => {
     await inquirer.prompt([{
       type: 'input',
       name: 'continue',
-      message: 'Pressione Enter para continuar'
+      message: getT('restore.steps.auth.pressEnter')
     }]);
     
     console.log(chalk.green(`   ✅ ${getT('restore.steps.auth.success')}`));

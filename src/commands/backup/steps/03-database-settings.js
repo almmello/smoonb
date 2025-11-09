@@ -16,7 +16,8 @@ module.exports = async ({ databaseUrl, projectId, backupDir }) => {
     const urlMatch = databaseUrl.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
     
     if (!urlMatch) {
-      throw new Error('Database URL inválida');
+      const getT = global.smoonbI18n?.t || t;
+      throw new Error(getT('error.databaseUrlInvalidSimple'));
     }
     
     const [, username, password, host, port, database] = urlMatch;

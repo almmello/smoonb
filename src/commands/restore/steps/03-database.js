@@ -38,7 +38,8 @@ module.exports = async ({ backupFilePath, targetDatabaseUrl }) => {
     const urlMatch = targetDatabaseUrl.match(/postgresql:\/\/([^@:]+):([^@]+)@(.+)$/);
     
     if (!urlMatch) {
-      throw new Error('Database URL inválida. Formato esperado: postgresql://user:password@host/database');
+      const getT = global.smoonbI18n?.t || t;
+      throw new Error(getT('error.databaseUrlInvalid'));
     }
     
     // Comando psql conforme documentação oficial Supabase

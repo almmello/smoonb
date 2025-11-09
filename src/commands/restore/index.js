@@ -25,16 +25,19 @@ const step08RealtimeSettings = require('./steps/08-realtime-settings');
  * Função auxiliar para importar arquivo de backup e storage (reutiliza lógica do comando import)
  */
 async function importBackupFile(sourceFile, sourceStorageFile, outputDir) {
+  const { t } = require('../../i18n');
+  const getT = global.smoonbI18n?.t || t;
+  
   // Validar arquivo de backup
   try {
     await fsPromises.access(sourceFile);
   } catch {
-    throw new Error(`Arquivo de backup não encontrado: ${sourceFile}`);
+    throw new Error(getT('restore.import.fileNotFound', { path: sourceFile }));
   }
 
   // Verificar se é um arquivo .backup.gz ou .backup
   if (!sourceFile.endsWith('.backup.gz') && !sourceFile.endsWith('.backup')) {
-    throw new Error('Arquivo de backup deve ser .backup.gz ou .backup');
+    throw new Error(getT('restore.import.invalidFormat'));
   }
 
   // Validar arquivo de storage se fornecido
@@ -42,12 +45,12 @@ async function importBackupFile(sourceFile, sourceStorageFile, outputDir) {
     try {
       await fsPromises.access(sourceStorageFile);
     } catch {
-      throw new Error(`Arquivo de storage não encontrado: ${sourceStorageFile}`);
+      throw new Error(getT('restore.import.storageNotFound', { path: sourceStorageFile }));
     }
 
     // Verificar se é um arquivo .storage.zip
     if (!sourceStorageFile.endsWith('.storage.zip')) {
-      throw new Error('Arquivo de storage deve ser .storage.zip');
+      throw new Error(getT('restore.import.storageInvalidFormat'));
     }
   }
 
@@ -57,7 +60,7 @@ async function importBackupFile(sourceFile, sourceStorageFile, outputDir) {
   const match = fileName.match(/db_cluster-(\d{2})-(\d{2})-(\d{4})@(\d{2})-(\d{2})-(\d{2})\.backup(\.gz)?/);
   
   if (!match) {
-    throw new Error('Nome do arquivo de backup não está no formato esperado do Dashboard. Formato esperado: db_cluster-DD-MM-YYYY@HH-MM-SS.backup.gz');
+    throw new Error(getT('restore.import.invalidFileName'));
   }
 
   const [, day, month, year, hour, minute, second] = match;
@@ -68,7 +71,7 @@ async function importBackupFile(sourceFile, sourceStorageFile, outputDir) {
   
   // Criar diretório de backup
   await ensureDir(backupDir);
-  console.log(chalk.blue(`📁 Importando backup para: ${backupDirName}`));
+  console.log(chalk.blue(`📁 ${getT('restore.import.importing', { name: backupDirName })}`));
   
   // Copiar arquivo de backup para o diretório de backup
   const destFile = path.join(backupDir, fileName);
@@ -78,7 +81,7 @@ async function importBackupFile(sourceFile, sourceStorageFile, outputDir) {
   const stats = await fsPromises.stat(destFile);
   const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
   
-  console.log(chalk.green(`✅ Arquivo de backup importado: ${fileName} (${sizeMB} MB)`));
+  console.log(chalk.green(`✅ ${getT('restore.import.backupImported', { fileName, size: sizeMB })}`));
   
   // Copiar arquivo de storage se fornecido
   if (sourceStorageFile) {
@@ -89,7 +92,7 @@ async function importBackupFile(sourceFile, sourceStorageFile, outputDir) {
     const storageStats = await fsPromises.stat(destStorageFile);
     const storageSizeMB = (storageStats.size / (1024 * 1024)).toFixed(2);
     
-    console.log(chalk.green(`✅ Arquivo de storage importado: ${storageFileName} (${storageSizeMB} MB)`));
+    console.log(chalk.green(`✅ ${getT('restore.import.storageImported', { fileName: storageFileName, size: storageSizeMB })}`));
   }
   
   return backupDir;
@@ -141,10 +144,10 @@ module.exports = async (options) => {
     try {
       await fsPromises.access(envPath);
       await backupEnvFile(envPath, envBackupPath);
-      console.log(chalk.blue(`📁 Backup do .env.local: ${path.relative(process.cwd(), envBackupPath)}`));
+      console.log(chalk.blue(`📁 ${getT('restore.import.envBackup', { path: path.relative(process.cwd(), envBackupPath) })}`));
     } catch {
       // Arquivo não existe, não fazer backup
-      console.log(chalk.yellow('⚠️  Arquivo .env.local não encontrado. Será criado durante o mapeamento.'));
+      console.log(chalk.yellow(getT('restore.import.envNotFound')));
     }
 
     // Leitura e mapeamento interativo
@@ -161,7 +164,7 @@ module.exports = async (options) => {
     const { finalEnv, dePara } = await mapEnvVariablesInteractively(currentEnv, expectedKeys);
     await writeEnvFile(envPath, finalEnv);
     await saveEnvMap(dePara, path.join(processDir, 'env', 'env-map.json'));
-    console.log(chalk.green('✅ .env.local atualizado com sucesso. Nenhuma chave renomeada; valores sincronizados.'));
+    console.log(chalk.green(`✅ ${getT('restore.index.envUpdated')}`));
 
     // Resolver valores esperados a partir do de-para
     function getValue(expectedKey) {
@@ -187,7 +190,7 @@ module.exports = async (options) => {
       const sourceFile = path.resolve(options.file);
       const sourceStorageFile = options.storage ? path.resolve(options.storage) : null;
       
-      console.log(chalk.blue(`📁 Importando arquivo de backup...`));
+      console.log(chalk.blue(`📁 ${getT('restore.import.importingFile')}`));
       const importedBackupDir = await importBackupFile(sourceFile, sourceStorageFile, outputDir);
       
       // Listar backups válidos para encontrar o backup importado
@@ -195,20 +198,20 @@ module.exports = async (options) => {
       selectedBackup = validBackups.find(b => b.path === importedBackupDir);
       
       if (!selectedBackup) {
-        throw new Error('Não foi possível encontrar o backup importado');
+        throw new Error(getT('restore.import.cannotFind'));
       }
       
-      console.log(chalk.green(`✅ Backup importado e selecionado automaticamente: ${path.basename(selectedBackup.path)}`));
+      console.log(chalk.green(`✅ ${getT('restore.import.importedSelected', { name: path.basename(selectedBackup.path) })}`));
     } else {
       // Fluxo normal: listar e selecionar backup interativamente
-      console.log(chalk.blue(`📁 Buscando backups em: ${outputDir}`));
+      console.log(chalk.blue(`📁 ${getT('restore.index.searchingBackups', { path: outputDir })}`));
       
       // 1. Listar backups válidos (.backup.gz)
       const validBackups = await listValidBackups(outputDir);
       
       if (validBackups.length === 0) {
-        console.error(chalk.red('❌ Nenhum backup válido encontrado'));
-        console.log(chalk.yellow('💡 Execute primeiro: npx smoonb backup'));
+        console.error(chalk.red(`❌ ${getT('restore.index.noBackupsFound')}`));
+        console.log(chalk.yellow(`💡 ${getT('restore.index.runBackupFirst')}`));
         process.exit(1);
       }
       
@@ -221,33 +224,33 @@ module.exports = async (options) => {
     
     // Validar que pelo menos um componente foi selecionado
     if (!Object.values(components).some(Boolean)) {
-      console.error(chalk.red('\n❌ Nenhum componente selecionado para restauração!'));
+      console.error(chalk.red(getT('restore.import.noComponents')));
       process.exit(1);
     }
     
     // 4. Mostrar resumo detalhado
-    console.log(chalk.cyan('\n📋 RESUMO DA RESTAURAÇÃO:\n'));
-    console.log(chalk.white(`   📁 Backup selecionado: ${path.basename(selectedBackup.path)}`));
-    console.log(chalk.white(`   🎯 Projeto destino: ${targetProject.targetProjectId || '(não configurado)'}`));
-    console.log(chalk.white(`   📊 Database: ${components.database ? 'Sim' : 'Não'}`));
-    console.log(chalk.white(`   ⚡ Edge Functions: ${components.edgeFunctions ? 'Sim' : 'Não'}`));
-    console.log(chalk.white(`   🔐 Auth Settings: ${components.authSettings ? 'Sim' : 'Não'}`));
-    console.log(chalk.white(`   📦 Storage: ${components.storage ? 'Sim' : 'Não'}`));
-    console.log(chalk.white(`   🔧 Database Settings: ${components.databaseSettings ? 'Sim' : 'Não'}`));
-    console.log(chalk.white(`   🔄 Realtime Settings: ${components.realtimeSettings ? 'Sim' : 'Não'}\n`));
+    console.log(chalk.cyan(`\n📋 ${getT('restore.index.summaryTitle')}\n`));
+    console.log(chalk.white(`   📁 ${getT('restore.index.selectedBackup', { name: path.basename(selectedBackup.path) })}`));
+    console.log(chalk.white(`   🎯 ${getT('restore.index.targetProject', { projectId: targetProject.targetProjectId || getT('restore.index.notConfigured') })}`));
+    console.log(chalk.white(`   📊 ${getT('restore.index.database', { value: components.database ? getT('restore.index.yes') : getT('restore.index.no') })}`));
+    console.log(chalk.white(`   ⚡ ${getT('restore.index.edgeFunctions', { value: components.edgeFunctions ? getT('restore.index.yes') : getT('restore.index.no') })}`));
+    console.log(chalk.white(`   🔐 ${getT('restore.index.authSettings', { value: components.authSettings ? getT('restore.index.yes') : getT('restore.index.no') })}`));
+    console.log(chalk.white(`   📦 ${getT('restore.index.storage', { value: components.storage ? getT('restore.index.yes') : getT('restore.index.no') })}`));
+    console.log(chalk.white(`   🔧 ${getT('restore.index.databaseSettings', { value: components.databaseSettings ? getT('restore.index.yes') : getT('restore.index.no') })}`));
+    console.log(chalk.white(`   🔄 ${getT('restore.index.realtimeSettings', { value: components.realtimeSettings ? getT('restore.index.yes') : getT('restore.index.no') })}\n`));
     
     // Mostrar resumo técnico adicional
     showRestoreSummary(selectedBackup, components, targetProject);
     
     // 5. Confirmar execução
-    const finalOk = await confirm('Deseja iniciar a restauração com estas configurações?', true);
+    const finalOk = await confirm(getT('restore.index.confirmRestore'), true);
     if (!finalOk) {
-      console.log(chalk.yellow('🚫 Restauração cancelada.'));
+      console.log(chalk.yellow(`🚫 ${getT('restore.index.restoreCancelled')}`));
       process.exit(0);
     }
     
     // 6. Executar restauração
-    console.log(chalk.blue('\n🚀 Iniciando restauração...'));
+    console.log(chalk.blue(`\n🚀 ${getT('restore.index.startingRestore')}`));
     
     // Contar etapas totais para numeração dinâmica
     let stepNumber = 0;
@@ -264,7 +267,7 @@ module.exports = async (options) => {
     // 6.1 Database (se selecionado)
     if (components.database) {
       stepNumber++;
-      console.log(chalk.blue(`\n📊 ${stepNumber}/${totalSteps} - Restaurando Database...`));
+      console.log(chalk.blue(`\n📊 ${stepNumber}/${totalSteps} - ${getT('restore.index.restoringDatabase')}`));
       await step03Database({
         backupFilePath: path.join(selectedBackup.path, selectedBackup.backupFile),
         targetDatabaseUrl: targetProject.targetDatabaseUrl
@@ -275,7 +278,7 @@ module.exports = async (options) => {
     // 6.2 Edge Functions (se selecionado)
     if (components.edgeFunctions) {
       stepNumber++;
-      console.log(chalk.blue(`\n⚡ ${stepNumber}/${totalSteps} - Restaurando Edge Functions...`));
+      console.log(chalk.blue(`\n⚡ ${stepNumber}/${totalSteps} - ${getT('restore.index.restoringEdgeFunctions')}`));
       const edgeFunctionsResult = await step04EdgeFunctions({
         backupPath: selectedBackup.path,
         targetProject
@@ -286,7 +289,7 @@ module.exports = async (options) => {
     // 6.3 Auth Settings (se selecionado)
     if (components.authSettings) {
       stepNumber++;
-      console.log(chalk.blue(`\n🔐 ${stepNumber}/${totalSteps} - Restaurando Auth Settings...`));
+      console.log(chalk.blue(`\n🔐 ${stepNumber}/${totalSteps} - ${getT('restore.index.restoringAuthSettings')}`));
       await step05AuthSettings({
         backupPath: selectedBackup.path,
         targetProject
@@ -297,7 +300,7 @@ module.exports = async (options) => {
     // 6.4 Storage Buckets (se selecionado)
     if (components.storage) {
       stepNumber++;
-      console.log(chalk.blue(`\n📦 ${stepNumber}/${totalSteps} - Restaurando Storage Buckets...`));
+      console.log(chalk.blue(`\n📦 ${stepNumber}/${totalSteps} - ${getT('restore.index.restoringStorageBuckets')}`));
       const storageResult = await step06Storage({
         backupPath: selectedBackup.path,
         targetProject
@@ -308,7 +311,7 @@ module.exports = async (options) => {
     // 6.5 Database Settings (se selecionado)
     if (components.databaseSettings) {
       stepNumber++;
-      console.log(chalk.blue(`\n🔧 ${stepNumber}/${totalSteps} - Restaurando Database Settings...`));
+      console.log(chalk.blue(`\n🔧 ${stepNumber}/${totalSteps} - ${getT('restore.index.restoringDatabaseSettings')}`));
       await step07DatabaseSettings({
         backupPath: selectedBackup.path,
         targetProject
@@ -319,7 +322,7 @@ module.exports = async (options) => {
     // 6.6 Realtime Settings (se selecionado)
     if (components.realtimeSettings) {
       stepNumber++;
-      console.log(chalk.blue(`\n🔄 ${stepNumber}/${totalSteps} - Restaurando Realtime Settings...`));
+      console.log(chalk.blue(`\n🔄 ${stepNumber}/${totalSteps} - ${getT('restore.index.restoringRealtimeSettings')}`));
       await step08RealtimeSettings({
         backupPath: selectedBackup.path,
         targetProject
@@ -349,21 +352,21 @@ module.exports = async (options) => {
     }
 
     // Exibir resumo final
-    console.log(chalk.green('\n🎉 RESTAURAÇÃO COMPLETA FINALIZADA!'));
-    console.log(chalk.blue(`🎯 Projeto destino: ${targetProject.targetProjectId || '(não configurado)'}`));
+    console.log(chalk.green(`\n🎉 ${getT('restore.index.restoreComplete')}`));
+    console.log(chalk.blue(`🎯 ${getT('restore.index.targetProjectFinal', { projectId: targetProject.targetProjectId || getT('restore.index.notConfigured') })}`));
     
     if (restoreResults.database) {
-      console.log(chalk.green(`📊 Database: Restaurada com sucesso via Docker`));
+      console.log(chalk.green(`📊 ${getT('restore.index.databaseRestored')}`));
     }
     
     if (restoreResults.edgeFunctions) {
       const funcCount = restoreResults.edgeFunctions.functions_count || 0;
       const successCount = restoreResults.edgeFunctions.success_count || 0;
-      console.log(chalk.green(`⚡ Edge Functions: ${successCount}/${funcCount} functions restauradas`));
+      console.log(chalk.green(`⚡ ${getT('restore.index.edgeFunctionsRestored', { success: successCount, total: funcCount })}`));
     }
     
     if (restoreResults.authSettings) {
-      console.log(chalk.green(`🔐 Auth Settings: Configurações exibidas para configuração manual`));
+      console.log(chalk.green(`🔐 ${getT('restore.index.authSettingsRestored')}`));
     }
     
     if (restoreResults.storage) {
@@ -372,22 +375,24 @@ module.exports = async (options) => {
       const totalFiles = restoreResults.storage.total_files || 0;
       
       if (filesRestored) {
-        console.log(chalk.green(`📦 Storage: ${bucketCount} bucket(s) restaurado(s), ${totalFiles} arquivo(s) enviado(s)`));
+        console.log(chalk.green(`📦 ${getT('restore.index.storageRestored', { buckets: bucketCount, files: totalFiles })}`));
       } else {
-        console.log(chalk.green(`📦 Storage: ${bucketCount} bucket(s) encontrado(s) - apenas metadados (arquivo .storage.zip não encontrado)`));
+        console.log(chalk.green(`📦 ${getT('restore.index.storageMetadataOnly', { buckets: bucketCount })}`));
       }
     }
     
     if (restoreResults.databaseSettings) {
-      console.log(chalk.green(`🔧 Database Settings: Extensões e configurações restauradas via SQL`));
+      console.log(chalk.green(`🔧 ${getT('restore.index.databaseSettingsRestored')}`));
     }
     
     if (restoreResults.realtimeSettings) {
-      console.log(chalk.green(`🔄 Realtime Settings: Configurações exibidas para configuração manual`));
+      console.log(chalk.green(`🔄 ${getT('restore.index.realtimeSettingsRestored')}`));
     }
     
   } catch (error) {
-    console.error(chalk.red(`❌ Erro na restauração: ${error.message}`));
+    const { t } = require('../../i18n');
+    const getT = global.smoonbI18n?.t || t;
+    console.error(chalk.red(`❌ ${getT('restore.index.error', { message: error.message })}`));
     process.exit(1);
   }
 };

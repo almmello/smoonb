@@ -26,13 +26,13 @@ module.exports = async (backups) => {
   
   const question = (query) => new Promise(resolve => rl.question(query, resolve));
   
-  const choice = await question(`\nDigite o número do backup para restaurar (1-${backups.length}): `);
+  const choice = await question(`\n${getT('restore.steps.backupSelection.input', { min: 1, max: backups.length })} `);
   rl.close();
   
   const backupIndex = parseInt(choice) - 1;
   
   if (backupIndex < 0 || backupIndex >= backups.length) {
-    throw new Error('Número inválido');
+    throw new Error(getT('restore.steps.backupSelection.invalid'));
   }
   
   return backups[backupIndex];
