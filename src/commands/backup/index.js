@@ -27,15 +27,17 @@ module.exports = async (options) => {
   showBetaBanner();
   
   try {
-    // Termo de uso e aviso de risco
-    console.log(chalk.yellow.bold('\n⚠️  TERMO DE USO E AVISO DE RISCO\n'));
-    console.log(chalk.white('Ao prosseguir, você reconhece e concorda que o Supa Moonbase (smoonb) é fornecido "NO ESTADO EM QUE SE ENCONTRA" ("AS IS") e "CONFORME DISPONIBILIDADE", sem garantias de qualquer natureza—expressas, implícitas ou legais—incluindo, sem limitação, garantias de comercialização, adequação a um fim específico e não violação, na máxima extensão permitida pela lei aplicável. Operações de backup e restauração envolvem riscos, os ambientes variam amplamente e não é possível prever ou validar todas as configurações dos usuários. Você é o único responsável por validar seu ambiente, manter cópias independentes e verificar os resultados antes de utilizá-los em produção. O Supa Moonbase (smoonb) é construído com repositórios públicos, auditáveis e software livre, para auxiliar pessoas a simplificar seus fluxos, sem com isso criar qualquer garantia, promessa de suporte ou compromisso de nível de serviço.\n'));
-    console.log(chalk.white('Limitação de responsabilidade (PT-BR) — Na máxima extensão permitida por lei, a Goalmoon, seus contribuidores e licenciadores não serão responsáveis por danos indiretos, incidentais, especiais, consequentes, exemplares ou punitivos (incluindo perda de dados, interrupção de negócios ou lucros cessantes) decorrentes do uso, incapacidade de uso, das operações de backup/restauração realizadas com, ou dos resultados gerados pelo Supa Moonbase (smoonb). Em qualquer hipótese, a responsabilidade total por todas as reivindicações relacionadas ao Supa Moonbase (smoonb) não excederá o valor pago por você pelo Supa Moonbase (smoonb) nos 12 meses anteriores ao evento. Nada neste aviso exclui ou limita responsabilidades onde tais limites sejam proibidos por lei, incluindo (conforme aplicável) dolo ou culpa grave.\n'));
-    console.log(chalk.white('Observação para consumidores no Brasil (PT-BR) — Para consumidores brasileiros, este aviso não afasta direitos irrenunciáveis previstos no Código de Defesa do Consumidor (CDC); qualquer limitação aqui prevista só se aplica nos limites da lei e não impede a indenização obrigatória quando cabível.\n'));
+    const { t } = require('../../i18n');
+    const getT = global.smoonbI18n?.t || t;
     
-    const termsAccepted = await confirm('Você aceita os Termos de Uso e o Aviso de Risco de Backup?', true);
+    // Termo de uso e aviso de risco
+    console.log(chalk.yellow.bold(`\n⚠️  ${getT('disclaimer.title')}\n`));
+    console.log(chalk.white(`${getT('disclaimer.text')}\n`));
+    console.log(chalk.white(`${getT('disclaimer.limitation')}\n`));
+    
+    const termsAccepted = await confirm(getT('disclaimer.acceptBackup'), true);
     if (!termsAccepted) {
-      console.log(chalk.red('🚫 Operação cancelada pelo usuário.'));
+      console.log(chalk.red(`🚫 ${getT('disclaimer.operationCancelled')}`));
       process.exit(1);
     }
 
@@ -43,13 +45,12 @@ module.exports = async (options) => {
     await step00DockerValidation();
 
     // Consentimento para leitura e escrita do .env.local
-    console.log(chalk.yellow('\n⚠️  O smoonb irá ler e escrever o arquivo .env.local localmente.'));
-    console.log(chalk.yellow('   Um backup automático do .env.local será criado antes de qualquer alteração.'));
-    console.log(chalk.yellow('   Vamos mapear suas variáveis de ambiente para garantir que todas as chaves necessárias'));
-    console.log(chalk.yellow('   estejam presentes e com os valores corretos do projeto alvo.'));
-    const consentOk = await confirm('Você consente em prosseguir', true);
+    console.log(chalk.yellow(`\n⚠️  ${getT('consent.title')}`));
+    console.log(chalk.yellow(`   ${getT('consent.backup')}`));
+    console.log(chalk.yellow(`   ${getT('consent.mapping')}`));
+    const consentOk = await confirm(getT('consent.proceed'), true);
     if (!consentOk) {
-      console.log(chalk.red('🚫 Operação cancelada pelo usuário.'));
+      console.log(chalk.red(`🚫 ${getT('disclaimer.operationCancelled')}`));
       process.exit(1);
     }
 

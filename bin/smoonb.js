@@ -14,6 +14,12 @@ const { Command } = require('commander');
 const chalk = require('chalk');
 const packageJson = require('../package.json');
 
+// Inicializar i18n ANTES de importar outros módulos
+// Nota: --lang será processado após o parse, mas precisamos inicializar agora
+const { initI18n } = require('../src/i18n');
+let i18n = initI18n(process.argv, process.env);
+let { t } = i18n;
+
 // Importar módulos principais
 const { commands, showBetaBanner, showQuickHelp } = require('../src/index');
 
@@ -25,188 +31,228 @@ program
   .name('smoonb')
   .description('Complete Supabase backup and migration tool')
   .version(packageJson.version, '-v, --version', 'display version number')
+  .option('--lang <code>', 'Set language (en, pt-BR). Overrides SMOONB_LANG and system locale')
   .addHelpText('before', () => {
     showBetaBanner();
-    return chalk.yellow.bold('\n⚠️  TERMO DE USO E AVISO DE RISCO\n') +
-      chalk.white('Ao prosseguir, você reconhece e concorda que o Supa Moonbase (smoonb) é fornecido "NO ESTADO EM QUE SE ENCONTRA" ("AS IS") e "CONFORME DISPONIBILIDADE", sem garantias de qualquer natureza—expressas, implícitas ou legais—incluindo, sem limitação, garantias de comercialização, adequação a um fim específico e não violação, na máxima extensão permitida pela lei aplicável. Operações de backup e restauração envolvem riscos, os ambientes variam amplamente e não é possível prever ou validar todas as configurações dos usuários. Você é o único responsável por validar seu ambiente, manter cópias independentes e verificar os resultados antes de utilizá-los em produção. O Supa Moonbase (smoonb) é construído com repositórios públicos, auditáveis e software livre, para auxiliar pessoas a simplificar seus fluxos, sem com isso criar qualquer garantia, promessa de suporte ou compromisso de nível de serviço.\n\n') +
-      chalk.white('Limitação de responsabilidade (PT-BR) — Na máxima extensão permitida por lei, a Goalmoon, seus contribuidores e licenciadores não serão responsáveis por danos indiretos, incidentais, especiais, consequentes, exemplares ou punitivos (incluindo perda de dados, interrupção de negócios ou lucros cessantes) decorrentes do uso, incapacidade de uso, das operações de backup/restauração realizadas com, ou dos resultados gerados pelo Supa Moonbase (smoonb). Em qualquer hipótese, a responsabilidade total por todas as reivindicações relacionadas ao Supa Moonbase (smoonb) não excederá o valor pago por você pelo Supa Moonbase (smoonb) nos 12 meses anteriores ao evento. Nada neste aviso exclui ou limita responsabilidades onde tais limites sejam proibidos por lei, incluindo (conforme aplicável) dolo ou culpa grave.\n\n') +
-      chalk.white('Observação para consumidores no Brasil (PT-BR) — Para consumidores brasileiros, este aviso não afasta direitos irrenunciáveis previstos no Código de Defesa do Consumidor (CDC); qualquer limitação aqui prevista só se aplica nos limites da lei e não impede a indenização obrigatória quando cabível.\n\n');
+    const getT = global.smoonbI18n?.t || t;
+    return chalk.yellow.bold(`\n⚠️  ${getT('disclaimer.title')}\n`) +
+      chalk.white(`${getT('disclaimer.text')}\n\n`) +
+      chalk.white(`${getT('disclaimer.limitation')}\n\n`);
   })
   .addHelpText('after', () => {
+    const getT = global.smoonbI18n?.t || t;
     return chalk.cyan.bold(`
-📋 CONFIGURAÇÃO:
-   Configure o arquivo .env.local na raiz do projeto com suas credenciais Supabase.
-   O smoonb irá mapear as variáveis interativamente na primeira execução.
+📋 ${getT('help.configuration')}
+   ${getT('help.configurationDesc')}
 
-🔄 ATUALIZAR PARA ÚLTIMA VERSÃO:
-   npm install smoonb@latest
+🔄 ${getT('help.update')}
+   ${getT('help.updateCommand')}
 
-📚 MANUAL DE USO - EXEMPLOS COMPLETOS:
+📚 ${getT('help.manual')}
 
-${chalk.yellow.bold('1. BACKUP - Fazer backup completo do projeto:')}
-   ${chalk.white('npx smoonb backup')}
-   ${chalk.gray('# Processo interativo que captura todos os componentes do Supabase')}
+${chalk.yellow.bold(getT('help.backupTitle'))}
+   ${chalk.white(getT('help.backupExample1'))}
+   ${chalk.gray(getT('help.backupExample1Desc'))}
    
-   ${chalk.white('npx smoonb backup --skip-realtime')}
-   ${chalk.gray('# Pula a captura interativa de Realtime Settings')}
+   ${chalk.white(getT('help.backupExample2'))}
+   ${chalk.gray(getT('help.backupExample2Desc'))}
 
-${chalk.yellow.bold('2. RESTORE - Restaurar backup em um projeto:')}
-   ${chalk.white('npx smoonb restore')}
-   ${chalk.gray('# Processo interativo que lista backups disponíveis e permite escolher')}
+${chalk.yellow.bold(getT('help.restoreTitle'))}
+   ${chalk.white(getT('help.restoreExample1'))}
+   ${chalk.gray(getT('help.restoreExample1Desc'))}
    
-   ${chalk.white('npx smoonb restore --file "C:\\Downloads\\db_cluster-04-03-2024@14-16-59.backup.gz"')}
-   ${chalk.gray('# Importa e restaura diretamente o arquivo de backup (pula seleção)')}
+   ${chalk.white(getT('help.restoreExample2'))}
+   ${chalk.gray(getT('help.restoreExample2Desc'))}
    
-   ${chalk.white('npx smoonb restore --file "backup.backup.gz" --storage "meu-projeto.storage.zip"')}
-   ${chalk.gray('# Importa e restaura backup e storage juntos')}
+   ${chalk.white(getT('help.restoreExample3'))}
+   ${chalk.gray(getT('help.restoreExample3Desc'))}
 
-${chalk.yellow.bold('3. IMPORT - Importar backup do Dashboard do Supabase:')}
-   ${chalk.white('npx smoonb import --file "C:\\Downloads\\db_cluster-04-03-2024@14-16-59.backup.gz"')}
-   ${chalk.gray('# Importa apenas o arquivo de database')}
+${chalk.yellow.bold(getT('help.importTitle'))}
+   ${chalk.white(getT('help.importExample1'))}
+   ${chalk.gray(getT('help.importExample1Desc'))}
    
-   ${chalk.white('npx smoonb import --file "backup.backup.gz" --storage "meu-projeto.storage.zip"')}
-   ${chalk.gray('# Importa database e storage juntos (storage é opcional)')}
+   ${chalk.white(getT('help.importExample2'))}
+   ${chalk.gray(getT('help.importExample2Desc'))}
 
-${chalk.yellow.bold('4. CHECK - Verificar integridade após restauração:')}
-   ${chalk.white('npx smoonb check')}
-   ${chalk.gray('# Verifica conexão, extensões, tabelas, RLS, Realtime e Storage')}
+${chalk.yellow.bold(getT('help.checkTitle'))}
+   ${chalk.white(getT('help.checkExample1'))}
+   ${chalk.gray(getT('help.checkExample1Desc'))}
 
-${chalk.yellow.bold('💡 DICAS IMPORTANTES:')}
-   ${chalk.white('• O comando import requer um arquivo de backup (.backup.gz), mas o storage (.storage.zip) é opcional')}
-   ${chalk.white('• O storage depende de um backup, mas o backup não depende do storage')}
-   ${chalk.white('• Use caminhos absolutos ou relativos para os arquivos no comando import')}
-   ${chalk.white('• O formato do arquivo de backup deve ser: db_cluster-DD-MM-YYYY@HH-MM-SS.backup.gz')}
-   ${chalk.white('• O formato do arquivo de storage deve ser: *.storage.zip')}
+${chalk.yellow.bold(getT('help.tipsTitle'))}
+   ${chalk.white(getT('help.tip1'))}
+   ${chalk.white(getT('help.tip2'))}
+   ${chalk.white(getT('help.tip3'))}
+   ${chalk.white(getT('help.tip4'))}
+   ${chalk.white(getT('help.tip5'))}
 `);
   });
 
 // Comandos principais
 program
   .command('backup')
-  .description('Fazer backup completo do projeto Supabase usando Supabase CLI')
-  .option('--skip-realtime', 'Pular captura interativa de Realtime Settings')
-  .addHelpText('after', `
-${chalk.yellow.bold('Exemplos:')}
-  ${chalk.white('npx smoonb backup')}
-  ${chalk.gray('# Processo interativo completo')}
+  .description(() => {
+    const getT = global.smoonbI18n?.t || t;
+    return getT('help.commands.backupDesc');
+  })
+  .option('--skip-realtime', () => {
+    const getT = global.smoonbI18n?.t || t;
+    return getT('help.commands.backupSkipRealtime');
+  })
+  .addHelpText('after', () => {
+    const getT = global.smoonbI18n?.t || t;
+    return `
+${chalk.yellow.bold(getT('help.commands.backupExamples'))}
+  ${chalk.white(getT('help.commands.backupExample1'))}
+  ${chalk.gray(getT('help.commands.backupExample1Desc'))}
   
-  ${chalk.white('npx smoonb backup --skip-realtime')}
-  ${chalk.gray('# Pula configuração de Realtime Settings')}
+  ${chalk.white(getT('help.commands.backupExample2'))}
+  ${chalk.gray(getT('help.commands.backupExample2Desc'))}
 
-${chalk.yellow.bold('O que é capturado:')}
-  • Database PostgreSQL (pg_dumpall + SQL separado)
-  • Database Extensions and Settings
-  • Custom Roles
-  • Edge Functions (download automático)
-  • Auth Settings (via Management API)
-  • Storage Buckets (metadados via Management API)
-  • Realtime Settings (7 parâmetros interativos)
-  • Supabase .temp (arquivos temporários)
-  • Migrations (todas as migrations do projeto)
-`)
+${chalk.yellow.bold(getT('help.commands.backupWhat'))}
+  ${getT('help.commands.backupWhat1')}
+  ${getT('help.commands.backupWhat2')}
+  ${getT('help.commands.backupWhat3')}
+  ${getT('help.commands.backupWhat4')}
+  ${getT('help.commands.backupWhat5')}
+  ${getT('help.commands.backupWhat6')}
+  ${getT('help.commands.backupWhat7')}
+  ${getT('help.commands.backupWhat8')}
+  ${getT('help.commands.backupWhat9')}
+`;
+  })
   .action(commands.backup);
 
 program
   .command('restore')
-  .description('Restaurar backup completo usando psql (modo interativo)')
-  .option('--file <path>', 'Caminho completo do arquivo .backup.gz a importar e restaurar (opcional)')
-  .option('--storage <path>', 'Caminho completo do arquivo .storage.zip a importar junto com o backup (opcional)')
-  .addHelpText('after', `
-${chalk.yellow.bold('Exemplos:')}
-  ${chalk.white('npx smoonb restore')}
-  ${chalk.gray('# Processo interativo que lista backups disponíveis')}
+  .description(() => {
+    const getT = global.smoonbI18n?.t || t;
+    return getT('help.commands.restoreDesc');
+  })
+  .option('--file <path>', () => {
+    const getT = global.smoonbI18n?.t || t;
+    return getT('help.commands.restoreFile');
+  })
+  .option('--storage <path>', () => {
+    const getT = global.smoonbI18n?.t || t;
+    return getT('help.commands.restoreStorage');
+  })
+  .addHelpText('after', () => {
+    const getT = global.smoonbI18n?.t || t;
+    return `
+${chalk.yellow.bold(getT('help.commands.restoreExamples'))}
+  ${chalk.white(getT('help.commands.restoreExample1'))}
+  ${chalk.gray(getT('help.commands.restoreExample1Desc'))}
   
-  ${chalk.white('npx smoonb restore --file "C:\\Downloads\\db_cluster-04-03-2024@14-16-59.backup.gz"')}
-  ${chalk.gray('# Importa e restaura diretamente o arquivo de backup')}
+  ${chalk.white(getT('help.commands.restoreExample2'))}
+  ${chalk.gray(getT('help.commands.restoreExample2Desc'))}
   
-  ${chalk.white('npx smoonb restore --file "backup.backup.gz" --storage "meu-projeto.storage.zip"')}
-  ${chalk.gray('# Importa e restaura backup e storage juntos')}
+  ${chalk.white(getT('help.commands.restoreExample3'))}
+  ${chalk.gray(getT('help.commands.restoreExample3Desc'))}
 
-${chalk.yellow.bold('Fluxo do restore:')}
-  1. Validação Docker
-  2. Consentimento para ler/escrever .env.local
-  3. Mapeamento de variáveis de ambiente
-  4. Seleção de backup disponível (pula se --file fornecido)
-  5. Seleção de componentes para restaurar
-  6. Resumo detalhado e confirmação
-  7. Execução da restauração
+${chalk.yellow.bold(getT('help.commands.restoreFlow'))}
+  ${getT('help.commands.restoreFlow1')}
+  ${getT('help.commands.restoreFlow2')}
+  ${getT('help.commands.restoreFlow3')}
+  ${getT('help.commands.restoreFlow4')}
+  ${getT('help.commands.restoreFlow5')}
+  ${getT('help.commands.restoreFlow6')}
+  ${getT('help.commands.restoreFlow7')}
 
-${chalk.yellow.bold('Quando usar --file:')}
-  • Importa automaticamente o arquivo de backup antes de restaurar
-  • Elimina a etapa de seleção de backup
-  • Se --storage fornecido, importa também o arquivo de storage
-  • Útil para restaurar backups baixados diretamente do Dashboard
+${chalk.yellow.bold(getT('help.commands.restoreWhenFile'))}
+  ${getT('help.commands.restoreWhenFile1')}
+  ${getT('help.commands.restoreWhenFile2')}
+  ${getT('help.commands.restoreWhenFile3')}
+  ${getT('help.commands.restoreWhenFile4')}
 
-${chalk.yellow.bold('Formatos suportados:')}
-  • .backup.gz (compactado) - Descompacta automaticamente
-  • .backup (descompactado) - Restaura diretamente
-`)
+${chalk.yellow.bold(getT('help.commands.restoreFormats'))}
+  ${getT('help.commands.restoreFormats1')}
+  ${getT('help.commands.restoreFormats2')}
+`;
+  })
   .action(async (options) => {
     await commands.restore({ file: options.file, storage: options.storage });
   });
 
 program
   .command('check')
-  .description('Verificar integridade do projeto Supabase após restauração')
-  .addHelpText('after', `
-${chalk.yellow.bold('Exemplos:')}
-  ${chalk.white('npx smoonb check')}
-  ${chalk.gray('# Verifica integridade e exibe relatório no console')}
+  .description(() => {
+    const getT = global.smoonbI18n?.t || t;
+    return getT('help.commands.checkDesc');
+  })
+  .addHelpText('after', () => {
+    const getT = global.smoonbI18n?.t || t;
+    return `
+${chalk.yellow.bold(getT('help.commands.checkExamples'))}
+  ${chalk.white(getT('help.commands.checkExample1'))}
+  ${chalk.gray(getT('help.commands.checkExample1Desc'))}
 
-${chalk.yellow.bold('O que é verificado:')}
-  • Conexão com database
-  • Extensões PostgreSQL instaladas
-  • Tabelas criadas
-  • Políticas RLS (Row Level Security)
-  • Publicações Realtime
-  • Buckets de Storage
-`)
+${chalk.yellow.bold(getT('help.commands.checkWhat'))}
+  ${getT('help.commands.checkWhat1')}
+  ${getT('help.commands.checkWhat2')}
+  ${getT('help.commands.checkWhat3')}
+  ${getT('help.commands.checkWhat4')}
+  ${getT('help.commands.checkWhat5')}
+  ${getT('help.commands.checkWhat6')}
+`;
+  })
   .action(commands.check);
 
 program
   .command('import')
-  .description('Importar arquivo .backup.gz e opcionalmente .storage.zip do Dashboard do Supabase')
-  .requiredOption('--file <path>', 'Caminho completo do arquivo .backup.gz a importar')
-  .option('--storage <path>', 'Caminho completo do arquivo .storage.zip a importar (opcional)')
-  .addHelpText('after', `
-${chalk.yellow.bold('Exemplos:')}
-  ${chalk.white('npx smoonb import --file "C:\\Downloads\\db_cluster-04-03-2024@14-16-59.backup.gz"')}
-  ${chalk.gray('# Importa apenas o arquivo de database')}
+  .description(() => {
+    const getT = global.smoonbI18n?.t || t;
+    return getT('help.commands.importDesc');
+  })
+  .requiredOption('--file <path>', () => {
+    const getT = global.smoonbI18n?.t || t;
+    return getT('help.commands.importFile');
+  })
+  .option('--storage <path>', () => {
+    const getT = global.smoonbI18n?.t || t;
+    return getT('help.commands.importStorage');
+  })
+  .addHelpText('after', () => {
+    const getT = global.smoonbI18n?.t || t;
+    return `
+${chalk.yellow.bold(getT('help.commands.importExamples'))}
+  ${chalk.white(getT('help.commands.importExample1'))}
+  ${chalk.gray(getT('help.commands.importExample1Desc'))}
   
-  ${chalk.white('npx smoonb import --file "backup.backup.gz" --storage "meu-projeto.storage.zip"')}
-  ${chalk.gray('# Importa database e storage juntos')}
+  ${chalk.white(getT('help.commands.importExample2'))}
+  ${chalk.gray(getT('help.commands.importExample2Desc'))}
 
-${chalk.yellow.bold('Formato dos arquivos:')}
-  • Backup: db_cluster-DD-MM-YYYY@HH-MM-SS.backup.gz (obrigatório)
-  • Storage: *.storage.zip (opcional)
+${chalk.yellow.bold(getT('help.commands.importFormats'))}
+  ${getT('help.commands.importFormats1')}
+  ${getT('help.commands.importFormats2')}
 
-${chalk.yellow.bold('Importante:')}
-  • O arquivo de backup é obrigatório
-  • O arquivo de storage é opcional e depende de um backup
-  • Ambos os arquivos serão copiados para a mesma pasta de backup
-  • O backup importado ficará disponível para o comando restore
-  • Use caminhos absolutos ou relativos
-`)
+${chalk.yellow.bold(getT('help.commands.importImportant'))}
+  ${getT('help.commands.importImportant1')}
+  ${getT('help.commands.importImportant2')}
+  ${getT('help.commands.importImportant3')}
+  ${getT('help.commands.importImportant4')}
+  ${getT('help.commands.importImportant5')}
+`;
+  })
   .action(async (options) => {
     await commands.import({ file: options.file, storage: options.storage });
   });
 
 // Tratamento de erros
 program.on('command:*', function (operands) {
-  console.error(chalk.red.bold('❌ Comando não reconhecido:'), operands[0]);
-  console.error(chalk.yellow('💡 Use'), chalk.cyan('smoonb --help'), chalk.yellow('para ver comandos disponíveis'));
+  console.error(chalk.red.bold(`❌ ${t('error.commandNotFound', { command: operands[0] })}`));
+  console.error(chalk.yellow(`💡 ${t('error.useHelp', { cmd: 'smoonb' })}`));
   process.exit(1);
 });
 
 // Tratamento de exceções não capturadas
 process.on('uncaughtException', (error) => {
-  console.error(chalk.red.bold('❌ Erro não tratado:'), error.message);
+  console.error(chalk.red.bold(`❌ ${t('error.uncaughtException', { message: error.message })}`));
   console.error(chalk.gray('Stack trace:'), error.stack);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, _promise) => {
-  console.error(chalk.red.bold('❌ Promise rejeitada não tratada:'), reason);
+  console.error(chalk.red.bold(`❌ ${t('error.unhandledRejection', { reason: String(reason) })}`));
   process.exit(1);
 });
 
@@ -218,6 +264,19 @@ if (process.argv.length === 2) {
 
 // Parse dos argumentos da linha de comando
 program.parse(process.argv);
+
+// Re-inicializar i18n se --lang foi fornecido (após parse)
+// Criar um novo argv com --lang para detectLocale
+const options = program.opts();
+if (options.lang) {
+  const { initI18n, detectLocale } = require('../src/i18n');
+  // Forçar detecção do locale fornecido
+  const forcedLocale = detectLocale(['--lang', options.lang], process.env);
+  const newI18n = initI18n(['--lang', forcedLocale], { ...process.env, SMOONB_LANG: forcedLocale });
+  i18n = newI18n;
+  t = newI18n.t;
+  Object.assign(global.smoonbI18n, newI18n);
+}
 
 // Se nenhum comando foi fornecido, mostrar ajuda
 if (!process.argv.slice(2).length) {

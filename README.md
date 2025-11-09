@@ -2,21 +2,23 @@
 
 **Complete Supabase backup and migration tool**
 
-Backup e restauração: completo e simples, como deveria ser
+Backup and restore: complete and simple, as it should be
 
-> **Nota sobre acesso comercial:** o Supa Moonbase passará a exigir validação de conta antes de executar operações (login + verificação de assinatura) em fase futura. Nesta versão, não há autenticação implementada — este README apenas apresenta a base legal/comercial. O uso operacional será regido pelos [Termos de Serviço](https://smoonb.com/terms) e pela [Política de Privacidade](https://smoonb.com/privacy).
+> **Note on commercial access:** Supa Moonbase will require account validation before executing operations (login + subscription verification) in a future phase. In this version, there is no authentication implemented — this README only presents the legal/commercial basis. Operational use will be governed by the [Terms of Service](https://smoonb.com/terms) and [Privacy Policy](https://smoonb.com/privacy).
 
-**Desenvolvido por:** Goalmoon Tecnologia LTDA  
+**Read this in other languages:** [Português (Brasil)](README.pt-BR.md)
+
+**Developed by:** Goalmoon Tecnologia LTDA  
 **Website:** https://smoonb.com  
 **GitHub:** https://github.com/almmello/smoonb
 
-## 🎯 Objetivo
+## 🎯 Objective
 
-O **smoonb** resolve o problema das ferramentas existentes que fazem backup apenas da database PostgreSQL, ignorando componentes críticos do Supabase.
+**smoonb** solves the problem of existing tools that only backup the PostgreSQL database, ignoring critical Supabase components.
 
-## 📦 Componentes de Backup
+## 📦 Backup Components
 
-O smoonb faz backup completo de todos os componentes do seu projeto Supabase:
+smoonb performs a complete backup of all components of your Supabase project:
 
 - ✅ **Database PostgreSQL** (backup completo via `pg_dumpall` + SQL separados, idêntico ao Dashboard)
 - ✅ **Database Extensions and Settings** (extensões PostgreSQL e configurações)
@@ -28,357 +30,433 @@ O smoonb faz backup completo de todos os componentes do seu projeto Supabase:
 - ✅ **Supabase .temp** (arquivos temporários do Supabase CLI)
 - ✅ **Migrations** (todas as migrations do projeto via `supabase migration fetch`)
 
-## ⚠️ Termo de Uso e Aviso de Risco
+## ⚠️ Universal Disclaimer / Aviso Legal Universal
 
-Ao usar o smoonb, você reconhece e concorda que o smoonb é fornecido "NO ESTADO EM QUE SE ENCONTRA" ("AS IS") e "CONFORME DISPONIBILIDADE", sem garantias de qualquer natureza—expressas, implícitas ou legais—incluindo, sem limitação, garantias de comercialização, adequação a um fim específico e não violação, na máxima extensão permitida pela lei aplicável.
+By continuing, you acknowledge and agree that Supa Moonbase (smoonb) is provided "AS IS" and "AS AVAILABLE", with no warranties of any kind—express, implied, or statutory—including but not limited to merchantability, fitness for a particular purpose, and non-infringement, to the maximum extent permitted by applicable law. Backup and restore operations inherently carry risk, environments vary widely, and we cannot foresee or validate all user setups. You are solely responsible for validating your own environment, keeping independent copies, and verifying results before relying on them in production. We build Supa Moonbase (smoonb) on public, auditable, open-source repositories to help people simplify their workflows, but this does not create any warranty, promise of support, or service-level commitment.
 
-Operações de backup e restauração envolvem riscos, os ambientes variam amplamente e não é possível prever ou validar todas as configurações dos usuários. Você é o único responsável por validar seu ambiente, manter cópias independentes e verificar os resultados antes de utilizá-los em produção.
+**Limitation of liability** — To the maximum extent permitted by law, Goalmoon Tecnologia LTDA, its contributors, and licensors will not be liable for any indirect, incidental, special, consequential, exemplary, or punitive damages (including loss of data, interruption of business, or lost profits) arising from or related to the use of, inability to use, backup/restore operations performed by, or results produced by Supa Moonbase (smoonb). In any case, our aggregate liability for all claims relating to Supa Moonbase (smoonb) will not exceed the amount you paid for Supa Moonbase (smoonb) in the 12 months preceding the event. Nothing in this notice excludes or limits liability where such limits are prohibited by law, including (as applicable) for willful misconduct or gross negligence.
 
-**Limitação de responsabilidade (PT-BR)** — Na máxima extensão permitida por lei, a Goalmoon, seus contribuidores e licenciadores não serão responsáveis por danos indiretos, incidentais, especiais, consequentes, exemplares ou punitivos (incluindo perda de dados, interrupção de negócios ou lucros cessantes) decorrentes do uso, incapacidade de uso, das operações de backup/restauração realizadas com, ou dos resultados gerados pelo smoonb.
+## 🚀 Installation
 
-**Observação para consumidores no Brasil (PT-BR)** — Para consumidores brasileiros, este aviso não afasta direitos irrenunciáveis previstos no Código de Defesa do Consumidor (CDC); qualquer limitação aqui prevista só se aplica nos limites da lei e não impede a indenização obrigatória quando cabível.
-
-## 🚀 Instalação
-
-**⚠️ IMPORTANTE: Instale APENAS localmente no projeto!**
+**⚠️ IMPORTANT: Install ONLY locally in the project!**
 
 ```bash
-# ✅ CORRETO - Instalar localmente no projeto
+# ✅ CORRECT - Install locally in the project
 npm install smoonb
 
-# ✅ CORRETO - Usar com npx
+# ✅ CORRECT - Use with npx
 npx smoonb --help
 
-# ❌ ERRADO - NÃO instalar globalmente
-npm install -g smoonb  # ← Isso será bloqueado!
+# ❌ WRONG - DO NOT install globally
+npm install -g smoonb  # ← This will be blocked!
 ```
 
-### 🔄 Atualizar para a Última Versão
+### 🔄 Update to Latest Version
 
-Para atualizar o smoonb para a versão mais recente disponível:
+To update smoonb to the latest available version:
 
 ```bash
-# Atualizar no projeto atual
+# Update in current project
 npm install smoonb@latest
 ```
 
-**⚠️ IMPORTANTE:** O smoonb deve ser instalado localmente no projeto. Não é permitido usar sem instalar (ex.: `npx smoonb@latest`).
+**⚠️ IMPORTANT:** smoonb must be installed locally in the project. Using without installing (e.g., `npx smoonb@latest`) is not allowed.
 
-**💡 Por que apenas local?**
-- **🔒 Segurança**: Evita conflitos de versão
-- **📦 Isolamento**: Cada projeto usa sua versão
-- **🔄 Atualizações**: Controle granular por projeto
-- **🛡️ Estabilidade**: Evita quebras em outros projetos
+**💡 Why local only?**
+- **🔒 Security**: Avoids version conflicts
+- **📦 Isolation**: Each project uses its own version
+- **🔄 Updates**: Granular control per project
+- **🛡️ Stability**: Prevents breaking other projects
 
-## 📋 Pré-requisitos
+## 📋 Prerequisites
 
-### 1. Docker Desktop (OBRIGATÓRIO)
+### 1. Docker Desktop (REQUIRED)
 ```bash
-# Instalar Docker Desktop
+# Install Docker Desktop
 # Windows/macOS: https://docs.docker.com/desktop/install/
 # Linux: https://docs.docker.com/engine/install/
 
-# Verificar se está rodando
+# Verify if it's running
 docker --version
 docker ps
 ```
 
-**⚠️ IMPORTANTE:** O Docker é necessário para:
-- Backup da database via `pg_dumpall` (compatível com Dashboard do Supabase)
-- Compressão de arquivos `.backup.gz`
-- Restauração de backups `.backup` e `.backup.gz`
+**⚠️ IMPORTANT:** Docker is required for:
+- Database backup via `pg_dumpall` (compatible with Supabase Dashboard)
+- Compression of `.backup.gz` files
+- Restoration of `.backup` and `.backup.gz` backups
 
 ### 2. Supabase CLI
 ```bash
 npm install -g supabase
 ```
 
-### 3. Personal Access Token do Supabase
-É necessário obter um token de acesso pessoal do Supabase para usar a Management API:
+### 3. Supabase Personal Access Token
+You need to obtain a Supabase personal access token to use the Management API:
 
-1. Acesse: https://supabase.com/dashboard/account/tokens
-2. Clique em "Generate new token"
-3. Copie o token (formato: `sbp_...`)
-4. Adicione ao `.env.local` como `SUPABASE_ACCESS_TOKEN`
+1. Visit: https://supabase.com/dashboard/account/tokens
+2. Click "Generate new token"
+3. Copy the token (format: `sbp_...`)
+4. Add to `.env.local` as `SUPABASE_ACCESS_TOKEN`
 
-## ⚙️ Configuração
+## ⚙️ Configuration
 
-### Método Moderno: `.env.local` (RECOMENDADO)
+### Modern Method: `.env.local` (RECOMMENDED)
 
-O **smoonb** agora usa `.env.local` para configuração, seguindo o padrão da indústria. Isso torna o processo mais simples e integrado ao seu fluxo de trabalho.
+**smoonb** now uses `.env.local` for configuration, following industry standards. This makes the process simpler and more integrated with your workflow.
 
-#### 1. Criar ou editar `.env.local` na raiz do projeto
+#### 1. Create or edit `.env.local` in the project root
 
 ```bash
-# Criar arquivo .env.local
+# Create .env.local file
 touch .env.local
 ```
 
-#### 2. Adicionar as variáveis de ambiente necessárias
+#### 2. Add required environment variables
 
 ```env
-# URLs e Chaves do Supabase
-NEXT_PUBLIC_SUPABASE_URL=[sua-supabase-url]
-NEXT_PUBLIC_SUPABASE_ANON_KEY=[sua-anon-key]
-SUPABASE_SERVICE_ROLE_KEY=e[sua-service-role]
+# Supabase URLs and Keys
+NEXT_PUBLIC_SUPABASE_URL=[your-supabase-url]
+NEXT_PUBLIC_SUPABASE_ANON_KEY=[your-anon-key]
+SUPABASE_SERVICE_ROLE_KEY=[your-service-role]
 
 # Database Connection
-SUPABASE_DB_URL=postgresql://postgres:[sua-database-password]@db.[seu-project-id].supabase.co:5432/postgres
+SUPABASE_DB_URL=postgresql://postgres:[your-database-password]@db.[your-project-id].supabase.co:5432/postgres
 
-# Identificação do Projeto
-SUPABASE_PROJECT_ID=[seu-project-id]
+# Project Identification
+SUPABASE_PROJECT_ID=[your-project-id]
 
-# Personal Access Token (OBRIGATÓRIO para Management API)
-SUPABASE_ACCESS_TOKEN=[seu-access-token]]
+# Personal Access Token (REQUIRED for Management API)
+SUPABASE_ACCESS_TOKEN=[your-access-token]
 
-# Diretório de Backups (opcional, padrão: ./backups)
+# Backup Directory (optional, default: ./backups)
 SMOONB_OUTPUT_DIR=./backups
 ```
 
-#### 3. Mapeamento Interativo
+#### 3. Interactive Mapping
 
-Ao executar `backup` ou `restore` pela primeira vez, o **smoonb** irá:
+When running `backup` or `restore` for the first time, **smoonb** will:
 
-1. **Ler** seu `.env.local` atual
-2. **Identificar** as chaves que você já tem
-3. **Perguntar interativamente** quais chaves correspondem às esperadas (se os nomes forem diferentes)
-4. **Adicionar** chaves faltantes se necessário
-5. **Criar backup** automático do `.env.local` antes de qualquer alteração
-6. **Salvar mapeamento** para futuras execuções
+1. **Read** your current `.env.local`
+2. **Identify** the keys you already have
+3. **Ask interactively** which keys correspond to the expected ones (if names are different)
+4. **Add** missing keys if necessary
+5. **Create automatic backup** of `.env.local` before any changes
+6. **Save mapping** for future executions
 
-**Exemplo de mapeamento:**
+**Mapping example:**
 ```
-🔧 Mapeando variável: NEXT_PUBLIC_SUPABASE_URL
-Valor atual: https://abc123.supabase.co
-Este é o valor correto do projeto alvo? (S/n): S
+🔧 Mapping variable: NEXT_PUBLIC_SUPABASE_URL
+Current value: https://abc123.supabase.co
+Is this the correct value for the target project? (Y/n): Y
 ```
 
-## 🎯 Uso
+## 🌐 Internationalization (i18n)
 
-### Backup Completo
+**smoonb** supports multiple languages automatically. Currently supported languages are:
+
+- **English (en)** - Default language
+- **Portuguese (Brazil) (pt-BR)** - Full support
+
+### Automatic Language Detection
+
+Language is detected automatically in the following order of precedence:
+
+1. **CLI flag `--lang`** (highest priority)
+   ```bash
+   npx smoonb --lang pt-BR backup
+   npx smoonb --lang en restore
+   ```
+
+2. **Environment variable `SMOONB_LANG`**
+   ```bash
+   # Windows PowerShell
+   $env:SMOONB_LANG="pt-BR"
+   npx smoonb backup
+   
+   # Linux/macOS
+   export SMOONB_LANG=pt-BR
+   npx smoonb backup
+   ```
+
+3. **System locale** (LANG, LC_ALL, LC_MESSAGES)
+   ```bash
+   # smoonb automatically detects system locale
+   # Example: LANG=pt_BR.UTF-8 → pt-BR
+   # Example: LANG=en_US.UTF-8 → en
+   ```
+
+4. **Fallback to English (en)** if none of the above are detected
+
+### Supported Languages and Aliases
+
+smoonb accepts the following language codes:
+
+- `en` or `en-US` → English
+- `pt-BR`, `pt_BR` or `pt` → Portuguese (Brazil)
+
+### Usage Examples
+
+**Force Portuguese:**
+```bash
+npx smoonb --lang pt-BR backup
+```
+
+**Force English:**
+```bash
+npx smoonb --lang en restore
+```
+
+**Use environment variable:**
+```bash
+# Windows PowerShell
+$env:SMOONB_LANG="pt-BR"
+npx smoonb check
+
+# Linux/macOS
+export SMOONB_LANG=en
+npx smoonb check
+```
+
+**Automatic system detection:**
+```bash
+# If system is configured with LANG=pt_BR.UTF-8
+# smoonb will automatically use Portuguese
+npx smoonb backup
+```
+
+### Important Notes
+
+- **Machine outputs** (e.g., `--json` if implemented) are **not** translated; fields and keys remain in English
+- If a translation key is missing in a language, the system automatically **falls back to English**
+- Language is detected once at the start of execution and applied to all CLI messages
+
+## 🎯 Usage
+
+### Full Backup
 
 ```bash
 npx smoonb backup
 ```
 
-**Fluxo interativo do backup:**
+**Interactive backup flow:**
 
-1. **Validação Docker** - Verifica se o Docker está rodando
-2. **Consentimento** - Pede permissão para ler/escrever `.env.local`
-3. **Mapeamento de Variáveis** - Mapeia suas variáveis de ambiente (primeira vez)
-4. **Backup do .env.local** - Cria backup automático antes de alterações
-5. **Seleção de Componentes** - Pergunta quais componentes incluir:
-   - ⚡ Edge Functions (explicação sobre reset de link e download)
-   - 📦 Storage (explicação sobre backup completo: download de arquivos + ZIP no padrão do Dashboard)
-   - 🔐 Auth Settings (explicação sobre configurações)
-   - 🔄 Realtime Settings (explicação sobre captura interativa de 7 parâmetros)
-   - 🗑️ Opções de limpeza (functions, .temp, migrations após backup)
-6. **Resumo de Configurações** - Mostra tudo que será feito
-7. **Confirmação Final** - Confirma antes de iniciar
-8. **Execução das Etapas:**
-   - 📊 1/10 - Backup Database via `pg_dumpall` (Docker)
-   - 📊 2/10 - Backup Database SQL separado (schema, data, roles)
-   - 🔧 3/10 - Backup Database Extensions and Settings
-   - 🔐 4/10 - Backup Auth Settings (se selecionado)
-   - 🔄 5/10 - Backup Realtime Settings (se selecionado) - 7 parâmetros capturados interativamente
-   - 📦 6/10 - Backup Storage (se selecionado) - Download completo de arquivos + ZIP no padrão do Dashboard
-   - 👥 7/10 - Backup Custom Roles
-   - ⚡ 8/10 - Backup Edge Functions (se selecionado)
-   - 📁 9/10 - Backup Supabase .temp (se selecionado)
-   - 📋 10/10 - Backup Migrations (se selecionado)
+1. **Docker Validation** - Verifies if Docker is running
+2. **Consent** - Asks permission to read/write `.env.local`
+3. **Variable Mapping** - Maps your environment variables (first time)
+4. **.env.local Backup** - Creates automatic backup before changes
+5. **Component Selection** - Asks which components to include:
+   - ⚡ Edge Functions (explanation about link reset and download)
+   - 📦 Storage (explanation about full backup: file download + ZIP in Dashboard format)
+   - 🔐 Auth Settings (explanation about configurations)
+   - 🔄 Realtime Settings (explanation about interactive capture of 7 parameters)
+   - 🗑️ Cleanup options (functions, .temp, migrations after backup)
+6. **Configuration Summary** - Shows everything that will be done
+7. **Final Confirmation** - Confirms before starting
+8. **Step Execution:**
+   - 📊 1/10 - Database Backup via `pg_dumpall` (Docker)
+   - 📊 2/10 - Separate Database SQL (schema, data, roles)
+   - 🔧 3/10 - Database Extensions and Settings Backup
+   - 🔐 4/10 - Auth Settings Backup (if selected)
+   - 🔄 5/10 - Realtime Settings Backup (if selected) - 7 parameters captured interactively
+   - 📦 6/10 - Storage Backup (if selected) - Full file download + ZIP in Dashboard format
+   - 👥 7/10 - Custom Roles Backup
+   - ⚡ 8/10 - Edge Functions Backup (if selected)
+   - 📁 9/10 - Supabase .temp Backup (if selected)
+   - 📋 10/10 - Migrations Backup (if selected)
 
-**Resultado:**
+**Result:**
 ```
 backups/backup-2025-10-31-09-37-54/
-├── backup-manifest.json           # Manifesto com metadados
-├── db_cluster-31-10-2025@09-38-57.backup.gz  # Backup completo (Dashboard compatible)
-├── schema.sql                     # Schema do banco
-├── data.sql                       # Dados
-├── roles.sql                      # Roles do PostgreSQL
-├── database-settings-*.json       # Extensões e configurações
-├── auth-settings.json             # Configurações de Auth
-├── realtime-settings.json         # Configurações de Realtime
-├── storage/                       # Metadados de Storage
-│   └── [bucket-name].json         # Metadados de cada bucket
-├── [project-id].storage.zip       # Backup completo de Storage (padrão Dashboard)
-├── storage_temp/                  # Estrutura temporária (opcional, pode ser removida)
-│   └── [project-id]/              # Estrutura de arquivos baixados
-│       └── [bucket-name]/        # Arquivos de cada bucket
-├── edge-functions/                # Edge Functions baixadas
-│   └── [nome-da-function]/
-├── supabase-temp/                 # Arquivos .temp do Supabase CLI
-├── migrations/                    # Todas as migrations
+├── backup-manifest.json           # Manifest with metadata
+├── db_cluster-31-10-2025@09-38-57.backup.gz  # Full backup (Dashboard compatible)
+├── schema.sql                     # Database schema
+├── data.sql                       # Data
+├── roles.sql                      # PostgreSQL roles
+├── database-settings-*.json       # Extensions and settings
+├── auth-settings.json             # Auth configurations
+├── realtime-settings.json         # Realtime configurations
+├── storage/                       # Storage metadata
+│   └── [bucket-name].json         # Metadata for each bucket
+├── [project-id].storage.zip       # Full Storage backup (Dashboard format)
+├── storage_temp/                  # Temporary structure (optional, can be removed)
+│   └── [project-id]/              # Downloaded files structure
+│       └── [bucket-name]/        # Files for each bucket
+├── edge-functions/                # Downloaded Edge Functions
+│   └── [function-name]/
+├── supabase-temp/                 # Supabase CLI .temp files
+├── migrations/                    # All migrations
 └── env/
-    ├── .env.local                 # Backup do .env.local
-    └── env-map.json               # Mapeamento de variáveis
+    ├── .env.local                 # .env.local backup
+    └── env-map.json               # Variable mapping
 ```
 
-### Restauração Interativa
+### Interactive Restoration
 
-**Restaurar backup existente:**
+**Restore existing backup:**
 ```bash
 npx smoonb restore
 ```
 
-**Importar e restaurar diretamente do Dashboard:**
+**Import and restore directly from Dashboard:**
 ```bash
-# Apenas database
+# Database only
 npx smoonb restore --file "C:\Downloads\db_cluster-04-03-2024@14-16-59.backup.gz"
 
-# Database e storage juntos
-npx smoonb restore --file "backup.backup.gz" --storage "meu-projeto.storage.zip"
+# Database and storage together
+npx smoonb restore --file "backup.backup.gz" --storage "my-project.storage.zip"
 ```
 
-**Fluxo interativo do restore:**
+**Interactive restore flow:**
 
-1. **Validação Docker** - Verifica se o Docker está rodando
-2. **Termo de Uso** - Exibe e solicita aceitação dos termos
-3. **Consentimento** - Pede permissão para ler/escrever `.env.local`
-4. **Mapeamento de Variáveis** - Mapeia variáveis para o projeto de destino
-5. **Backup do .env.local** - Cria backup automático
-6. **Seleção de Backup** - Lista e permite escolher qual backup restaurar (pula se `--file` fornecido)
-   - Se `--file` for fornecido: importa automaticamente e auto-seleciona o backup
-   - Se `--storage` for fornecido junto com `--file`: importa também o arquivo de storage
-7. **Seleção de Componentes** - Pergunta quais componentes restaurar:
-   - 📊 Database (sempre disponível)
-   - ⚡ Edge Functions (se disponível no backup)
-   - 🔐 Auth Settings (se disponível no backup)
-   - 📦 Storage (se disponível no backup)
-   - 🔧 Database Extensions and Settings (se disponível no backup)
-   - 🔄 Realtime Settings (se disponível no backup)
-8. **Resumo Detalhado** - Mostra backup selecionado, projeto destino e componentes
-9. **Confirmação Final** - Confirma antes de iniciar
-10. **Execução da Restauração:**
-    - 📊 Database - Restaura via `psql` (suporta `.backup.gz` e `.backup`)
-    - ⚡ Edge Functions - Copia e faz deploy no projeto destino
-    - 🔐 Auth Settings - Exibe configurações para aplicação manual
-    - 📦 Storage - Restaura buckets e arquivos do ZIP (se disponível) ou exibe informações para migração manual
-    - 🔧 Database Settings - Restaura extensões e configurações via SQL
-    - 🔄 Realtime Settings - Exibe configurações para aplicação manual
+1. **Docker Validation** - Verifies if Docker is running
+2. **Terms of Use** - Displays and requests acceptance of terms
+3. **Consent** - Asks permission to read/write `.env.local`
+4. **Variable Mapping** - Maps variables to target project
+5. **.env.local Backup** - Creates automatic backup
+6. **Backup Selection** - Lists and allows choosing which backup to restore (skips if `--file` provided)
+   - If `--file` is provided: automatically imports and auto-selects the backup
+   - If `--storage` is provided along with `--file`: also imports the storage file
+7. **Component Selection** - Asks which components to restore:
+   - 📊 Database (always available)
+   - ⚡ Edge Functions (if available in backup)
+   - 🔐 Auth Settings (if available in backup)
+   - 📦 Storage (if available in backup)
+   - 🔧 Database Extensions and Settings (if available in backup)
+   - 🔄 Realtime Settings (if available in backup)
+8. **Detailed Summary** - Shows selected backup, target project and components
+9. **Final Confirmation** - Confirms before starting
+10. **Restore Execution:**
+    - 📊 Database - Restores via `psql` (supports `.backup.gz` and `.backup`)
+    - ⚡ Edge Functions - Copies and deploys to target project
+    - 🔐 Auth Settings - Displays configurations for manual application
+    - 📦 Storage - Restores buckets and files from ZIP (if available) or displays information for manual migration
+    - 🔧 Database Settings - Restores extensions and settings via SQL
+    - 🔄 Realtime Settings - Displays configurations for manual application
 
-**Formato de arquivos suportados:**
-- ✅ `.backup.gz` (compactado) - Descompacta automaticamente antes de restaurar
-- ✅ `.backup` (descompactado) - Restaura diretamente
+**Supported file formats:**
+- ✅ `.backup.gz` (compressed) - Automatically decompresses before restoring
+- ✅ `.backup` (uncompressed) - Restores directly
 
-**Quando usar `--file`:**
-- Importa automaticamente o arquivo de backup antes de restaurar
-- Elimina a etapa de seleção de backup
-- Se `--storage` fornecido, importa também o arquivo de storage
-- Útil para restaurar backups baixados diretamente do Dashboard do Supabase
+**When to use `--file`:**
+- Automatically imports backup file before restoring
+- Eliminates backup selection step
+- If `--storage` provided, also imports storage file
+- Useful for restoring backups downloaded directly from Supabase Dashboard
 
-### Importar Backup do Dashboard do Supabase
+### Import Backup from Supabase Dashboard
 
-Se você baixou um backup diretamente do Dashboard do Supabase (formato `.backup.gz`), você pode importá-lo para o formato esperado pelo smoonb. O comando também suporta importar arquivos de storage (`.storage.zip`) opcionalmente.
+If you downloaded a backup directly from the Supabase Dashboard (`.backup.gz` format), you can import it to the format expected by smoonb. The command also supports optionally importing storage files (`.storage.zip`).
 
-**Importar apenas database:**
+**Import database only:**
 ```bash
-npx smoonb import --file "caminho/completo/para/db_cluster-04-03-2024@14-16-59.backup.gz"
+npx smoonb import --file "full/path/to/db_cluster-04-03-2024@14-16-59.backup.gz"
 ```
 
-**Importar database e storage juntos:**
+**Import database and storage together:**
 ```bash
-npx smoonb import --file "backup.backup.gz" --storage "meu-projeto.storage.zip"
+npx smoonb import --file "backup.backup.gz" --storage "my-project.storage.zip"
 ```
 
-**O que o comando faz:**
-1. Lê o arquivo `.backup.gz` do Dashboard (obrigatório)
-2. Se fornecido, lê o arquivo `.storage.zip` do Dashboard (opcional)
-3. Extrai informações do nome do arquivo de backup (data e hora)
-4. Cria uma pasta de backup no formato esperado (`backup-YYYY-MM-DD-HH-MM-SS`)
-5. Copia o arquivo de backup para a pasta criada
-6. Se fornecido, copia o arquivo de storage para a mesma pasta
-7. Deixa o backup pronto para ser encontrado pelo comando `restore`
+**What the command does:**
+1. Reads the `.backup.gz` file from Dashboard (required)
+2. If provided, reads the `.storage.zip` file from Dashboard (optional)
+3. Extracts information from backup file name (date and time)
+4. Creates a backup folder in expected format (`backup-YYYY-MM-DD-HH-MM-SS`)
+5. Copies backup file to created folder
+6. If provided, copies storage file to same folder
+7. Makes backup ready to be found by `restore` command
 
-**Exemplo completo - Apenas database (usando import + restore):**
+**Complete example - Database only (using import + restore):**
 ```bash
-# 1. Baixar backup do Dashboard do Supabase
-#    Arquivo: db_cluster-04-03-2024@14-16-59.backup.gz
+# 1. Download backup from Supabase Dashboard
+#    File: db_cluster-04-03-2024@14-16-59.backup.gz
 
-# 2. Importar o arquivo
+# 2. Import the file
 npx smoonb import --file "C:\Downloads\db_cluster-04-03-2024@14-16-59.backup.gz"
 
-# 3. Restaurar o backup importado
+# 3. Restore the imported backup
 npx smoonb restore
-# O backup importado aparecerá na lista de backups disponíveis
+# The imported backup will appear in the list of available backups
 ```
 
-**Exemplo completo - Apenas database (usando restore diretamente):**
+**Complete example - Database only (using restore directly):**
 ```bash
-# 1. Baixar backup do Dashboard do Supabase
-#    Arquivo: db_cluster-04-03-2024@14-16-59.backup.gz
+# 1. Download backup from Supabase Dashboard
+#    File: db_cluster-04-03-2024@14-16-59.backup.gz
 
-# 2. Importar e restaurar diretamente (pula seleção de backup)
+# 2. Import and restore directly (skips backup selection)
 npx smoonb restore --file "C:\Downloads\db_cluster-04-03-2024@14-16-59.backup.gz"
 ```
 
-**Exemplo completo - Database e Storage (usando import + restore):**
+**Complete example - Database and Storage (using import + restore):**
 ```bash
-# 1. Baixar backup e storage do Dashboard do Supabase
-#    Arquivos: 
+# 1. Download backup and storage from Supabase Dashboard
+#    Files: 
 #    - db_cluster-04-03-2024@14-16-59.backup.gz
-#    - meu-projeto.storage.zip
+#    - my-project.storage.zip
 
-# 2. Importar ambos os arquivos
-npx smoonb import --file "C:\Downloads\db_cluster-04-03-2024@14-16-59.backup.gz" --storage "C:\Downloads\meu-projeto.storage.zip"
+# 2. Import both files
+npx smoonb import --file "C:\Downloads\db_cluster-04-03-2024@14-16-59.backup.gz" --storage "C:\Downloads\my-project.storage.zip"
 
-# 3. Restaurar o backup importado
+# 3. Restore the imported backup
 npx smoonb restore
-# O backup importado aparecerá na lista de backups disponíveis
+# The imported backup will appear in the list of available backups
 ```
 
-**Exemplo completo - Database e Storage (usando restore diretamente):**
+**Complete example - Database and Storage (using restore directly):**
 ```bash
-# 1. Baixar backup e storage do Dashboard do Supabase
-#    Arquivos: 
+# 1. Download backup and storage from Supabase Dashboard
+#    Files: 
 #    - db_cluster-04-03-2024@14-16-59.backup.gz
-#    - meu-projeto.storage.zip
+#    - my-project.storage.zip
 
-# 2. Importar e restaurar diretamente (pula seleção de backup)
-npx smoonb restore --file "C:\Downloads\db_cluster-04-03-2024@14-16-59.backup.gz" --storage "C:\Downloads\meu-projeto.storage.zip"
+# 2. Import and restore directly (skips backup selection)
+npx smoonb restore --file "C:\Downloads\db_cluster-04-03-2024@14-16-59.backup.gz" --storage "C:\Downloads\my-project.storage.zip"
 ```
 
-**Importante:**
-- O arquivo de backup é **obrigatório** e deve estar no formato do Dashboard: `db_cluster-DD-MM-YYYY@HH-MM-SS.backup.gz`
-- O arquivo de storage é **opcional** e deve estar no formato: `*.storage.zip`
-- O storage depende de um backup, mas o backup não depende do storage
-- Ambos os arquivos serão copiados para a mesma pasta de backup
-- O caminho pode ser absoluto ou relativo
-- O comando criará a estrutura de pastas necessária automaticamente
+**Important:**
+- Backup file is **required** and must be in Dashboard format: `db_cluster-DD-MM-YYYY@HH-MM-SS.backup.gz`
+- Storage file is **optional** and must be in format: `*.storage.zip`
+- Storage depends on a backup, but backup does not depend on storage
+- Both files will be copied to the same backup folder
+- Path can be absolute or relative
+- Command will automatically create necessary folder structure
 
-**Diferença entre `import` e `restore --file`:**
-- `import`: Apenas importa o arquivo e cria a estrutura de backup. Você precisa executar `restore` depois.
-- `restore --file`: Importa o arquivo automaticamente e já inicia o processo de restauração, pulando a etapa de seleção de backup.
+**Difference between `import` and `restore --file`:**
+- `import`: Only imports the file and creates backup structure. You need to run `restore` afterwards.
+- `restore --file`: Automatically imports the file and starts the restoration process, skipping the backup selection step.
 
-### Verificação Pós-Restore
+### Post-Restore Verification
 
 ```bash
 npx smoonb check
 ```
 
-**Verifica:**
-- ✅ Conexão com database
-- ✅ Extensões instaladas
-- ✅ Tabelas criadas
-- ✅ Políticas RLS
-- ✅ Publicações Realtime
-- ✅ Buckets de Storage
+**Verifies:**
+- ✅ Database connection
+- ✅ Installed extensions
+- ✅ Created tables
+- ✅ RLS policies
+- ✅ Realtime publications
+- ✅ Storage buckets
 
 
-## 🔧 Comandos Disponíveis
+## 🔧 Available Commands
 
-| Comando | Descrição |
-|---------|-----------|
-| `npx smoonb backup` | Backup completo interativo usando Docker |
-| `npx smoonb restore` | Restauração interativa usando psql (Docker) |
-| `npx smoonb restore --file <path> [--storage <path>]` | Importar e restaurar diretamente arquivo .backup.gz e opcionalmente .storage.zip do Dashboard |
-| `npx smoonb import --file <path> [--storage <path>]` | Importar arquivo .backup.gz e opcionalmente .storage.zip do Dashboard do Supabase |
-| `npx smoonb check` | Verificação de integridade pós-restore |
+| Command | Description |
+|---------|-------------|
+| `npx smoonb backup` | Full interactive backup using Docker |
+| `npx smoonb restore` | Interactive restoration using psql (Docker) |
+| `npx smoonb restore --file <path> [--storage <path>]` | Import and restore directly .backup.gz file and optionally .storage.zip from Dashboard |
+| `npx smoonb import --file <path> [--storage <path>]` | Import .backup.gz file and optionally .storage.zip from Supabase Dashboard |
+| `npx smoonb check` | Post-restore integrity verification |
 
-## 🏗️ Arquitetura Técnica
+## 🏗️ Technical Architecture
 
-### Estrutura Modular
+### Modular Structure
 
-O código foi refatorado para uma **arquitetura modular** com etapas independentes:
+The code has been refactored to a **modular architecture** with independent steps:
 
 #### Backup (`src/commands/backup/`)
 ```
@@ -419,38 +497,38 @@ restore/
 ### Backup Strategy
 
 #### Database
-- **Backup Principal**: `pg_dumpall` via Docker (idêntico ao Dashboard)
-  - Arquivo: `db_cluster-XX-XX-XXXX@XX-XX-XX.backup.gz`
-  - Compatível com restauração via Dashboard do Supabase
-- **Backup Separado**: SQL em arquivos distintos via Supabase CLI
-  - `schema.sql` - Estrutura das tabelas
-  - `data.sql` - Dados (COPY statements)
-  - `roles.sql` - Roles e permissões
+- **Main Backup**: `pg_dumpall` via Docker (identical to Dashboard)
+  - File: `db_cluster-XX-XX-XXXX@XX-XX-XX.backup.gz`
+  - Compatible with restoration via Supabase Dashboard
+- **Separate Backup**: SQL in separate files via Supabase CLI
+  - `schema.sql` - Table structure
+  - `data.sql` - Data (COPY statements)
+  - `roles.sql` - Roles and permissions
 
 #### Edge Functions
-- **Download Automático**: Via Supabase CLI `supabase functions download`
-- **Reset de Link**: Garante link limpo com o projeto antes do download
-- **Backup Completo**: Código completo de cada function
+- **Automatic Download**: Via Supabase CLI `supabase functions download`
+- **Link Reset**: Ensures clean link with project before download
+- **Complete Backup**: Full code of each function
 
 #### Migrations
-- **Download Automático**: Via `supabase migration fetch`
-- **Reset de Link**: Garante link limpo com o projeto
-- **Backup Completo**: Todas as migrations do servidor
+- **Automatic Download**: Via `supabase migration fetch`
+- **Link Reset**: Ensures clean link with project
+- **Complete Backup**: All server migrations
 
 #### Storage
-- **Backup Completo**: Download de todos os arquivos de todos os buckets
-- **Estrutura Temporária**: Cria `storage_temp/project-id/bucket-name/arquivos...` dentro do backupDir
-- **ZIP no Padrão Dashboard**: Cria `{project-id}.storage.zip` com estrutura `project-id/bucket-name/arquivos...`
-- **Compatível com Restore**: O ZIP criado é compatível com o processo de restore (mesmo formato do Dashboard)
-- **Pergunta Interativa**: Após criar o ZIP, pergunta se deseja limpar a estrutura temporária
-- **Fallback**: Se não houver credenciais do Supabase, faz backup apenas de metadados
-- **Management API**: Usa Personal Access Token para listar buckets e objetos
-- **Supabase Client**: Usa Service Role Key para download de arquivos
+- **Complete Backup**: Download of all files from all buckets
+- **Temporary Structure**: Creates `storage_temp/project-id/bucket-name/files...` inside backupDir
+- **ZIP in Dashboard Format**: Creates `{project-id}.storage.zip` with structure `project-id/bucket-name/files...`
+- **Restore Compatible**: Created ZIP is compatible with restore process (same format as Dashboard)
+- **Interactive Question**: After creating ZIP, asks if you want to clean temporary structure
+- **Fallback**: If Supabase credentials are not available, backs up metadata only
+- **Management API**: Uses Personal Access Token to list buckets and objects
+- **Supabase Client**: Uses Service Role Key for file downloads
 
 #### Auth, Realtime
-- **Management API**: Usa Personal Access Token
-- **JSON Export**: Configurações exportadas como JSON
-- **Realtime Settings**: Captura interativa de 7 parâmetros:
+- **Management API**: Uses Personal Access Token
+- **JSON Export**: Configurations exported as JSON
+- **Realtime Settings**: Interactive capture of 7 parameters:
   1. Enable Realtime service
   2. Allow public access
   3. Database connection pool size
@@ -458,195 +536,195 @@ restore/
   5. Max events per second
   6. Max presence events per second
   7. Max payload size in KB
-- **Manual para alguns**: Alguns settings precisam ser aplicados manualmente por segurança
+- **Manual for some**: Some settings need to be applied manually for security
 
 ### Restore Strategy
 
 #### Database
-- **Suporte a Formatos**:
-  - `.backup.gz` - Descompacta automaticamente via Docker
-  - `.backup` - Restaura diretamente via `psql` (Docker)
-- **Clean Restore**: Pode sobrescrever dados existentes (com confirmação)
+- **Format Support**:
+  - `.backup.gz` - Automatically decompresses via Docker
+  - `.backup` - Restores directly via `psql` (Docker)
+- **Clean Restore**: Can overwrite existing data (with confirmation)
 
 #### Edge Functions
-- **Clean Deploy**: Limpa `supabase/functions` antes do deploy
-- **Reset de Link**: Garante link correto com projeto destino
-- **Deploy Automático**: Usa `supabase functions deploy`
+- **Clean Deploy**: Cleans `supabase/functions` before deploy
+- **Link Reset**: Ensures correct link with target project
+- **Automatic Deploy**: Uses `supabase functions deploy`
 
-#### Outros Componentes
-- **Database Settings**: Restaura via SQL
-- **Storage**: Restaura buckets e arquivos do ZIP (se disponível) ou exibe informações para configuração manual
-- **Auth/Realtime**: Exibe informações para configuração manual no Dashboard
+#### Other Components
+- **Database Settings**: Restores via SQL
+- **Storage**: Restores buckets and files from ZIP (if available) or displays information for manual configuration
+- **Auth/Realtime**: Displays information for manual configuration in Dashboard
 
-### Multiplataforma
+### Cross-Platform
 
-- **Windows/macOS/Linux**: Detecção automática de binários
-- **Cross-platform**: Usa `fs.promises.cp`, `path.join`, Docker
-- **Docker para Tudo**: Backup, restore e compressão via Docker (garante consistência)
+- **Windows/macOS/Linux**: Automatic binary detection
+- **Cross-platform**: Uses `fs.promises.cp`, `path.join`, Docker
+- **Docker for Everything**: Backup, restore and compression via Docker (ensures consistency)
 
-## 📊 Fluxo Recomendado
+## 📊 Recommended Flow
 
 ```bash
-# 1. Configurar .env.local (primeira vez)
-# Edite .env.local com suas credenciais do projeto origem
+# 1. Configure .env.local (first time)
+# Edit .env.local with your source project credentials
 
-# 2. Backup do projeto origem
+# 2. Backup source project
 npx smoonb backup
-# - Mapeia variáveis interativamente (primeira vez)
-# - Seleciona componentes para backup
-# - Executa backup completo
+# - Maps variables interactively (first time)
+# - Selects components for backup
+# - Executes full backup
 
-# 3. Criar novo projeto Supabase
-# (via Dashboard ou Supabase CLI)
+# 3. Create new Supabase project
+# (via Dashboard or Supabase CLI)
 
-# 4. Editar .env.local com credenciais do novo projeto
-# Atualize as variáveis para apontar ao projeto destino
+# 4. Edit .env.local with new project credentials
+# Update variables to point to target project
 
-# 5. Restaurar backup (modo interativo)
+# 5. Restore backup (interactive mode)
 npx smoonb restore
-# - Seleciona backup desejado
-# - Seleciona componentes para restaurar
-# - Executa restauração
+# - Selects desired backup
+# - Selects components to restore
+# - Executes restoration
 
-# 6. Verificar integridade
+# 6. Verify integrity
 npx smoonb check
 
-# 7. Aplicar configurações manuais (se necessário)
+# 7. Apply manual configurations (if necessary)
 # - Auth Settings: Dashboard → Authentication → Settings
 # - Realtime: Dashboard → Database → Replication
-# Nota: Storage é restaurado automaticamente do ZIP se disponível
+# Note: Storage is automatically restored from ZIP if available
 ```
 
-## 🎨 Experiência do Usuário
+## 🎨 User Experience
 
-### Interface em Português
+### Multi-Language Interface
 
-Todas as interações são em **Português do Brasil**:
-- Perguntas claras e diretas
-- Explicações antes de cada processo
-- Resumos detalhados antes de confirmar
-- Confirmações com `(S/n)` ou `(s/N)` em português
+All interactions are **automatically translated** based on system locale or `--lang` flag:
+- Clear and direct questions
+- Explanations before each process
+- Detailed summaries before confirming
+- Confirmations with `(Y/n)` or `(y/N)` in English, `(S/n)` or `(s/N)` in Portuguese
 
-### Mapeamento Inteligente de Variáveis
+### Intelligent Variable Mapping
 
-- **Detecção Automática**: Se a chave já existe com o nome esperado, pula a seleção
-- **Opção de Adicionar**: Permite adicionar novas chaves se não existirem
-- **Validação de Valores**: Confirma valores antes de salvar
-- **Backup Automático**: Sempre cria backup do `.env.local` antes de alterações
+- **Automatic Detection**: If key already exists with expected name, skips selection
+- **Add Option**: Allows adding new keys if they don't exist
+- **Value Validation**: Confirms values before saving
+- **Automatic Backup**: Always creates backup of `.env.local` before changes
 
-### Processo Guiado
+### Guided Process
 
-- **Validação Prévia**: Verifica Docker antes de começar
-- **Explicações Contextuais**: Explica cada processo antes de perguntar
-- **Resumo Final**: Mostra tudo que será feito antes de executar
-- **Feedback Visual**: Cores e ícones para melhor experiência
+- **Prior Validation**: Verifies Docker before starting
+- **Contextual Explanations**: Explains each process before asking
+- **Final Summary**: Shows everything that will be done before executing
+- **Visual Feedback**: Colors and icons for better experience
 
 ## 🐛 Troubleshooting
 
-### Docker não encontrado ou não está rodando
+### Docker not found or not running
 ```bash
-# Verificar se Docker está instalado
+# Verify if Docker is installed
 docker --version
 
-# Verificar se Docker Desktop está rodando
+# Verify if Docker Desktop is running
 docker ps
 
-# Se não estiver, iniciar Docker Desktop
-# Windows/macOS: Abrir aplicativo Docker Desktop
+# If not, start Docker Desktop
+# Windows/macOS: Open Docker Desktop application
 # Linux: sudo systemctl start docker
 ```
 
-### Supabase CLI não encontrado
+### Supabase CLI not found
 ```bash
 npm install -g supabase
 ```
 
-### Personal Access Token inválido ou ausente
+### Invalid or missing Personal Access Token
 
-1. Verificar se `SUPABASE_ACCESS_TOKEN` está no `.env.local`
-2. Gerar novo token: https://supabase.com/dashboard/account/tokens
-3. Atualizar `.env.local` com o novo token
+1. Verify if `SUPABASE_ACCESS_TOKEN` is in `.env.local`
+2. Generate new token: https://supabase.com/dashboard/account/tokens
+3. Update `.env.local` with new token
 
-### Database URL incorreta
-- Verificar senha na URL de conexão
-- Usar Connection string do Dashboard Supabase (Settings → Database)
-- Testar conexão: `psql "sua-database-url" -c "SELECT 1"`
+### Incorrect Database URL
+- Verify password in connection URL
+- Use Connection string from Supabase Dashboard (Settings → Database)
+- Test connection: `psql "your-database-url" -c "SELECT 1"`
 
-### Arquivo .backup.gz não pode ser restaurado
+### .backup.gz file cannot be restored
 
-O smoonb suporta automaticamente:
-- ✅ `.backup.gz` - Descompacta via Docker antes de restaurar
-- ✅ `.backup` - Restaura diretamente
+smoonb automatically supports:
+- ✅ `.backup.gz` - Decompresses via Docker before restoring
+- ✅ `.backup` - Restores directly
 
-Se houver problemas:
-1. Verificar se Docker está rodando
-2. Verificar permissões do arquivo
-3. Verificar espaço em disco
+If there are problems:
+1. Verify if Docker is running
+2. Verify file permissions
+3. Verify disk space
 
-### Erro ao baixar Edge Functions
+### Error downloading Edge Functions
 
-1. Verificar se `SUPABASE_ACCESS_TOKEN` está configurado
-2. Verificar se o projeto está linkado: `supabase link`
-3. Verificar se as functions existem no servidor
+1. Verify if `SUPABASE_ACCESS_TOKEN` is configured
+2. Verify if project is linked: `supabase link`
+3. Verify if functions exist on server
 
-### Erro ao baixar Migrations
+### Error downloading Migrations
 
-1. Verificar se `SUPABASE_ACCESS_TOKEN` está configurado
-2. Verificar se o projeto está linkado: `supabase link`
-3. Verificar se há migrations no servidor
+1. Verify if `SUPABASE_ACCESS_TOKEN` is configured
+2. Verify if project is linked: `supabase link`
+3. Verify if there are migrations on server
 
-## 🔒 Segurança
+## 🔒 Security
 
-- **Backup Automático**: Sempre cria backup do `.env.local` antes de alterações
-- **Mapeamento Local**: Mapeamento de variáveis salvo apenas localmente
-- **Sem Dados Sensíveis**: Nenhum dado sensível é enviado para fora do seu ambiente
-- **Docker Isolado**: Operações de database via Docker (isolamento)
+- **Automatic Backup**: Always creates backup of `.env.local` before changes
+- **Local Mapping**: Variable mapping saved only locally
+- **No Sensitive Data**: No sensitive data is sent outside your environment
+- **Isolated Docker**: Database operations via Docker (isolation)
 
-## 💼 Modelo de Acesso e Assinatura
+## 💼 Access Model and Subscription
 
-O código do Supa Moonbase é disponibilizado sob licença MIT (ver `LICENSE`). Em fase futura, a execução do CLI será vinculada a uma assinatura por conta, permitindo uso associado a uma conta válida. A validação de conta ocorrerá antes de qualquer operação sensível (ex.: backup e restore).
+Supa Moonbase code is provided under MIT license (see `LICENSE`). In a future phase, CLI execution will be linked to a per-account subscription, allowing use associated with a valid account. Account validation will occur before any sensitive operations (e.g., backup and restore).
 
-Até que a validação esteja ativa, a ferramenta pode ser utilizada sem login.
+Until validation is active, the tool can be used without login.
 
-Saiba mais em [Pricing](https://smoonb.com/pricing) e [FAQ Comercial](https://smoonb.com/faq).
+Learn more at [Pricing](https://smoonb.com/pricing) and [Commercial FAQ](https://smoonb.com/faq).
 
-## 🎁 Grandfathering (conceito)
+## 🎁 Grandfathering (concept)
 
-Contas criadas durante o período inicial de disponibilização comercial poderão manter condições de acesso diferenciadas enquanto permanecerem ativas. O objetivo é reconhecer os primeiros usuários. Detalhes específicos constarão nos [Termos de Serviço](https://smoonb.com/terms) e no [Pricing](https://smoonb.com/pricing).
+Accounts created during the initial commercial availability period may maintain differentiated access conditions while they remain active. The goal is to recognize early users. Specific details will be in the [Terms of Service](https://smoonb.com/terms) and [Pricing](https://smoonb.com/pricing).
 
-## 🔒 Privacidade e LGPD (resumo)
+## 🔒 Privacy and LGPD (summary)
 
-O Supa Moonbase adota o princípio de minimização de dados. Quando a validação de conta estiver ativa, trataremos apenas informações estritamente necessárias para controle de acesso e faturamento (por exemplo, identificador de conta e contato). Os propósitos, bases legais e direitos do titular serão descritos na [Política de Privacidade](https://smoonb.com/privacy).
+Supa Moonbase adopts the data minimization principle. When account validation is active, we will only process information strictly necessary for access control and billing (e.g., account identifier and contact). Purposes, legal bases and data subject rights will be described in the [Privacy Policy](https://smoonb.com/privacy).
 
-## 📋 Termos de Serviço e Uso de Marca
+## 📋 Terms of Service and Brand Usage
 
-A licença de código (MIT) não substitui os Termos de Serviço que regerão o acesso operacional por conta e a validação de assinatura.
+The code license (MIT) does not replace the Terms of Service that will govern per-account operational access and subscription validation.
 
-"Supa Moonbase" e elementos de identidade visual são marcas da Goalmoon Tecnologia Ltda.; o uso de marca e assets de branding é restrito, conforme os [Termos de Serviço](https://smoonb.com/terms).
+"Supa Moonbase" and visual identity elements are trademarks of Goalmoon Tecnologia Ltda.; brand and branding assets usage is restricted, as per [Terms of Service](https://smoonb.com/terms).
 
-## ❓ FAQ Comercial
+## ❓ Commercial FAQ
 
-**Por que assinatura se o código é MIT?**
+**Why subscription if the code is MIT?**
 
-> O código permanece aberto para auditoria e contribuições. O acesso operacional será condicionado à validação de conta, conforme Termos de Serviço.
+> The code remains open for audit and contributions. Operational access will be conditioned to account validation, as per Terms of Service.
 
-**O que significa grandfathering?**
+**What does grandfathering mean?**
 
-> Contas do período inicial poderão manter condições diferenciadas enquanto ativas; detalhes estarão nos Termos.
+> Accounts from the initial period may maintain differentiated conditions while active; details will be in the Terms.
 
 
 
-## 📝 Licença
+## 📝 License
 
-O código do Supa Moonbase é disponibilizado sob licença MIT. Veja [LICENSE](LICENSE) para o texto completo da licença.
+Supa Moonbase code is provided under MIT license. See [LICENSE](LICENSE) for the full license text. A Portuguese translation is available in [LICENSE.pt-BR.md](LICENSE.pt-BR.md) for convenience only.
 
-## 🤝 Contribuição
+## 🤝 Contributing
 
-Contribuições são bem-vindas! Este é um projeto experimental e precisamos de feedback da comunidade.
+Contributions are welcome! This is an experimental project and we need community feedback.
 
 
 ---
 
-**Desenvolvido por:** Goalmoon Tecnologia LTDA  
+**Developed by:** Goalmoon Tecnologia LTDA  
 **Website:** https://smoonb.com  
 **GitHub:** https://github.com/almmello/smoonb

@@ -2,34 +2,38 @@ const chalk = require('chalk');
 const { ensureBin, runCommand } = require('../utils/cli');
 const { readConfig, validateFor } = require('../utils/config');
 const { showBetaBanner } = require('../utils/banner');
+const { t } = require('../i18n');
 
 // Exportar FUNÇÃO em vez de objeto Command
 module.exports = async (_options) => {
   showBetaBanner();
   
   try {
+    const getT = global.smoonbI18n?.t || t;
+    
     // Verificar se Supabase CLI está disponível
     const supabasePath = await ensureBin('supabase');
     if (!supabasePath) {
-      console.error(chalk.red('❌ Supabase CLI não encontrado'));
-      console.log(chalk.yellow('💡 Instale o Supabase CLI:'));
-      console.log(chalk.yellow('  npm install -g supabase'));
-      console.log(chalk.yellow('  ou visite: https://supabase.com/docs/guides/cli'));
+      console.error(chalk.red(`❌ ${getT('functions.cliNotFound')}`));
+      console.log(chalk.yellow(`💡 ${getT('functions.installCli')}`));
+      console.log(chalk.yellow(`  ${getT('functions.installLink')}`));
+      console.log(chalk.yellow(`  ${getT('functions.orVisit')}`));
       process.exit(1);
     }
 
-    console.log(chalk.blue('⚡ Comandos disponíveis para Edge Functions:'));
-    console.log(chalk.yellow('\n📋 Listar functions:'));
+    console.log(chalk.blue(`⚡ ${getT('functions.availableCommands')}`));
+    console.log(chalk.yellow(`\n📋 ${getT('functions.list')}`));
     console.log(chalk.gray('  npx smoonb functions list'));
-    console.log(chalk.yellow('\n🚀 Deploy functions:'));
+    console.log(chalk.yellow(`\n🚀 ${getT('functions.deploy')}`));
     console.log(chalk.gray('  npx smoonb functions push'));
-    console.log(chalk.yellow('\n📥 Pull functions (se disponível):'));
+    console.log(chalk.yellow(`\n📥 ${getT('functions.pull')}`));
     console.log(chalk.gray('  npx smoonb functions pull'));
-    console.log(chalk.yellow('\n💡 Para mais opções, use o Supabase CLI diretamente:'));
+    console.log(chalk.yellow(`\n💡 ${getT('functions.moreOptions')}`));
     console.log(chalk.gray('  supabase functions --help'));
 
   } catch (error) {
-    console.error(chalk.red(`❌ Erro: ${error.message}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.error(chalk.red(`❌ ${getT('functions.error', { message: error.message })}`));
     process.exit(1);
   }
 };

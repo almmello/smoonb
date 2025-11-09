@@ -1,6 +1,6 @@
 {
   "name": "smoonb",
-  "version": "0.0.71",
+  "version": "0.0.72",
   "description": "Complete Supabase backup and migration tool - EXPERIMENTAL VERSION - USE AT YOUR OWN RISK",
   "preferGlobal": false,
   "preventGlobalInstall": true,
@@ -55,6 +55,8 @@
     "bin/",
     "src/",
     "README.md",
-    "LICENSE.md"
+    "README.pt-BR.md",
+    "LICENSE",
+    "LICENSE.pt-BR.md"
   ]
 }

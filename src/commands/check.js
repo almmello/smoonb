@@ -5,17 +5,20 @@ const { readConfig, validateFor } = require('../utils/config');
 const { writeJson } = require('../utils/fsx');
 const { IntrospectionService } = require('../services/introspect');
 const { showBetaBanner } = require('../utils/banner');
+const { t } = require('../i18n');
 
 // Exportar FUNÇÃO em vez de objeto Command
 module.exports = async () => {
   showBetaBanner();
   
   try {
+    const getT = global.smoonbI18n?.t || t;
+    
     // Verificar se psql está disponível
     const psqlPath = await ensureBin('psql');
     if (!psqlPath) {
-      console.error(chalk.red('❌ psql não encontrado'));
-      console.log(chalk.yellow('💡 Instale PostgreSQL:'));
+      console.error(chalk.red(`❌ ${getT('check.psqlNotFound')}`));
+      console.log(chalk.yellow(`💡 ${getT('check.installPostgres')}`));
       console.log(chalk.yellow('  https://www.postgresql.org/download/'));
       process.exit(1);
     }
@@ -26,12 +29,12 @@ module.exports = async () => {
 
     const databaseUrl = config.supabase.databaseUrl;
     if (!databaseUrl) {
-      console.error(chalk.red('❌ databaseUrl não configurada'));
-      console.log(chalk.yellow('💡 Configure databaseUrl no .smoonbrc'));
+      console.error(chalk.red(`❌ ${getT('check.databaseUrlNotConfigured')}`));
+      console.log(chalk.yellow(`💡 ${getT('check.configureDatabaseUrl')}`));
       process.exit(1);
     }
 
-    console.log(chalk.blue(`🔍 Verificando integridade do projeto: ${config.supabase.projectId}`));
+    console.log(chalk.blue(`🔍 ${getT('check.start', { projectId: config.supabase.projectId })}`));
 
     // Executar verificações
     const report = await performChecks(config, databaseUrl);
@@ -43,11 +46,13 @@ module.exports = async () => {
     // Mostrar resumo
     showCheckSummary(report);
 
-    console.log(chalk.green('\n🎉 Verificação concluída!'));
-    console.log(chalk.blue(`📋 Relatório salvo em: ${reportPath}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.log(chalk.green(`\n🎉 ${getT('check.done')}`));
+    console.log(chalk.blue(`📋 ${getT('check.reportSaved', { path: reportPath })}`));
 
   } catch (error) {
-    console.error(chalk.red(`❌ Erro na verificação: ${error.message}`));
+    const getT = global.smoonbI18n?.t || t;
+    console.error(chalk.red(`❌ ${getT('check.error', { message: error.message })}`));
     process.exit(1);
   }
 };

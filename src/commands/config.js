@@ -2,12 +2,14 @@ const chalk = require('chalk');
 const fs = require('fs').promises;
 const path = require('path');
 const { showBetaBanner } = require('../utils/banner');
+const { t } = require('../i18n');
 
 // Exportar FUNÇÃO em vez de objeto Command
 module.exports = async (options) => {
   showBetaBanner();
   
-  console.log(chalk.cyan.bold('⚙️  Configuração do smoonb...\n'));
+  const getT = global.smoonbI18n?.t || t;
+  console.log(chalk.cyan.bold(`⚙️  ${getT('config.title')}\n`));
 
   try {
     const configPath = path.join(process.cwd(), '.smoonbrc');
@@ -17,20 +19,22 @@ module.exports = async (options) => {
     } else if (options.show) {
       await showConfig(configPath);
     } else {
-      console.log(chalk.yellow('💡 Opções disponíveis:'));
-      console.log(chalk.gray('  --init    Inicializar configuração'));
-      console.log(chalk.gray('  --show    Mostrar configuração atual'));
+      console.log(chalk.yellow(`💡 ${getT('config.options')}`));
+      console.log(chalk.gray(`  ${getT('config.initOption')}`));
+      console.log(chalk.gray(`  ${getT('config.showOption')}`));
     }
 
   } catch (error) {
-    console.error(chalk.red('❌ Erro na configuração:'), error.message);
+    const getT = global.smoonbI18n?.t || t;
+    console.error(chalk.red(`❌ ${getT('config.error')}`), error.message);
     process.exit(1);
   }
 };
 
 // Inicializar configuração
 async function initializeConfig(configPath) {
-  console.log(chalk.blue('🔧 Inicializando configuração...'));
+  const getT = global.smoonbI18n?.t || t;
+  console.log(chalk.blue(`🔧 ${getT('config.init')}`));
 
   const defaultConfig = {
     supabase: {
@@ -55,20 +59,23 @@ async function initializeConfig(configPath) {
   };
 
   try {
+    const getT = global.smoonbI18n?.t || t;
     await fs.writeFile(configPath, JSON.stringify(defaultConfig, null, 2));
-    console.log(chalk.green('✅ Arquivo de configuração criado: .smoonbrc'));
+    console.log(chalk.green(`✅ ${getT('config.fileCreated', { path: '.smoonbrc' })}`));
     console.log(chalk.yellow('\n📝 Próximos passos:'));
     console.log(chalk.gray('  1. Edite .smoonbrc com suas credenciais Supabase'));
     console.log(chalk.gray('  2. Substitua os valores placeholder pelos reais'));
     console.log(chalk.gray('  3. Execute: npx smoonb backup'));
   } catch (error) {
-    throw new Error(`Falha ao criar arquivo de configuração: ${error.message}`);
+    const getT = global.smoonbI18n?.t || t;
+    throw new Error(`${getT('config.error')}: ${error.message}`);
   }
 }
 
 // Mostrar configuração atual
 async function showConfig(configPath) {
-  console.log(chalk.blue('📋 Configuração atual:'));
+  const getT = global.smoonbI18n?.t || t;
+  console.log(chalk.blue(`📋 ${getT('config.show')}`));
 
   try {
     const configContent = await fs.readFile(configPath, 'utf8');
@@ -125,11 +132,12 @@ async function showConfig(configPath) {
     console.log(chalk.gray(`   - Verify After Restore: ${config.restore?.verifyAfterRestore || true}`));
 
   } catch (error) {
+    const getT = global.smoonbI18n?.t || t;
     if (error.code === 'ENOENT') {
-      console.log(chalk.yellow('⚠️  Arquivo de configuração não encontrado'));
+      console.log(chalk.yellow(`⚠️  ${getT('config.fileNotFound', { path: configPath })}`));
       console.log(chalk.gray('   - Use: npx smoonb config --init'));
     } else {
-      throw new Error(`Falha ao ler arquivo de configuração: ${error.message}`);
+      throw new Error(`${getT('config.error')}: ${error.message}`);
     }
   }
 }

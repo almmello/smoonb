@@ -8,6 +8,7 @@
 const chalk = require('chalk');
 const path = require('path');
 const { showBetaBanner } = require('./utils/banner');
+const { t } = require('./i18n');
 
 // Exportar comandos
 const backupCommand = require('./commands/backup');
@@ -58,31 +59,31 @@ function showLicenseInfo() {
  * Informações de ajuda rápida
  */
 function showQuickHelp() {
+  const getT = global.smoonbI18n?.t || t;
   console.log(chalk.cyan.bold(`
-🚀 COMANDOS PRINCIPAIS:
+🚀 ${getT('quickHelp.title')}
 
-📊 Backup completo:
-   npx smoonb backup                    # Backup completo interativo usando Docker
+📊 ${getT('quickHelp.backupTitle')}
+   ${getT('quickHelp.backupDesc')}
 
-🔄 Restauração completa:
-   npx smoonb restore                    # Restauração interativa usando psql (Docker)
+🔄 ${getT('quickHelp.restoreTitle')}
+   ${getT('quickHelp.restoreDesc')}
 
-🔍 Verificação pós-restore:
-   npx smoonb check                     # Verifica integridade do projeto
+🔍 ${getT('quickHelp.checkTitle')}
+   ${getT('quickHelp.checkDesc')}
 
-📋 CONFIGURAÇÃO:
-   Configure o arquivo .env.local na raiz do projeto com suas credenciais Supabase.
-   O smoonb irá mapear as variáveis interativamente na primeira execução.
+📋 ${getT('quickHelp.configuration')}
+   ${getT('quickHelp.configurationDesc')}
 
-🔑 PERSONAL ACCESS TOKEN (OBRIGATÓRIO):
-   Para Management API (Edge Functions, Auth Settings, Storage):
-   1. Acesse: https://supabase.com/dashboard/account/tokens
-   2. Clique em "Generate new token"
-   3. Copie o token (formato: sbp_...)
-   4. Adicione ao .env.local como SUPABASE_ACCESS_TOKEN
+🔑 ${getT('quickHelp.tokenTitle')}
+   ${getT('quickHelp.tokenDesc')}
+   ${getT('quickHelp.tokenStep1')}
+   ${getT('quickHelp.tokenStep2')}
+   ${getT('quickHelp.tokenStep3')}
+   ${getT('quickHelp.tokenStep4')}
 
-🔄 ATUALIZAR PARA ÚLTIMA VERSÃO:
-   npm install smoonb@latest
+🔄 ${getT('quickHelp.update')}
+   ${getT('quickHelp.updateCommand')}
 `));
 }
 
