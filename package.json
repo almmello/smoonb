@@ -1,6 +1,6 @@
 {
   "name": "smoonb",
-  "version": "0.0.72",
+  "version": "0.0.73",
   "description": "Complete Supabase backup and migration tool - EXPERIMENTAL VERSION - USE AT YOUR OWN RISK",
   "preferGlobal": false,
   "preventGlobalInstall": true,
@@ -15,7 +15,8 @@
     "postinstall": "echo '\\n✅ smoonb instalado com sucesso!\\n💡 Execute: npx smoonb backup\\n📖 Documentação: https://github.com/almmello/smoonb\\n'",
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix",
-    "build": "npm run lint"
+    "build": "node scripts/build.js",
+    "build:check": "node scripts/build.js"
   },
   "keywords": [
     "supabase",

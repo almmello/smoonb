@@ -170,7 +170,6 @@ function loadCatalog(locale) {
  */
 function t(id, vars = {}, locale = null) {
   // Determinar locale a usar
-  const currentLocale = locale || (global.smoonbI18n?.locale || 'en');
   const catalog = locale ? loadCatalog(locale) : (global.smoonbI18n?.catalog || loadCatalog('en'));
 
   // Buscar tradução

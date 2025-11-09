@@ -46,7 +46,6 @@ module.exports = async () => {
     // Mostrar resumo
     showCheckSummary(report);
 
-    const getT = global.smoonbI18n?.t || t;
     console.log(chalk.green(`\n🎉 ${getT('check.done')}`));
     console.log(chalk.blue(`📋 ${getT('check.reportSaved', { path: reportPath })}`));
 
