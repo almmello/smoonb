@@ -37,6 +37,32 @@ for (const file of filesToCheck) {
 
   try {
     execSync(`node -c "${filePath}"`, { stdio: 'pipe' });
+    
+    // Verificar declarações duplicadas de variáveis no mesmo escopo
+    const content = fs.readFileSync(filePath, 'utf8');
+    const lines = content.split('\n');
+    const constDeclarations = new Map();
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const constMatch = line.match(/const\s+(\w+)\s*=/);
+      if (constMatch) {
+        const varName = constMatch[1];
+        const lineNum = i + 1;
+        
+        // Verificar se já foi declarada no mesmo escopo (aproximação simples)
+        if (constDeclarations.has(varName)) {
+          const prevLine = constDeclarations.get(varName);
+          // Verificar se não está em um bloco diferente (try/catch, função, etc)
+          const isSameScope = Math.abs(lineNum - prevLine) < 50; // Aproximação
+          if (isSameScope) {
+            console.log(chalk.yellow(`⚠️  Possível declaração duplicada: ${varName} na linha ${lineNum} (anterior: ${prevLine})`));
+          }
+        }
+        constDeclarations.set(varName, lineNum);
+      }
+    }
+    
     console.log(chalk.green(`✅ ${file}`));
   } catch (error) {
     hasErrors = true;
