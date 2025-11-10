@@ -206,33 +206,34 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
       throw new Error(`Duplicidade de mapeamento detectada para ${clientKey}`);
     }
     dePara[clientKey] = expected;
+  }
 
-    // Após processar SMOONB_OUTPUT_DIR, perguntar sobre idioma padrão
-    if (expected === 'SMOONB_OUTPUT_DIR') {
-      const currentLang = finalEnv.SMOONB_LANG || '';
-      const { normalizeLocale } = require('../i18n');
-      
-      const langChoices = [
-        { name: getT('env.language.english'), value: 'en' },
-        { name: getT('env.language.portuguese'), value: 'pt-BR' }
-      ];
+  // Após processar todas as variáveis, perguntar sobre idioma padrão se SMOONB_OUTPUT_DIR foi processado
+  const outputDirProcessed = Object.values(dePara).includes('SMOONB_OUTPUT_DIR');
+  if (outputDirProcessed) {
+    const currentLang = finalEnv.SMOONB_LANG || '';
+    const { normalizeLocale } = require('../i18n');
+    
+    const langChoices = [
+      { name: getT('env.language.english'), value: 'en' },
+      { name: getT('env.language.portuguese'), value: 'pt-BR' }
+    ];
 
-      const defaultLang = currentLang ? normalizeLocale(currentLang) || 'en' : 'en';
-      const defaultIndex = langChoices.findIndex(c => c.value === defaultLang);
+    const defaultLang = currentLang ? normalizeLocale(currentLang) || 'en' : 'en';
+    const defaultIndex = langChoices.findIndex(c => c.value === defaultLang);
 
-      const { selectedLang } = await inquirer.prompt([{
-        type: 'list',
-        name: 'selectedLang',
-        message: getT('env.language.selectDefault'),
-        choices: langChoices,
-        default: defaultIndex >= 0 ? defaultIndex : 0,
-        loop: false,
-        prefix: ''
-      }]);
+    const { selectedLang } = await inquirer.prompt([{
+      type: 'list',
+      name: 'selectedLang',
+      message: getT('env.language.selectDefault'),
+      choices: langChoices,
+      default: defaultIndex >= 0 ? defaultIndex : 0,
+      loop: false,
+      prefix: ''
+    }]);
 
-      finalEnv.SMOONB_LANG = selectedLang;
-      console.log(chalk.green(`✅ ${getT('env.language.saved', { lang: selectedLang })}`));
-    }
+    finalEnv.SMOONB_LANG = selectedLang;
+    console.log(chalk.green(`✅ ${getT('env.language.saved', { lang: selectedLang })}`));
   }
 
   return { finalEnv, dePara };
