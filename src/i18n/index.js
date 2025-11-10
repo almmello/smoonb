@@ -79,13 +79,13 @@ function detectSystemLocale(env) {
 }
 
 /**
- * Detectar locale baseado em argumentos CLI, env e sistema
+ * Detectar locale baseado em argumentos CLI, .env.local, env e sistema
  * @param {string[]} argv - Argumentos da linha de comando
  * @param {NodeJS.ProcessEnv} env - Variáveis de ambiente
  * @returns {string} - Código de locale (padrão: 'en')
  */
 function detectLocale(argv = [], env = process.env) {
-  // 1. Verificar flag CLI --lang
+  // 1. Verificar flag CLI --lang (maior precedência)
   const langIndex = argv.indexOf('--lang');
   if (langIndex !== -1 && argv[langIndex + 1]) {
     const normalized = normalizeLocale(argv[langIndex + 1]);
@@ -94,7 +94,36 @@ function detectLocale(argv = [], env = process.env) {
     }
   }
 
-  // 2. Verificar variável de ambiente SMOONB_LANG
+  // 2. Verificar SMOONB_LANG do .env.local (síncrono para evitar problemas de inicialização)
+  try {
+    const envLocalPath = path.join(process.cwd(), '.env.local');
+    if (fs.existsSync(envLocalPath)) {
+      const envContent = fs.readFileSync(envLocalPath, 'utf8');
+      const envLines = envContent.replace(/\r\n/g, '\n').split('\n');
+      for (const line of envLines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const eqIndex = line.indexOf('=');
+        if (eqIndex === -1) continue;
+        const key = line.slice(0, eqIndex).trim();
+        if (key === 'SMOONB_LANG') {
+          let value = line.slice(eqIndex + 1).trim();
+          // Remove optional quotes
+          if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
+          }
+          const normalized = normalizeLocale(value);
+          if (normalized) {
+            return normalized;
+          }
+        }
+      }
+    }
+  } catch {
+    // Ignorar erros ao ler .env.local (pode não existir ainda)
+  }
+
+  // 3. Verificar variável de ambiente SMOONB_LANG
   if (env.SMOONB_LANG) {
     const normalized = normalizeLocale(env.SMOONB_LANG);
     if (normalized) {
@@ -102,13 +131,13 @@ function detectLocale(argv = [], env = process.env) {
     }
   }
 
-  // 3. Verificar locale do sistema
+  // 4. Verificar locale do sistema
   const systemLocale = detectSystemLocale(env);
   if (systemLocale) {
     return systemLocale;
   }
 
-  // 4. Fallback para inglês
+  // 5. Fallback para inglês
   return 'en';
 }
 

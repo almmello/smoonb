@@ -262,6 +262,10 @@
   "env.mapping.backupCreated": "Backup do .env.local: {path}",
   "env.mapping.fileNotFound": "Arquivo .env.local não encontrado. Será criado durante o mapeamento.",
   "env.mapping.updated": ".env.local atualizado com sucesso. Nenhuma chave renomeada; valores sincronizados.",
+  "env.language.selectDefault": "Qual o idioma padrão?",
+  "env.language.english": "Inglês (English)",
+  "env.language.portuguese": "Português (pt-BR)",
+  "env.language.saved": "Idioma padrão salvo: {lang}",
 
   "backup.components.edgeFunctions.title": "Edge Functions:",
   "backup.components.edgeFunctions.description1": "Vamos apagar as funções existentes na pasta supabase/functions, fazer um reset no link",
