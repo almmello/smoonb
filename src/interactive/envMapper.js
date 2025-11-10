@@ -239,10 +239,12 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
     const newI18n = initI18n(process.argv, { ...process.env, SMOONB_LANG: selectedLang });
     Object.assign(global.smoonbI18n, newI18n);
     
-    // Atualizar getT para usar o novo idioma
-    const getT = global.smoonbI18n?.t || t;
-    console.log(chalk.green(`✅ ${getT('env.language.saved', { lang: selectedLang })}`));
-    console.log(chalk.cyan(`🌐 ${getT('env.language.applied')}`));
+    // Atualizar getT para usar o novo idioma (não redeclarar, apenas atualizar a referência)
+    // getT já foi declarado no escopo da função, então apenas atualizamos o global.smoonbI18n
+    // e getT continuará funcionando através do global.smoonbI18n?.t
+    const updatedGetT = global.smoonbI18n?.t || t;
+    console.log(chalk.green(`✅ ${updatedGetT('env.language.saved', { lang: selectedLang })}`));
+    console.log(chalk.cyan(`🌐 ${updatedGetT('env.language.applied')}`));
   }
 
   return { finalEnv, dePara };
