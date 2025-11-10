@@ -266,6 +266,7 @@
   "env.language.english": "Inglês (English)",
   "env.language.portuguese": "Português (pt-BR)",
   "env.language.saved": "Idioma padrão salvo: {lang}",
+  "env.language.note": "Nota: A mudança de idioma será efetiva nos próximos comandos. O processo atual continuará no idioma inicial.",
 
   "backup.components.edgeFunctions.title": "Edge Functions:",
   "backup.components.edgeFunctions.description1": "Vamos apagar as funções existentes na pasta supabase/functions, fazer um reset no link",

@@ -234,6 +234,7 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
 
     finalEnv.SMOONB_LANG = selectedLang;
     console.log(chalk.green(`✅ ${getT('env.language.saved', { lang: selectedLang })}`));
+    console.log(chalk.yellow(`💡 ${getT('env.language.note')}`));
   }
 
   return { finalEnv, dePara };
