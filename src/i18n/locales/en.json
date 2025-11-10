@@ -266,6 +266,7 @@
   "env.language.english": "English",
   "env.language.portuguese": "Portuguese (pt-BR)",
   "env.language.saved": "Default language saved: {lang}",
+  "env.language.applied": "Language applied! The next messages will be displayed in the selected language.",
 
   "backup.components.edgeFunctions.title": "Edge Functions:",
   "backup.components.edgeFunctions.description1": "We will delete existing functions in the supabase/functions folder, reset the link",

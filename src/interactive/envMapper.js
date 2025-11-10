@@ -233,7 +233,16 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
     }]);
 
     finalEnv.SMOONB_LANG = selectedLang;
+    
+    // Re-inicializar i18n com o novo idioma para aplicar mudança em tempo real
+    const { initI18n } = require('../i18n');
+    const newI18n = initI18n(process.argv, { ...process.env, SMOONB_LANG: selectedLang });
+    Object.assign(global.smoonbI18n, newI18n);
+    
+    // Atualizar getT para usar o novo idioma
+    const getT = global.smoonbI18n?.t || t;
     console.log(chalk.green(`✅ ${getT('env.language.saved', { lang: selectedLang })}`));
+    console.log(chalk.cyan(`🌐 ${getT('env.language.applied')}`));
   }
 
   return { finalEnv, dePara };
