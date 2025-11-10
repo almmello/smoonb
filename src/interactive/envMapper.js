@@ -84,7 +84,12 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
     };
   }
 
-  const getT = global.smoonbI18n?.t || t;
+  // Função getT que sempre acessa global.smoonbI18n dinamicamente
+  // Isso permite que a mudança de idioma seja aplicada em tempo real
+  const getT = (id, vars) => {
+    const currentT = global.smoonbI18n?.t || t;
+    return currentT(id, vars);
+  };
   
   for (const expected of expectedKeys) {
     console.log(chalk.blue(`\n🔧 ${getT('env.mapping.title', { variable: expected })}`));
@@ -239,19 +244,22 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
     const newI18n = initI18n(process.argv, { ...process.env, SMOONB_LANG: selectedLang });
     Object.assign(global.smoonbI18n, newI18n);
     
-    // Atualizar getT para usar o novo idioma (não redeclarar, apenas atualizar a referência)
-    // getT já foi declarado no escopo da função, então apenas atualizamos o global.smoonbI18n
-    // e getT continuará funcionando através do global.smoonbI18n?.t
-    const updatedGetT = global.smoonbI18n?.t || t;
-    console.log(chalk.green(`✅ ${updatedGetT('env.language.saved', { lang: selectedLang })}`));
-    console.log(chalk.cyan(`🌐 ${updatedGetT('env.language.applied')}`));
+    // getT agora funciona dinamicamente, sempre acessando global.smoonbI18n?.t
+    // Então não precisamos atualizar nada, apenas usar getT normalmente
+    console.log(chalk.green(`✅ ${getT('env.language.saved', { lang: selectedLang })}`));
+    console.log(chalk.cyan(`🌐 ${getT('env.language.applied')}`));
   }
 
   return { finalEnv, dePara };
 }
 
 async function askComponentsFlags() {
-  const getT = global.smoonbI18n?.t || t;
+  // Função getT que sempre acessa global.smoonbI18n dinamicamente
+  // Isso permite que a mudança de idioma seja aplicada em tempo real
+  const getT = (id, vars) => {
+    const currentT = global.smoonbI18n?.t || t;
+    return currentT(id, vars);
+  };
   
   // Explicação sobre Edge Functions
   console.log(chalk.cyan(`\n⚡ ${getT('backup.components.edgeFunctions.title')}`));
