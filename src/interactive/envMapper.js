@@ -241,8 +241,7 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
     
     // Re-inicializar i18n com o novo idioma para aplicar mudança em tempo real
     const { initI18n } = require('../i18n');
-    const newI18n = initI18n(process.argv, { ...process.env, SMOONB_LANG: selectedLang });
-    Object.assign(global.smoonbI18n, newI18n);
+    initI18n(process.argv, { ...process.env, SMOONB_LANG: selectedLang });
     
     // getT agora funciona dinamicamente, sempre acessando global.smoonbI18n?.t
     // Então não precisamos atualizar nada, apenas usar getT normalmente
