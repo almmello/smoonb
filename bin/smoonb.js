@@ -275,7 +275,6 @@ if (options.lang) {
   const newI18n = initI18n(['--lang', forcedLocale], { ...process.env, SMOONB_LANG: forcedLocale });
   i18n = newI18n;
   t = newI18n.t;
-  Object.assign(global.smoonbI18n, newI18n);
 }
 
 // Se nenhum comando foi fornecido, mostrar ajuda

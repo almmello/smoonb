@@ -198,20 +198,28 @@ function loadCatalog(locale) {
  * @returns {string} - Texto traduzido
  */
 function t(id, vars = {}, locale = null) {
-  // Determinar locale a usar
-  const catalog = locale ? loadCatalog(locale) : (global.smoonbI18n?.catalog || loadCatalog('en'));
+  const localeToUse = locale || global.smoonbI18n?.locale || 'en';
+  const catalog = loadCatalog(localeToUse);
 
-  // Buscar tradução
   let translation = catalog[id] || id;
 
-  // Substituir placeholders nomeados (ex: {name}, {path})
   if (typeof translation === 'string' && Object.keys(vars).length > 0) {
-    translation = translation.replace(/{(\w+)}/g, (match, key) => {
+    translation = translation.replace(/\{(\w+)\}/g, (match, key) => {
       return vars[key] !== undefined ? String(vars[key]) : match;
     });
   }
 
   return translation;
+}
+
+let globalTranslator = null;
+
+function ensureGlobalTranslator() {
+  if (!globalTranslator) {
+    globalTranslator = (id, vars) => t(id, vars, global.smoonbI18n?.locale);
+  }
+
+  return globalTranslator;
 }
 
 /**
@@ -224,12 +232,13 @@ function initI18n(argv = process.argv, env = process.env) {
   const locale = detectLocale(argv, env);
   const catalog = loadCatalog(locale);
 
-  // Armazenar globalmente para acesso fácil
-  global.smoonbI18n = {
-    locale,
-    catalog,
-    t: (id, vars) => t(id, vars, locale)
-  };
+  if (!global.smoonbI18n) {
+    global.smoonbI18n = {};
+  }
+
+  global.smoonbI18n.locale = locale;
+  global.smoonbI18n.catalog = catalog;
+  global.smoonbI18n.t = ensureGlobalTranslator();
 
   return global.smoonbI18n;
 }
