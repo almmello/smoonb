@@ -1,9 +1,16 @@
 const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs').promises;
+const readline = require('readline');
 const { spawn } = require('child_process');
 const { t } = require('../../../i18n');
 const { getPostgresServerMajor } = require('../utils');
+
+const DUMP_SIZE_FACTOR_DEFAULT = 1.4;
+const BAR_WIDTH = 24;
+const EMA_ALPHA = 0.25;
+const ETA_MIN_TICKS = 4;
+const ESTIMATE_TIMEOUT_MS = 10000;
 
 function formatBytes(bytes) {
   if (bytes === 0) return '0 B';
@@ -30,6 +37,79 @@ async function exists(filePath) {
   } catch {
     return false;
   }
+}
+
+/**
+ * Estima tamanho total do cluster (soma dos bancos) via SQL. Timeout 10s; falha = null (fallback sem estimativa).
+ * @returns {Promise<number|null>} bytes ou null
+ */
+async function estimateClusterBytes({ postgresImage, username, password, host, port }) {
+  const query = "SELECT COALESCE(sum(pg_database_size(datname)),0) FROM pg_database WHERE datistemplate = false;";
+  const args = [
+    'run', '--rm', '--network', 'host',
+    '-e', `PGPASSWORD=${password}`,
+    postgresImage, 'psql',
+    '-h', host, '-p', port, '-U', username, '-d', 'postgres',
+    '-t', '-A', '-c', query
+  ];
+  return new Promise((resolve) => {
+    const proc = spawn('docker', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let done = false;
+    const timeout = setTimeout(() => {
+      if (done) return;
+      done = true;
+      try { proc.kill('SIGKILL'); } catch { }
+      resolve(null); // timeout: seguir sem estimativa
+    }, ESTIMATE_TIMEOUT_MS);
+    proc.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
+    proc.on('close', (code) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timeout);
+      if (code !== 0) {
+        resolve(null);
+        return;
+      }
+      const trimmed = stdout.trim();
+      const bytes = parseInt(trimmed, 10);
+      if (Number.isNaN(bytes) || bytes < 0) {
+        resolve(null);
+        return;
+      }
+      resolve(bytes);
+    });
+    proc.on('error', () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timeout);
+      resolve(null);
+    });
+  });
+}
+
+/**
+ * Monta uma linha de progresso: barra opcional + tamanho, tempo, velocidade, ETA (quando estimado).
+ * percent/etaSeconds null = modo indeterminado (sem % nem ETA).
+ */
+function renderProgressLine({ percent, width, sizeBytes, elapsedMs, speedBps, etaSeconds, estimated, getT }) {
+  const sizeStr = formatBytes(sizeBytes);
+  const elapsedStr = formatDuration(elapsedMs);
+  const speedStr = formatBytes(Math.max(0, speedBps)) + '/s';
+  let bar = '';
+  if (estimated && percent != null && percent >= 0) {
+    const filled = Math.round((percent / 100) * width);
+    const n = Math.min(filled, width);
+    bar = `[${'#'.repeat(n)}${'-'.repeat(width - n)}] ${Math.min(99, Math.floor(percent))}% (~) `;
+  } else {
+    bar = '     … ';
+  }
+  let etaStr = '';
+  if (estimated && etaSeconds != null && etaSeconds > 0) {
+    const etaLabel = getT ? getT('backup.steps.database.progress.eta') : 'ETA';
+    etaStr = ` | ${etaLabel} ~${formatDuration(etaSeconds * 1000)}`;
+  }
+  return `     ${bar}| ${sizeStr} | ${elapsedStr} | ${speedStr}${etaStr}`;
 }
 
 /**
@@ -75,6 +155,18 @@ module.exports = async ({ databaseUrl, backupDir, postgresMajor: contextMajor })
     const backupDirAbs = path.resolve(backupDir);
     const outputPath = path.join(backupDirAbs, fileName);
 
+    // Estimativa opcional: tamanho do cluster * fator (dump lógico costuma ser maior). Falha = sem %/ETA.
+    let expectedBytes = null;
+    try {
+      const clusterBytes = await estimateClusterBytes({ postgresImage, username, password, host, port });
+      if (clusterBytes != null && clusterBytes > 0) {
+        const factor = parseFloat(process.env.SMOONB_DUMP_SIZE_FACTOR || '', 10) || DUMP_SIZE_FACTOR_DEFAULT;
+        expectedBytes = Math.floor(clusterBytes * factor);
+      }
+    } catch {
+      expectedBytes = null;
+    }
+
     const dockerArgs = [
       'run', '--rm', '--network', 'host',
       '-v', `${backupDirAbs}:/host`,
@@ -92,39 +184,107 @@ module.exports = async ({ databaseUrl, backupDir, postgresMajor: contextMajor })
     let lastSize = 0;
     let lastTime = startTime;
     let ticker = null;
+    let tickCount = 0;
+    let smoothedSpeed = 0;
+    const useTty = Boolean(process.stdout.isTTY);
+    let lastProgressLine = '';
 
     const runDump = () => new Promise((resolve, reject) => {
       const proc = spawn('docker', dockerArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
 
-      proc.stderr.on('data', (chunk) => process.stderr.write(chunk));
+      proc.stderr.on('data', (chunk) => {
+        process.stderr.write(chunk);
+        if (useTty && lastProgressLine) {
+          readline.cursorTo(process.stdout, 0);
+          process.stdout.write(lastProgressLine);
+        }
+      });
 
       const pollFile = async () => {
         if (!(await exists(outputPath))) return;
         const stat = await fs.stat(outputPath).catch(() => null);
         if (!stat) return;
-        const size = stat.size;
-        const elapsed = Date.now() - startTime;
-        const deltaTime = (Date.now() - lastTime) / 1000;
-        const speed = deltaTime > 0 ? (size - lastSize) / deltaTime : 0;
-        lastSize = size;
-        lastTime = Date.now();
-        const line = `     📦 ${formatBytes(size)} | ${formatDuration(elapsed)} | ${formatBytes(speed)}/s`;
-        process.stdout.write(`\r${line}`);
+        tickCount++;
+        const currentSize = stat.size;
+        const now = Date.now();
+        const elapsed = now - startTime;
+        const deltaTime = (now - lastTime) / 1000;
+        const speed = deltaTime > 0 ? (currentSize - lastSize) / deltaTime : 0;
+        if (speed > 0) {
+          smoothedSpeed = tickCount === 1 ? speed : EMA_ALPHA * speed + (1 - EMA_ALPHA) * smoothedSpeed;
+        }
+        lastSize = currentSize;
+        lastTime = now;
+
+        const estimated = expectedBytes != null && expectedBytes > 0;
+        let percent = null;
+        let etaSeconds = null;
+        if (estimated) {
+          percent = Math.min(99, Math.floor((currentSize / expectedBytes) * 100));
+          if (smoothedSpeed > 0 && currentSize < expectedBytes && tickCount >= ETA_MIN_TICKS) {
+            etaSeconds = (expectedBytes - currentSize) / smoothedSpeed;
+          }
+        }
+
+        const line = renderProgressLine({
+          percent,
+          width: BAR_WIDTH,
+          sizeBytes: currentSize,
+          elapsedMs: elapsed,
+          speedBps: smoothedSpeed || speed,
+          etaSeconds,
+          estimated,
+          getT
+        });
+        lastProgressLine = line;
+
+        if (useTty) {
+          readline.clearLine(process.stdout, 0);
+          readline.cursorTo(process.stdout, 0);
+          process.stdout.write(chalk.white(line));
+        } else if (tickCount % 30 === 1 && elapsed >= 15000) {
+          process.stdout.write(chalk.white(line) + '\n');
+        }
       };
 
       ticker = setInterval(pollFile, 500);
 
-      proc.on('close', (code) => {
+      proc.on('close', async (code) => {
         if (ticker) {
           clearInterval(ticker);
           ticker = null;
         }
-        process.stdout.write('\r' + ' '.repeat(80) + '\r');
+        if (useTty) {
+          readline.clearLine(process.stdout, 0);
+          readline.cursorTo(process.stdout, 0);
+        }
         if (code !== 0) {
           reject(new Error(`pg_dumpall exited with code ${code}`));
-        } else {
-          resolve();
+          return;
         }
+        // Sucesso: mostrar 100% uma vez (estimativa) com tamanho final real
+        if (expectedBytes != null && expectedBytes > 0) {
+          let finalSize = lastSize;
+          try {
+            const stat = await fs.stat(outputPath).catch(() => null);
+            if (stat) finalSize = stat.size;
+          } catch { }
+          const finalLine = renderProgressLine({
+            percent: 100,
+            width: BAR_WIDTH,
+            sizeBytes: finalSize,
+            elapsedMs: Date.now() - startTime,
+            speedBps: smoothedSpeed,
+            etaSeconds: null,
+            estimated: true,
+            getT
+          });
+          process.stdout.write(chalk.white(finalLine) + '\n');
+        }
+        if (useTty) {
+          readline.cursorTo(process.stdout, 0);
+        }
+        resolve();
       });
 
       proc.on('error', (err) => {
@@ -157,7 +317,12 @@ module.exports = async ({ databaseUrl, backupDir, postgresMajor: contextMajor })
         if (!stat) return;
         const size = stat.size;
         const elapsed = Date.now() - gzipStart;
-        process.stdout.write(`\r     📦 ${formatBytes(size)} | ${formatDuration(elapsed)}\r`);
+        if (process.stdout.isTTY) {
+          readline.clearLine(process.stdout, 0);
+          readline.cursorTo(process.stdout, 0);
+        }
+        process.stdout.write(`     📦 ${formatBytes(size)} | ${formatDuration(elapsed)}`);
+        if (process.stdout.isTTY) process.stdout.write('\r');
       };
 
       gzipTicker = setInterval(pollGzip, 300);
@@ -167,7 +332,10 @@ module.exports = async ({ databaseUrl, backupDir, postgresMajor: contextMajor })
           clearInterval(gzipTicker);
           gzipTicker = null;
         }
-        process.stdout.write('\r' + ' '.repeat(80) + '\r');
+        if (process.stdout.isTTY) {
+          readline.clearLine(process.stdout, 0);
+          readline.cursorTo(process.stdout, 0);
+        }
         if (code !== 0) {
           reject(new Error(`gzip exited with code ${code}`));
         } else {

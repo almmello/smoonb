@@ -334,6 +334,7 @@
   "backup.steps.database.creating": "Criando backup completo via pg_dumpall...",
   "backup.steps.database.postgresImage": "Postgres servidor major {major} detectado. Usando imagem: {image}",
   "backup.steps.database.executing": "Executando pg_dumpall via Docker...",
+  "backup.steps.database.progress.eta": "ETA",
   "backup.steps.database.separated.title": "Backup da Database PostgreSQL (arquivos SQL separados)...",
   "backup.steps.database.separated.creating": "Criando backups SQL separados via Supabase CLI...",
   "backup.steps.database.separated.exportingSchema": "Exportando schema...",
