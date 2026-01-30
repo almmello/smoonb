@@ -1,11 +1,31 @@
 const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs').promises;
-const { promisify } = require('util');
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 const { t } = require('../../../i18n');
 
-const execAsync = promisify(exec);
+function runWithElapsedTicker(command, env, label) {
+  return new Promise((resolve, reject) => {
+    const start = Date.now();
+    const ticker = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - start) / 1000);
+      process.stdout.write(`\r     ⏱ ${label} ${elapsed}s`);
+    }, 1000);
+    const proc = spawn(command, [], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      shell: true,
+      env: { ...process.env, ...env }
+    });
+    proc.stderr.on('data', (chunk) => process.stderr.write(chunk));
+    proc.on('close', (code) => {
+      clearInterval(ticker);
+      process.stdout.write('\r' + ' '.repeat(60) + '\r');
+      if (code !== 0) reject(new Error(`Exited with code ${code}`));
+      else resolve();
+    });
+    proc.on('error', reject);
+  });
+}
 
 /**
  * Etapa 7: Backup Custom Roles via SQL
@@ -16,12 +36,10 @@ module.exports = async ({ databaseUrl, backupDir, accessToken }) => {
     console.log(chalk.white(`   - ${getT('backup.steps.roles.exporting')}`));
     
     const customRolesFile = path.join(backupDir, 'custom-roles.sql');
+    const cmd = `supabase db dump --db-url "${databaseUrl}" --role-only -f "${customRolesFile}"`;
     
     try {
-      // Usar Supabase CLI via Docker para roles
-      await execAsync(`supabase db dump --db-url "${databaseUrl}" --role-only -f "${customRolesFile}"`, { 
-        env: { ...process.env, SUPABASE_ACCESS_TOKEN: accessToken || '' } 
-      });
+      await runWithElapsedTicker(cmd, { SUPABASE_ACCESS_TOKEN: accessToken || '' }, getT('backup.steps.roles.exporting'));
       
       const stats = await fs.stat(customRolesFile);
       const sizeKB = (stats.size / 1024).toFixed(1);

@@ -89,12 +89,17 @@ module.exports = async (context) => {
     const downloadedFunctions = [];
     let successCount = 0;
     let errorCount = 0;
+    const totalFuncs = functions.length;
+    const stepStart = Date.now();
 
     // Baixar cada Edge Function via Supabase CLI
     // Nota: O CLI ignora o cwd e sempre baixa para supabase/functions
-    for (const func of functions) {
+    for (let idx = 0; idx < functions.length; idx++) {
+      const func = functions[idx];
+      const current = idx + 1;
+      const elapsed = Math.floor((Date.now() - stepStart) / 1000);
       try {
-        console.log(chalk.white(`   - Baixando: ${func.name}...`));
+        console.log(chalk.white(`   - Baixando ${current}/${totalFuncs}: ${func.name}... (${elapsed}s)`));
         
         // Criar diretório da função NO BACKUP
         const functionTargetDir = path.join(functionsDir, func.name);

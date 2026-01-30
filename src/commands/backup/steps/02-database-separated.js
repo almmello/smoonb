@@ -1,8 +1,31 @@
 const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs').promises;
-const { execSync } = require('child_process');
+const { spawn } = require('child_process');
 const { t } = require('../../../i18n');
+
+function runWithElapsedTicker(command, args, env, label) {
+  return new Promise((resolve, reject) => {
+    const start = Date.now();
+    const ticker = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - start) / 1000);
+      process.stdout.write(`\r     ⏱ ${label} ${elapsed}s`);
+    }, 1000);
+    const proc = spawn(command, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      shell: true,
+      env: { ...process.env, ...env }
+    });
+    proc.stderr.on('data', (chunk) => process.stderr.write(chunk));
+    proc.on('close', (code) => {
+      clearInterval(ticker);
+      process.stdout.write('\r' + ' '.repeat(60) + '\r');
+      if (code !== 0) reject(new Error(`Exited with code ${code}`));
+      else resolve();
+    });
+    proc.on('error', reject);
+  });
+}
 
 /**
  * Etapa 2: Backup Database Separado (SQL files para troubleshooting)
@@ -21,10 +44,12 @@ module.exports = async ({ databaseUrl, backupDir, accessToken }) => {
     const schemaFile = path.join(backupDir, 'schema.sql');
     
     try {
-      execSync(`supabase db dump --db-url "${dbUrl}" -f "${schemaFile}"`, { 
-        stdio: 'pipe', 
-        env: { ...process.env, SUPABASE_ACCESS_TOKEN: accessToken || '' } 
-      });
+      await runWithElapsedTicker(
+        `supabase db dump --db-url "${dbUrl}" -f "${schemaFile}"`,
+        [],
+        { SUPABASE_ACCESS_TOKEN: accessToken || '' },
+        getT('backup.steps.database.separated.exportingSchema')
+      );
       const stats = await fs.stat(schemaFile);
       const sizeKB = (stats.size / 1024).toFixed(1);
       files.push({ filename: 'schema.sql', sizeKB });
@@ -39,10 +64,12 @@ module.exports = async ({ databaseUrl, backupDir, accessToken }) => {
     const dataFile = path.join(backupDir, 'data.sql');
     
     try {
-      execSync(`supabase db dump --db-url "${dbUrl}" --data-only -f "${dataFile}"`, { 
-        stdio: 'pipe', 
-        env: { ...process.env, SUPABASE_ACCESS_TOKEN: accessToken || '' } 
-      });
+      await runWithElapsedTicker(
+        `supabase db dump --db-url "${dbUrl}" --data-only -f "${dataFile}"`,
+        [],
+        { SUPABASE_ACCESS_TOKEN: accessToken || '' },
+        getT('backup.steps.database.separated.exportingData')
+      );
       const stats = await fs.stat(dataFile);
       const sizeKB = (stats.size / 1024).toFixed(1);
       files.push({ filename: 'data.sql', sizeKB });
@@ -57,10 +84,12 @@ module.exports = async ({ databaseUrl, backupDir, accessToken }) => {
     const rolesFile = path.join(backupDir, 'roles.sql');
     
     try {
-      execSync(`supabase db dump --db-url "${dbUrl}" --role-only -f "${rolesFile}"`, { 
-        stdio: 'pipe', 
-        env: { ...process.env, SUPABASE_ACCESS_TOKEN: accessToken || '' } 
-      });
+      await runWithElapsedTicker(
+        `supabase db dump --db-url "${dbUrl}" --role-only -f "${rolesFile}"`,
+        [],
+        { SUPABASE_ACCESS_TOKEN: accessToken || '' },
+        getT('backup.steps.database.separated.exportingRoles')
+      );
       const stats = await fs.stat(rolesFile);
       const sizeKB = (stats.size / 1024).toFixed(1);
       files.push({ filename: 'roles.sql', sizeKB });
