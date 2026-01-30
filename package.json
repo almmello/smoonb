@@ -1,6 +1,6 @@
 {
   "name": "smoonb",
-  "version": "0.0.86",
+  "version": "0.0.87",
   "description": "Complete Supabase backup and migration tool - EXPERIMENTAL VERSION - USE AT YOUR OWN RISK",
   "preferGlobal": false,
   "preventGlobalInstall": true,
@@ -34,7 +34,7 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.38.0",
+    "@supabase/supabase-js": "^2.93.0",
     "adm-zip": "^0.5.16",
     "chalk": "^4.1.2",
     "commander": "^11.1.0",

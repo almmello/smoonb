@@ -3,8 +3,10 @@ const { t } = require('../../i18n');
 
 /**
  * Função para mostrar mensagens educativas e encerrar elegantemente
+ * @param {string} reason - Motivo do bloqueio
+ * @param {object} [data] - Dados extras (ex: { supabaseCliVersion } para supabase_cli_outdated)
  */
-function showDockerMessagesAndExit(reason) {
+function showDockerMessagesAndExit(reason, data = {}) {
   const getT = global.smoonbI18n?.t || t;
   
   console.log('');
@@ -46,6 +48,24 @@ function showDockerMessagesAndExit(reason) {
       console.log(chalk.blue(`🔗 ${getT('supabase.installLink')}`));
       console.log('');
       console.log(chalk.gray(`💡 ${getT('supabase.requiredComponents')}`));
+      break;
+
+    case 'supabase_cli_outdated':
+      console.log(chalk.red(`❌ ${getT('supabase.cliOutdated', { version: data.supabaseCliVersion || '?', latest: data.supabaseCliLatest || '?' })}`));
+      console.log('');
+      console.log(chalk.yellow(`📋 ${getT('supabase.cliUpdateInstructions')}`));
+      console.log(chalk.cyan(`   ${getT('supabase.cliUpdateCommand')}`));
+      console.log('');
+      console.log(chalk.gray(`💡 ${getT('supabase.cliUpdateLink')}`));
+      break;
+
+    case 'supabase_cli_latest_unknown':
+      console.log(chalk.red(`❌ ${getT('supabase.cliLatestUnknown')}`));
+      console.log('');
+      console.log(chalk.yellow(`📋 ${getT('supabase.cliLatestErrorLabel')}`));
+      console.log(chalk.gray(`   ${data.latestError || getT('supabase.cliLatestErrorUnknown')}`));
+      console.log('');
+      console.log(chalk.gray(`💡 ${getT('supabase.cliUpdateLink')}`));
       break;
   }
 

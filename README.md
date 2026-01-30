@@ -91,6 +91,8 @@ docker ps
 npm install -g supabase
 ```
 
+We recommend **Supabase CLI v2.72 or newer** for new features and bug fixes. To update: [Updating the Supabase CLI](https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli).
+
 ### 3. Supabase Personal Access Token
 You need to obtain a Supabase personal access token to use the Management API:
 

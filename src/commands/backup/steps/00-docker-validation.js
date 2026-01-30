@@ -15,7 +15,7 @@ module.exports = async () => {
   const backupCapability = await canPerformCompleteBackup();
 
   if (!backupCapability.canBackupComplete) {
-    showDockerMessagesAndExit(backupCapability.reason);
+    showDockerMessagesAndExit(backupCapability.reason, backupCapability);
   }
   
   console.log(chalk.green(`✅ ${getT('docker.validation.detected')}`));

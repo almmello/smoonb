@@ -37,12 +37,67 @@ async function detectDockerRunning() {
  */
 async function detectSupabaseCLI() {
   try {
-    // Tentar executar supabase --version
     await execAsync('supabase --version');
     return true;
   } catch {
     return false;
   }
+}
+
+/**
+ * Obtém a versão instalada do Supabase CLI (ex: "2.51.0").
+ * @returns {Promise<string|null>} Semver ou null se não disponível
+ */
+async function getSupabaseCLIVersion() {
+  try {
+    const { stdout } = await execAsync('supabase --version');
+    const match = stdout.match(/(\d+)\.(\d+)\.(\d+)/);
+    return match ? `${match[1]}.${match[2]}.${match[3]}` : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Obtém a versão latest do Supabase CLI no npm.
+ * @returns {Promise<{version: string|null, error: string|null}>} version ou error preenchido
+ */
+async function getSupabaseCLILatestVersion() {
+  try {
+    const res = await fetch('https://registry.npmjs.org/supabase/latest', {
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) {
+      return { version: null, error: `HTTP ${res.status} ${res.statusText}` };
+    }
+    const data = await res.json();
+    const version = data.version || null;
+    if (!version) {
+      return { version: null, error: 'Resposta do registro npm sem campo version' };
+    }
+    return { version, error: null };
+  } catch (err) {
+    const message = err && typeof err.message === 'string' ? err.message : String(err);
+    return { version: null, error: message };
+  }
+}
+
+/**
+ * Compara duas versões semver (ex: "2.51.0", "2.72.7").
+ * @param {string} a
+ * @param {string} b
+ * @returns {number} -1 se a < b, 0 se a === b, 1 se a > b
+ */
+function compareSemver(a, b) {
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    const va = pa[i] || 0;
+    const vb = pb[i] || 0;
+    if (va < vb) return -1;
+    if (va > vb) return 1;
+  }
+  return 0;
 }
 
 /**
@@ -133,6 +188,27 @@ async function canPerformCompleteBackup() {
       dockerStatus
     };
   }
+
+  const supabaseCliVersion = await getSupabaseCLIVersion();
+  const latestResult = await getSupabaseCLILatestVersion();
+  if (latestResult.error) {
+    return {
+      canBackupComplete: false,
+      reason: 'supabase_cli_latest_unknown',
+      latestError: latestResult.error,
+      supabaseCliVersion: supabaseCliVersion || null,
+      dockerStatus
+    };
+  }
+  if (supabaseCliVersion && latestResult.version && compareSemver(supabaseCliVersion, latestResult.version) < 0) {
+    return {
+      canBackupComplete: false,
+      reason: 'supabase_cli_outdated',
+      supabaseCliVersion,
+      supabaseCliLatest: latestResult.version,
+      dockerStatus
+    };
+  }
   
   return {
     canBackupComplete: true,
@@ -147,5 +223,8 @@ module.exports = {
   detectDockerDependencies,
   detectDockerDesktop,
   getDockerVersion,
+  getSupabaseCLIVersion,
+  getSupabaseCLILatestVersion,
+  compareSemver,
   canPerformCompleteBackup
 };
