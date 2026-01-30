@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const { spawn } = require('child_process');
 const { t } = require('../../../i18n');
+const { getPostgresServerMajor } = require('../utils');
 
 function formatBytes(bytes) {
   if (bytes === 0) return '0 B';
@@ -32,10 +33,11 @@ async function exists(filePath) {
 }
 
 /**
- * Etapa 1: Backup Database via pg_dumpall Docker (idêntico ao Dashboard)
+ * Etapa 2: Backup Database via pg_dumpall Docker (idêntico ao Dashboard)
  * Com feedback de progresso: tamanho do arquivo, velocidade e tempo decorrido.
+ * Usa context.postgresMajor (definido no step Postgres version) ou detecta se não definido.
  */
-module.exports = async ({ databaseUrl, backupDir }) => {
+module.exports = async ({ databaseUrl, backupDir, postgresMajor: contextMajor }) => {
   try {
     const getT = global.smoonbI18n?.t || t;
     console.log(chalk.white(`   - ${getT('backup.steps.database.creating')}`));
@@ -48,6 +50,18 @@ module.exports = async ({ databaseUrl, backupDir }) => {
     }
 
     const [, username, password, host, port] = urlMatch;
+
+    let postgresMajor = contextMajor;
+    if (postgresMajor == null && databaseUrl) {
+      try {
+        postgresMajor = await getPostgresServerMajor(databaseUrl);
+      } catch {
+        postgresMajor = 17;
+      }
+    }
+    if (postgresMajor == null) postgresMajor = 17;
+    const postgresImage = `postgres:${postgresMajor}`;
+    console.log(chalk.white(`   - ${getT('backup.steps.database.postgresImage', { image: postgresImage, major: postgresMajor })}`));
 
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
@@ -65,7 +79,7 @@ module.exports = async ({ databaseUrl, backupDir }) => {
       'run', '--rm', '--network', 'host',
       '-v', `${backupDirAbs}:/host`,
       '-e', `PGPASSWORD=${password}`,
-      'postgres:17', 'pg_dumpall',
+      postgresImage, 'pg_dumpall',
       '-h', host,
       '-p', port,
       '-U', username,
@@ -124,7 +138,7 @@ module.exports = async ({ databaseUrl, backupDir }) => {
     const gzipArgs = [
       'run', '--rm',
       '-v', `${backupDirAbs}:/host`,
-      'postgres:17', 'gzip', `/host/${fileName}`
+      postgresImage, 'gzip', `/host/${fileName}`
     ];
 
     const gzipStart = Date.now();

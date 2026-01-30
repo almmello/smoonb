@@ -9,18 +9,19 @@ const { saveEnvMap } = require('../../utils/envMap');
 const { mapEnvVariablesInteractively, askComponentsFlags } = require('../../interactive/envMapper');
 const { confirm } = require('../../utils/prompt');
 
-// Importar todas as etapas
+// Importar todas as etapas (arquivos 00..11)
 const step00DockerValidation = require('./steps/00-docker-validation');
-const step01Database = require('./steps/01-database');
-const step02DatabaseSeparated = require('./steps/02-database-separated');
-const step03DatabaseSettings = require('./steps/03-database-settings');
-const step04AuthSettings = require('./steps/04-auth-settings');
-const step05RealtimeSettings = require('./steps/05-realtime-settings');
-const step06Storage = require('./steps/06-storage');
-const step07CustomRoles = require('./steps/07-custom-roles');
-const step08EdgeFunctions = require('./steps/08-edge-functions');
-const step09SupabaseTemp = require('./steps/09-supabase-temp');
-const step10Migrations = require('./steps/10-migrations');
+const step01PostgresVersion = require('./steps/01-postgres-version');
+const step02Database = require('./steps/02-database');
+const step03DatabaseSeparated = require('./steps/03-database-separated');
+const step04DatabaseSettings = require('./steps/04-database-settings');
+const step05AuthSettings = require('./steps/05-auth-settings');
+const step06RealtimeSettings = require('./steps/06-realtime-settings');
+const step07Storage = require('./steps/07-storage');
+const step08CustomRoles = require('./steps/08-custom-roles');
+const step09EdgeFunctions = require('./steps/09-edge-functions');
+const step10SupabaseTemp = require('./steps/10-supabase-temp');
+const step11Migrations = require('./steps/11-migrations');
 
 // Exportar FUNÇÃO em vez de objeto Command
 module.exports = async (options) => {
@@ -218,21 +219,26 @@ module.exports = async (options) => {
     console.log(chalk.white(`🐳 ${getT('backup.start.docker')}`));
 
     // Contar etapas totais para numeração
-    // Etapas fixas: Database, Database Separado, Database Settings, Custom Roles (4)
+    // Etapas fixas: Postgres version, Database, Database Separado, Database Settings, Custom Roles (5)
     // Etapas condicionais: Auth, Realtime, Storage, Functions, Temp, Migrations
     let stepNumber = 0;
-    const totalSteps = 4 + (flags?.includeAuth ? 1 : 0) + (flags?.includeRealtime ? 1 : 0) + (flags?.includeStorage ? 1 : 0) + (flags?.includeFunctions ? 1 : 0) + (flags?.includeTemp ? 1 : 0) + (flags?.includeMigrations ? 1 : 0);
+    const totalSteps = 5 + (flags?.includeAuth ? 1 : 0) + (flags?.includeRealtime ? 1 : 0) + (flags?.includeStorage ? 1 : 0) + (flags?.includeFunctions ? 1 : 0) + (flags?.includeTemp ? 1 : 0) + (flags?.includeMigrations ? 1 : 0);
 
-    // 1. Backup Database via pg_dumpall Docker
+    // 1. Postgres version (detect + optional override)
+    stepNumber++;
+    console.log(chalk.blue(`\n📊 ${stepNumber}/${totalSteps} - ${getT('backup.steps.postgresVersion.title')}`));
+    await step01PostgresVersion(context);
+
+    // 2. Backup Database via pg_dumpall Docker
     stepNumber++;
     console.log(chalk.blue(`\n📊 ${stepNumber}/${totalSteps} - ${getT('backup.steps.database.title')}`));
-    const databaseResult = await step01Database(context);
+    const databaseResult = await step02Database(context);
     manifest.components.database = databaseResult;
 
-    // 2. Backup Database Separado
+    // 3. Backup Database Separado
     stepNumber++;
     console.log(chalk.blue(`\n📊 ${stepNumber}/${totalSteps} - ${getT('backup.steps.database.separated.title')}`));
-    const dbSeparatedResult = await step02DatabaseSeparated(context);
+    const dbSeparatedResult = await step03DatabaseSeparated(context);
     manifest.components.database_separated = {
       success: dbSeparatedResult.success,
       method: 'supabase-cli',
@@ -240,63 +246,63 @@ module.exports = async (options) => {
       total_size_kb: dbSeparatedResult.totalSizeKB || '0.0'
     };
 
-    // 3. Backup Database Settings
+    // 4. Backup Database Settings
     stepNumber++;
     console.log(chalk.blue(`\n🔧 ${stepNumber}/${totalSteps} - ${getT('backup.steps.databaseSettings.title')}`));
-    const databaseSettingsResult = await step03DatabaseSettings(context);
+    const databaseSettingsResult = await step04DatabaseSettings(context);
     manifest.components.database_settings = databaseSettingsResult;
 
-    // 4. Backup Auth Settings
+    // 5. Backup Auth Settings
     if (flags?.includeAuth) {
       stepNumber++;
       console.log(chalk.blue(`\n🔐 ${stepNumber}/${totalSteps} - ${getT('backup.steps.auth.title')}`));
-      const authResult = await step04AuthSettings(context);
+      const authResult = await step05AuthSettings(context);
       manifest.components.auth_settings = authResult;
     }
 
-    // 5. Backup Realtime Settings
+    // 6. Backup Realtime Settings
     if (flags?.includeRealtime) {
       stepNumber++;
       console.log(chalk.blue(`\n🔄 ${stepNumber}/${totalSteps} - ${getT('backup.steps.realtime.title')}`));
-      const realtimeResult = await step05RealtimeSettings(context);
+      const realtimeResult = await step06RealtimeSettings(context);
       manifest.components.realtime = realtimeResult;
     }
 
-    // 6. Backup Storage
+    // 7. Backup Storage
     if (flags?.includeStorage) {
       stepNumber++;
       console.log(chalk.blue(`\n📦 ${stepNumber}/${totalSteps} - ${getT('backup.steps.storage.title')}`));
-      const storageResult = await step06Storage(context);
+      const storageResult = await step07Storage(context);
       manifest.components.storage = storageResult;
     }
 
-    // 7. Backup Custom Roles
+    // 8. Backup Custom Roles
     stepNumber++;
     console.log(chalk.blue(`\n👥 ${stepNumber}/${totalSteps} - ${getT('backup.steps.roles.title')}`));
-    const rolesResult = await step07CustomRoles(context);
+    const rolesResult = await step08CustomRoles(context);
     manifest.components.custom_roles = rolesResult;
 
-    // 8. Backup Edge Functions
+    // 9. Backup Edge Functions
     if (flags?.includeFunctions) {
       stepNumber++;
       console.log(chalk.blue(`\n⚡ ${stepNumber}/${totalSteps} - ${getT('backup.steps.functions.title')}`));
-      const functionsResult = await step08EdgeFunctions(context);
+      const functionsResult = await step09EdgeFunctions(context);
       manifest.components.edge_functions = functionsResult;
     }
 
-    // 9. Backup Supabase .temp
+    // 10. Backup Supabase .temp
     if (flags?.includeTemp) {
       stepNumber++;
       console.log(chalk.blue(`\n📁 ${stepNumber}/${totalSteps} - ${getT('backup.steps.temp.title')}`));
-      const supabaseTempResult = await step09SupabaseTemp(context);
+      const supabaseTempResult = await step10SupabaseTemp(context);
       manifest.components.supabase_temp = supabaseTempResult;
     }
 
-    // 10. Backup Migrations
+    // 11. Backup Migrations
     if (flags?.includeMigrations) {
       stepNumber++;
       console.log(chalk.blue(`\n📋 ${stepNumber}/${totalSteps} - ${getT('backup.steps.migrations.title')}`));
-      const migrationsResult = await step10Migrations(context);
+      const migrationsResult = await step11Migrations(context);
       manifest.components.migrations = migrationsResult;
     }
 
