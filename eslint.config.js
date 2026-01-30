@@ -22,7 +22,11 @@ module.exports = [
         URL: 'readonly',
         Buffer: 'readonly',
         global: 'readonly',
-        __dirname: 'readonly'
+        __dirname: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly'
       }
     },
     rules: {
