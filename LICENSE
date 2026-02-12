@@ -1,0 +1,64 @@
+smoonb — Commercial License Notice + MIT License (Source Code)
+
+1) Commercial use (in effect)
+
+Supa Moonbase (smoonb) is a commercial product operated by Goalmoon Tecnologia LTDA.
+
+To use the smoonb CLI operationally, you must have:
+- An active license key (generated in the desktop app at https://www.smoonb.com)
+- An active subscription after any trial period ends (if applicable)
+
+Pricing and plans: https://www.smoonb.com/#price
+Terms of Use: https://www.smoonb.com/terms
+Privacy Policy: https://www.smoonb.com/privacy
+
+This Commercial Use Notice does not replace the Terms of Use and Privacy Policy above, which govern the use of smoonb, including licensing, subscriptions, usage limits, enforcement, and support.
+
+2) Source code license (MIT)
+
+The smoonb source code is made available under the MIT License below.
+
+Important: The MIT License applies to the source code only. It does not grant you the right to use the product without a valid license key and an active subscription after the trial period ends (if applicable), as described in the Terms of Use.
+
+3) Disclaimers and limitation of liability
+
+smoonb is provided "AS IS" and "AS AVAILABLE", without warranties of any kind, to the maximum extent permitted by law.
+
+Backup and restore operations are inherently risky and depend on your environment (PostgreSQL, Docker, Supabase CLI, credentials, network, permissions, storage, and your configuration). You are solely responsible for verifying your configuration (including avoiding mixing variables from different projects), validating outputs, and testing restores before relying on results in production.
+
+To the maximum extent permitted by law, Goalmoon Tecnologia LTDA, its contributors, and licensors will not be liable for any indirect, incidental, special, consequential, exemplary, or punitive damages (including loss of data, interruption of business, or lost profits) arising from or related to your use of smoonb or the results it produces.
+
+Nothing in this notice limits liability where such limits are prohibited by law, including (as applicable) willful misconduct or gross negligence. The complete legal terms are in https://www.smoonb.com/terms.
+
+4) Company
+
+Goalmoon Tecnologia LTDA
+Website: https://www.smoonb.com
+Copyright © 2026 GoalMoon. All rights reserved.
+
+
+============================================================
+MIT License (Source Code)
+============================================================
+
+MIT License
+
+Copyright (c) 2026 Goalmoon Tecnologia LTDA
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
