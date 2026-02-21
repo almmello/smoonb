@@ -51,7 +51,7 @@ module.exports = async (options) => {
     const licenseResult = await step00License({ envPath, command: 'backup' });
 
     // Executar validação Docker
-    await step01DockerValidation();
+    await step01DockerValidation({ skipSupabaseVersionCheck: !!(options && options.skipSupabaseVersionCheck) });
 
     // Consentimento para leitura e escrita do .env.local
     console.log(chalk.yellow(`\n⚠️  ${getT('consent.title')}`));

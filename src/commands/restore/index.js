@@ -25,7 +25,7 @@ const step07DatabaseSettings = require('./steps/07-database-settings');
 const step08RealtimeSettings = require('./steps/08-realtime-settings');
 const { sendTelemetry } = require('../../telemetry');
 
-module.exports = async () => {
+module.exports = async (options = {}) => {
   showBetaBanner();
   const restoreStartTime = Date.now();
   let telemetryEnabled = (process.env.SMOONB_TELEMETRY_ENABLED || 'true') !== 'false';
@@ -49,7 +49,7 @@ module.exports = async () => {
     await step00License({ envPath: envPathForLicense, command: 'restore' });
 
     // Executar validação Docker
-    await step01DockerValidation();
+    await step01DockerValidation({ skipSupabaseVersionCheck: !!(options && options.skipSupabaseVersionCheck) });
 
     // Consentimento para leitura e escrita do .env.local
     ui.warn(`\n⚠️  ${getT('consent.title')}`);

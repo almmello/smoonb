@@ -79,12 +79,19 @@ program
     const getT = global.smoonbI18n?.t || t;
     return getT('help.commands.backupDesc');
   })
+  .option('--skip-supabase-version-check', () => {
+    const getT = global.smoonbI18n?.t || t;
+    return getT('help.commands.skipSupabaseVersionCheck');
+  })
   .addHelpText('after', () => {
     const getT = global.smoonbI18n?.t || t;
     return `
 ${chalk.yellow.bold(getT('help.commands.backupExamples'))}
   ${chalk.white(getT('help.commands.backupExample1'))}
   ${chalk.white(getT('help.commands.backupExample1Desc'))}
+
+  ${chalk.white(getT('help.commands.backupExample3'))}
+  ${chalk.white(getT('help.commands.backupExample3Desc'))}
 
 ${chalk.yellow.bold(getT('help.commands.backupFlow'))}
   ${getT('help.commands.backupFlow1')}
@@ -120,12 +127,19 @@ program
     const getT = global.smoonbI18n?.t || t;
     return getT('help.commands.restoreDesc');
   })
+  .option('--skip-supabase-version-check', () => {
+    const getT = global.smoonbI18n?.t || t;
+    return getT('help.commands.skipSupabaseVersionCheck');
+  })
   .addHelpText('after', () => {
     const getT = global.smoonbI18n?.t || t;
     return `
 ${chalk.yellow.bold(getT('help.commands.restoreExamples'))}
   ${chalk.white(getT('help.commands.restoreExample1'))}
   ${chalk.white(getT('help.commands.restoreExample1Desc'))}
+
+  ${chalk.white(getT('help.commands.restoreExample4'))}
+  ${chalk.white(getT('help.commands.restoreExample4Desc'))}
 
 ${chalk.yellow.bold(getT('help.commands.restoreFlow'))}
   ${getT('help.commands.restoreFlow1')}
@@ -144,7 +158,7 @@ ${chalk.yellow.bold(getT('help.commands.restoreFormats'))}
   ${getT('help.commands.restoreFormats2')}
 `;
   })
-  .action(() => commands.restore({}));
+  .action((options) => commands.restore(options));
 
 program
   .command('import')

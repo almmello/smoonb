@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.5] - 2026-02-21
+
+### Added
+
+- **Flexible Supabase CLI version check** – Instead of requiring the exact latest version, smoonb now accepts any CLI version that is at most 1 minor behind the latest (same major). The minimum accepted version is computed as `major.(minor_latest - 1).0` at runtime from the npm registry. Special case: if `minor_latest === 0`, only the same major.minor is accepted.
+- **`--skip-supabase-version-check` flag** – New opt-in flag for both `backup` and `restore` commands. When set, the Supabase CLI version check is skipped entirely and a warning is displayed. Useful when package managers (e.g. Scoop on Windows) lag behind on updates and the user wants to proceed at their own risk.
+
+### Changed
+
+- Error message for outdated Supabase CLI now shows the computed minimum accepted version (`minVersion`) and the current latest, instead of only the latest.
+- README (EN and PT-BR): updated Supabase CLI prerequisites section with the new version policy, added examples with `--skip-supabase-version-check`, updated commands table and troubleshooting section.
+- i18n strings (`en.json`, `pt-BR.json`): removed specific version number references in favour of evergreen language ("always use the latest version").
+
+---
+
 ## [1.0.4] - 2025-01-29
 
 ### Changed
@@ -34,4 +49,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+[1.0.5]: https://github.com/almmello/smoonb/releases/tag/v1.0.5
 [1.0.4]: https://github.com/almmello/smoonb/releases/tag/v1.0.4

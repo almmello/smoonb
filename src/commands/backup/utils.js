@@ -83,7 +83,7 @@ function showDockerMessagesAndExit(reason, data = {}) {
       break;
 
     case 'supabase_cli_outdated':
-      console.log(chalk.red(`❌ ${getT('supabase.cliOutdated', { version: data.supabaseCliVersion || '?', latest: data.supabaseCliLatest || '?' })}`));
+      console.log(chalk.red(`❌ ${getT('supabase.cliOutdated', { version: data.supabaseCliVersion || '?', minVersion: data.supabaseCliMinVersion || '?', latest: data.supabaseCliLatest || '?' })}`));
       console.log('');
       console.log(chalk.yellow(`📋 ${getT('supabase.cliUpdateInstructions')}`));
       console.log(chalk.cyan(`   ${getT('supabase.cliUpdateCommandExamples')}`));

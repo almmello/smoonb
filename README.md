@@ -92,7 +92,11 @@ docker ps
 npm install -g supabase
 ```
 
-We recommend **Supabase CLI v2.72 or newer** for new features and bug fixes. To update: [Updating the Supabase CLI](https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli).
+**Version policy:** smoonb accepts any Supabase CLI version that is **at most 1 minor behind the latest** (same major). We recommend always using the latest version. Versions that are too old are blocked with an error message.
+
+If your package manager (e.g. **Scoop** on Windows) lags behind on updates and you want to proceed anyway, use the `--skip-supabase-version-check` flag (see usage section below).
+
+To update the Supabase CLI: [Updating the Supabase CLI](https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli).
 
 ### 3. Supabase Personal Access Token
 You need to obtain a Supabase personal access token to use the Management API:
@@ -190,6 +194,17 @@ Language is detected automatically in the following order of precedence:
 npx smoonb backup
 ```
 
+**Available options:**
+
+| Flag | Description |
+|------|-------------|
+| `--skip-supabase-version-check` | Skips the Supabase CLI version check. Use when your package manager (e.g. Scoop) lags behind on updates. A warning is shown and the user assumes the risk. |
+
+**Example with flag:**
+```bash
+npx smoonb backup --skip-supabase-version-check
+```
+
 **Interactive backup flow:**
 
 1. **Terms of use** - Displays and requests acceptance of terms
@@ -250,6 +265,17 @@ backups/backup-2025-10-31-09-37-54/
 **Restore existing backup:**
 ```bash
 npx smoonb restore
+```
+
+**Available options:**
+
+| Flag | Description |
+|------|-------------|
+| `--skip-supabase-version-check` | Skips the Supabase CLI version check. Use when your package manager (e.g. Scoop) lags behind on updates. A warning is shown and the user assumes the risk. |
+
+**Example with flag:**
+```bash
+npx smoonb restore --skip-supabase-version-check
 ```
 
 **Interactive restore flow:**
@@ -345,7 +371,9 @@ After running `import`, run `restore` to choose the imported backup from the lis
 | Command | Description |
 |---------|-------------|
 | `npx smoonb backup` | Full interactive backup using Docker |
+| `npx smoonb backup --skip-supabase-version-check` | Backup skipping the Supabase CLI version check |
 | `npx smoonb restore` | Interactive restoration using psql (Docker) |
+| `npx smoonb restore --skip-supabase-version-check` | Restore skipping the Supabase CLI version check |
 | `npx smoonb import --file <path> [--storage <path>]` | Import .backup.gz file and optionally .storage.zip from Supabase Dashboard |
 
 ## 🏗️ Technical Architecture
@@ -518,6 +546,28 @@ If not, start Docker Desktop (Windows/macOS) or run `sudo systemctl start docker
 ```bash
 npm install -g supabase
 ```
+
+### Supabase CLI outdated (below minimum accepted version)
+
+smoonb accepts versions up to **1 minor behind the latest**. If your installed version is below that threshold, you will see a message like:
+
+```
+❌ Supabase CLI X.Y.Z is below the minimum accepted version (X.W.0). Latest: X.V.Z. Update to at least version X.W.0.
+```
+
+**Option 1 — Update the Supabase CLI:**
+```bash
+npm install -g supabase@latest   # global install
+npm install supabase@latest       # local/project install
+```
+
+**Option 2 — Skip the check (temporary, user assumes the risk):**
+```bash
+npx smoonb backup --skip-supabase-version-check
+npx smoonb restore --skip-supabase-version-check
+```
+
+> **Note for Scoop users (Windows):** the Scoop repository may take a few days to update after a release. Use `--skip-supabase-version-check` until Scoop ships the updated version.
 
 ### Invalid or missing Personal Access Token
 

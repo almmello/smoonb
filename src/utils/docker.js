@@ -101,6 +101,21 @@ function compareSemver(a, b) {
 }
 
 /**
+ * Calcula a versão mínima aceita: no máximo 1 minor atrás da latest.
+ * Ex: latest "2.76.12" → "2.75.0"; latest "3.0.5" → "3.0.0"
+ * @param {string} latestVersion
+ * @returns {string|null}
+ */
+function getMinAcceptableVersion(latestVersion) {
+  if (!latestVersion) return null;
+  const parts = latestVersion.split('.').map(Number);
+  const major = parts[0] || 0;
+  const minor = parts[1] || 0;
+  const minMinor = Math.max(0, minor - 1);
+  return `${major}.${minMinor}.0`;
+}
+
+/**
  * Detecta Docker Desktop completo com versão
  * @returns {Promise<{installed: boolean, running: boolean, version: string}>}
  */
@@ -159,9 +174,11 @@ async function detectDockerDependencies() {
 
 /**
  * Detecta se é possível fazer backup completo via Docker
+ * @param {object} [opts]
+ * @param {boolean} [opts.skipSupabaseVersionCheck=false] - Pular checagem de versão do Supabase CLI
  * @returns {Promise<{canBackupComplete: boolean, reason?: string, dockerStatus: any}>}
  */
-async function canPerformCompleteBackup() {
+async function canPerformCompleteBackup({ skipSupabaseVersionCheck = false } = {}) {
   const dockerStatus = await detectDockerDesktop();
   
   if (!dockerStatus.installed) {
@@ -189,6 +206,14 @@ async function canPerformCompleteBackup() {
     };
   }
 
+  if (skipSupabaseVersionCheck) {
+    return {
+      canBackupComplete: true,
+      supabaseVersionCheckSkipped: true,
+      dockerStatus
+    };
+  }
+
   const supabaseCliVersion = await getSupabaseCLIVersion();
   const latestResult = await getSupabaseCLILatestVersion();
   if (latestResult.error) {
@@ -200,12 +225,15 @@ async function canPerformCompleteBackup() {
       dockerStatus
     };
   }
-  if (supabaseCliVersion && latestResult.version && compareSemver(supabaseCliVersion, latestResult.version) < 0) {
+
+  const minVersion = getMinAcceptableVersion(latestResult.version);
+  if (supabaseCliVersion && minVersion && compareSemver(supabaseCliVersion, minVersion) < 0) {
     return {
       canBackupComplete: false,
       reason: 'supabase_cli_outdated',
       supabaseCliVersion,
       supabaseCliLatest: latestResult.version,
+      supabaseCliMinVersion: minVersion,
       dockerStatus
     };
   }
@@ -226,5 +254,6 @@ module.exports = {
   getSupabaseCLIVersion,
   getSupabaseCLILatestVersion,
   compareSemver,
+  getMinAcceptableVersion,
   canPerformCompleteBackup
 };
