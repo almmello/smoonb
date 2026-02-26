@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.6] - 2026-02-21
+
+### Changed
+
+- **Storage backup (step 6) — robustness and feedback:**
+  - Added `withTimeout` helper: each Storage `.list()` call times out after 30s; each file `.download()` times out after 2 minutes.
+  - Added `withRetry` helper: up to 3 attempts with exponential backoff (2s → 4s → 8s) on both listing and download failures.
+  - Inline progress during file listing: live `\r`-updated line shows the current folder being scanned and the running file count (`→ Scanning bucket/folder (N found)`). No more silent hangs.
+  - After listing completes, a summary line shows the total files found.
+  - Retry warnings show attempt number, failure reason and next retry delay.
+  - Download failures after all retries are counted as `filesSkipped` and reported in the bucket summary.
+  - Bucket summary now distinguishes between full success and partial success with skips.
+
+---
+
 ## [1.0.5] - 2026-02-21
 
 ### Added
@@ -49,5 +64,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+[1.0.6]: https://github.com/almmello/smoonb/releases/tag/v1.0.6
 [1.0.5]: https://github.com/almmello/smoonb/releases/tag/v1.0.5
 [1.0.4]: https://github.com/almmello/smoonb/releases/tag/v1.0.4
