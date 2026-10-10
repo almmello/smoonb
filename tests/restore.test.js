@@ -77,7 +77,7 @@ test('nonempty unsupported managed data blocks restoration instead of being disc
   assert.throws(() => buildRestore(readDump(p)), /dedicated migration/);
 });
 test('Auth configuration is applied, re-read and verified; secrets never appear in the result', async () => {
-  let state = { smtp_pass: null, site_url: 'old' };
+  let state = { site_url: 'old' };
   let patches = 0;
   const request = async (_target, _endpoint, options = {}) => {
     if (options.method === 'PATCH') {
@@ -89,8 +89,8 @@ test('Auth configuration is applied, re-read and verified; secrets never appear 
   const r = await applyConfig(
     target,
     'config/auth',
-    { smtp_pass: 'test-secret', site_url: 'new' },
-    ['smtp_pass', 'site_url'],
+    { site_url: 'new' },
+    ['site_url'],
     request,
   );
   assert.equal(patches, 1);
@@ -109,7 +109,7 @@ test('Auth mismatch after accepted PATCH fails verification', async () => {
     /verification failed/,
   );
 });
-test('non-writable divergent fields and masked secrets fail before PATCH', async () => {
+test('non-writable divergent fields and SMTP readback fail before PATCH', async () => {
   await assert.rejects(
     applyConfig(target, 'config/auth', { unknown: true }, [], async () => ({})),
     /manual migration/,
@@ -122,7 +122,7 @@ test('non-writable divergent fields and masked secrets fail before PATCH', async
       ['smtp_pass'],
       async () => ({}),
     ),
-    /Masked/,
+    /supplied separately/,
   );
 });
 test('Management API failure reports status without leaking response or credentials', async () => {
@@ -235,6 +235,7 @@ test('restore runner persists partial failure and never executes later steps', a
           reached = true;
         },
       },
+      { prepareAuthConfig: async () => ({ desired: {}, writeOnly: {} }) },
     ),
     /did not pass verification/,
   );

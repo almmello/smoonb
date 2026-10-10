@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.9] - 2026-10-10
+
+### Fixed
+
+- Treat SMTP passwords as write-only credentials. Never replay the protected SMTP value returned by the Management API from a legacy backup as the provider password.
+- Ask for the real SMTP password with hidden input before restoring any selected components. Fail before remote mutations if it is missing. Keep the entered password in memory only.
+- Verify readable Auth settings independently from password submission. Continue after the API accepts the supplied password, but report `applied_with_unverified_secrets` and require an authentication email test instead of claiming password or email-delivery verification.
+- Omit the protected SMTP value from new Auth snapshots and explicitly record that the provider password is required during restore. Existing backups remain usable.
+
+### Recovery from 1.0.8
+
+- If restore stopped at `Configuration verification failed: smtp_pass`, inspect its `report.json`. When Database and Edge Functions are already verified, run restore with those two components disabled and select Auth, Storage, Database Settings and Realtime as needed. Supply the real provider SMTP password when prompted; no new backup or destination project is required for this specific failure.
+
+### Tests
+
+- Cover legacy/new snapshots, hidden input, missing-password preflight, protected-value rejection, HTTP failures, readable-setting mismatches, partial verification reporting and continuation without reloading the database.
+
 ## [1.0.8] - 2026-10-10
 
 ### Fixed

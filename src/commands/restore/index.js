@@ -188,7 +188,10 @@ module.exports = async (options = {}) => {
     }
 
     if (restoreResults.authSettings) {
-      ui.success(`🔐 ${getT('restore.index.authSettingsRestored')}`);
+      if (restoreResults.authSettings.verified)
+        ui.success(`🔐 ${getT('restore.index.authSettingsRestored')}`);
+      else
+        ui.warn(getT('restore.smtp.accepted'));
     }
 
     if (restoreResults.storage) {

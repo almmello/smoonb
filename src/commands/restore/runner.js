@@ -3,6 +3,7 @@ const path = require('path');
 const { t } = require('../../i18n');
 const { buildRestore, readDump } = require('./dump');
 const { storagePlan } = require('./steps/06-storage');
+const { prepareAuth } = require('./auth');
 const steps = {
   database: require('./steps/03-database'),
   edgeFunctions: require('./steps/04-edge-functions'),
@@ -21,6 +22,7 @@ async function runRestore(
     remapUrls = true,
   },
   implementations = steps,
+  { prepareAuthConfig = prepareAuth } = {},
 ) {
   if (selectedBackup.projectId === targetProject.targetProjectId)
     throw new Error('Restore requires a different, empty destination project');
@@ -84,24 +86,45 @@ async function runRestore(
       buildRestore(readDump(context.backupFilePath), context);
     if (components.storage)
       storagePlan(context.backupPath, context.backupFilePath);
+    // Resolve write-only credentials before restoring the database or any service.
+    if (components.authSettings)
+      context.authConfig = await prepareAuthConfig(context);
     for (const [name, step] of Object.entries(implementations)) {
       if (!components[name]) continue;
       current = name;
       report.results[name] = { success: false, status: 'running' };
       save();
       const labels = {
-        database: 'restoringDatabase', edgeFunctions: 'restoringEdgeFunctions',
-        authSettings: 'restoringAuthSettings', storage: 'restoringStorageBuckets',
-        databaseSettings: 'restoringDatabaseSettings', realtimeSettings: 'restoringRealtimeSettings',
+        database: 'restoringDatabase',
+        edgeFunctions: 'restoringEdgeFunctions',
+        authSettings: 'restoringAuthSettings',
+        storage: 'restoringStorageBuckets',
+        databaseSettings: 'restoringDatabaseSettings',
+        realtimeSettings: 'restoringRealtimeSettings',
       };
       console.log((global.smoonbI18n?.t || t)(`restore.index.${labels[name]}`));
       const result = await step(context);
-      if (!result?.success || !result?.verified)
+      const acceptedSmtp =
+        name === 'authSettings' &&
+        result?.configuration_readback_verified === true &&
+        result?.email_delivery_verified === false &&
+        result?.write_only_fields_accepted?.length === 1 &&
+        result.write_only_fields_accepted[0] === 'smtp_pass';
+      if (!result?.success || (!result?.verified && !acceptedSmtp))
         throw new Error(`Component ${name} did not pass verification`);
-      report.results[name] = { ...result, status: 'verified' };
+      report.results[name] = {
+        ...result,
+        status: result.verified
+          ? 'verified'
+          : 'applied_with_unverified_secrets',
+      };
       save();
+      if (acceptedSmtp)
+        console.log((global.smoonbI18n?.t || t)('restore.smtp.accepted'));
     }
-    report.status = 'verified';
+    report.status = Object.values(report.results).every((r) => r.verified)
+      ? 'verified'
+      : 'applied_with_unverified_secrets';
     report.completed_at = new Date().toISOString();
     save();
     return report.results;

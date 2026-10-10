@@ -18,6 +18,12 @@
   "prompt.confirmYes": "(S/n)",
   "prompt.confirmNo": "(s/N)",
   "prompt.cancelled": "Operação cancelada.",
+  "backup.smtp.passwordNotExported": "⚠️ O Supabase não exporta a senha SMTP. Guarde-a no seu gerenciador de senhas: ela será solicitada ao restaurar Auth. Não é necessário refazer o backup.",
+  "restore.smtp.explanation": "O backup contém as configurações SMTP, mas o Supabase não permite recuperar a senha. Informe a senha do provedor de e-mail (ou a chave usada como senha SMTP). Ela será enviada somente ao Supabase de destino e não será gravada pelo smoonb.",
+  "restore.smtp.password": "Senha SMTP do provedor de e-mail:",
+  "restore.smtp.required": "Informe a senha real do provedor, não o valor protegido de auth-settings.json. Use Ctrl+C para cancelar antes de restaurar os componentes.",
+  "restore.smtp.interactiveRequired": "A restauração de Auth precisa da senha SMTP. Execute em um terminal interativo para informá-la de forma oculta antes de restaurar os componentes.",
+  "restore.smtp.accepted": "⚠️ Auth: configurações conferidas; senha SMTP aceita pela API. O Supabase não permite conferir a senha por leitura. Teste o envio de e-mail de autenticação antes de usar o projeto.",
 
   "error.generic": "Algo inesperado aconteceu.",
   "error.pathNotFound": "Caminho não encontrado: {path}",

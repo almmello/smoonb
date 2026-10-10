@@ -18,6 +18,12 @@
   "prompt.confirmYes": "(Y/n)",
   "prompt.confirmNo": "(y/N)",
   "prompt.cancelled": "Operation cancelled.",
+  "backup.smtp.passwordNotExported": "⚠️ Supabase does not export the SMTP password. Keep it in your password manager: restoring Auth will require it. You do not need to create another backup.",
+  "restore.smtp.explanation": "The backup contains SMTP settings, but Supabase does not let you retrieve the password. Enter your email provider password (or the key used as the SMTP password). It will be sent only to the destination Supabase project and will not be saved by smoonb.",
+  "restore.smtp.password": "Email provider SMTP password:",
+  "restore.smtp.required": "Enter the real provider password, not the protected value in auth-settings.json. Use Ctrl+C to cancel before restoring any components.",
+  "restore.smtp.interactiveRequired": "Restoring Auth requires the SMTP password. Run in an interactive terminal to enter it securely before any components are restored.",
+  "restore.smtp.accepted": "⚠️ Auth: settings checked; SMTP password accepted by the API. Supabase does not allow password readback verification. Test an authentication email before using the project.",
 
   "error.generic": "Something went wrong.",
   "error.pathNotFound": "Path not found: {path}",
