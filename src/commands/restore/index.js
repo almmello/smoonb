@@ -12,17 +12,11 @@ const { isPostgresMajorSupported } = require('../backup/utils');
 const step00License = require('../backup/steps/00-license');
 const step01DockerValidation = require('../backup/steps/01-docker-validation');
 
-const SUPABASE_RESTORE_DOC_URL = 'https://supabase.com/docs/guides/platform/migrating-within-supabase/dashboard-restore';
+const { runRestore } = require('./runner');
 
 // Importar todas as etapas
 const step00BackupSelection = require('./steps/00-backup-selection');
 const step01ComponentsSelection = require('./steps/01-components-selection');
-const step03Database = require('./steps/03-database');
-const step04EdgeFunctions = require('./steps/04-edge-functions');
-const step05AuthSettings = require('./steps/05-auth-settings');
-const step06Storage = require('./steps/06-storage');
-const step07DatabaseSettings = require('./steps/07-database-settings');
-const step08RealtimeSettings = require('./steps/08-realtime-settings');
 const { sendTelemetry } = require('../../telemetry');
 
 module.exports = async (options = {}) => {
@@ -176,124 +170,8 @@ module.exports = async (options = {}) => {
       process.exit(0);
     }
 
-    // 5.1 Disclaimer: erros esperados durante restore (destacado)
-    ui.errorBold(`\n⚠️  ${getT('restore.disclaimer.errorsTitle')}\n`);
-    ui.info(`   ${getT('restore.disclaimer.errorsIntro')}`);
-    ui.info(`   ${getT('restore.disclaimer.errorsReason')}`);
-    ui.info('');
-    ui.info(`   ${getT('restore.disclaimer.supabaseDoc')}`);
-    ui.link(`   ${SUPABASE_RESTORE_DOC_URL}`);
-    ui.info('');
-    ui.warn(`   ${getT('restore.disclaimer.waitComplete')}`);
-    ui.warn(`   ${getT('restore.disclaimer.testResult')}`);
-    ui.info('');
-    const acceptErrors = await confirm(getT('restore.disclaimer.acceptProceed'), true);
-    if (!acceptErrors) {
-      ui.warn(`🚫 ${getT('restore.index.restoreCancelled')}`);
-      process.exit(0);
-    }
-
-    // 6. Executar restauração
-    ui.step(`\n🚀 ${getT('restore.index.startingRestore')}`);
-    
-    // Contar etapas totais para numeração dinâmica
-    let stepNumber = 0;
-    const totalSteps = (components.database ? 1 : 0) + 
-                      (components.edgeFunctions ? 1 : 0) + 
-                      (components.authSettings ? 1 : 0) + 
-                      (components.storage ? 1 : 0) + 
-                      (components.databaseSettings ? 1 : 0) + 
-                      (components.realtimeSettings ? 1 : 0);
-    
-    // Armazenar resultados para o resumo final
-    const restoreResults = {};
-    
-    // 6.1 Database (se selecionado)
-    if (components.database) {
-      stepNumber++;
-      ui.step(`\n📊 ${stepNumber}/${totalSteps} - ${getT('restore.index.restoringDatabase')}`);
-      await step03Database({
-        backupFilePath: path.join(selectedBackup.path, selectedBackup.backupFile),
-        targetDatabaseUrl: targetProject.targetDatabaseUrl
-      });
-      restoreResults.database = { success: true };
-    }
-    
-    // 6.2 Edge Functions (se selecionado)
-    if (components.edgeFunctions) {
-      stepNumber++;
-      ui.step(`\n⚡ ${stepNumber}/${totalSteps} - ${getT('restore.index.restoringEdgeFunctions')}`);
-      const edgeFunctionsResult = await step04EdgeFunctions({
-        backupPath: selectedBackup.path,
-        targetProject
-      });
-      restoreResults.edgeFunctions = edgeFunctionsResult || { success: true };
-    }
-    
-    // 6.3 Auth Settings (se selecionado)
-    if (components.authSettings) {
-      stepNumber++;
-      ui.step(`\n🔐 ${stepNumber}/${totalSteps} - ${getT('restore.index.restoringAuthSettings')}`);
-      await step05AuthSettings({
-        backupPath: selectedBackup.path,
-        targetProject
-      });
-      restoreResults.authSettings = { success: true };
-    }
-    
-    // 6.4 Storage Buckets (se selecionado)
-    if (components.storage) {
-      stepNumber++;
-      ui.step(`\n📦 ${stepNumber}/${totalSteps} - ${getT('restore.index.restoringStorageBuckets')}`);
-      const storageResult = await step06Storage({
-        backupPath: selectedBackup.path,
-        targetProject
-      });
-      restoreResults.storage = storageResult || { success: true };
-    }
-    
-    // 6.5 Database Settings (se selecionado)
-    if (components.databaseSettings) {
-      stepNumber++;
-      ui.step(`\n🔧 ${stepNumber}/${totalSteps} - ${getT('restore.index.restoringDatabaseSettings')}`);
-      await step07DatabaseSettings({
-        backupPath: selectedBackup.path,
-        targetProject
-      });
-      restoreResults.databaseSettings = { success: true };
-    }
-    
-    // 6.6 Realtime Settings (se selecionado)
-    if (components.realtimeSettings) {
-      stepNumber++;
-      ui.step(`\n🔄 ${stepNumber}/${totalSteps} - ${getT('restore.index.restoringRealtimeSettings')}`);
-      await step08RealtimeSettings({
-        backupPath: selectedBackup.path,
-        targetProject
-      });
-      restoreResults.realtimeSettings = { success: true };
-    }
-    
-    // report.json de restauração
-    const report = {
-      process: 'restore',
-      created_at: new Date().toISOString(),
-      target_project_id: targetProject.targetProjectId,
-      assets: {
-        env: path.join(processDir, 'env', '.env.local'),
-        env_map: path.join(processDir, 'env', 'env-map.json')
-      },
-      components: components,
-      results: restoreResults,
-      notes: [
-        'supabase/functions limpo antes e depois do deploy (se Edge Functions selecionado)'
-      ]
-    };
-    try {
-      fs.writeFileSync(path.join(processDir, 'report.json'), JSON.stringify(report, null, 2));
-    } catch {
-      // silencioso
-    }
+    const remapUrls = await confirm(getT('restore.verified.remapUrls'), true);
+    const restoreResults = await runRestore({ selectedBackup, components, targetProject, processDir, postgresMajor:parsedMajor, remapUrls });
 
     // Exibir resumo final
     ui.success(`\n🎉 ${getT('restore.index.restoreComplete')}`);

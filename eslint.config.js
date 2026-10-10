@@ -19,6 +19,8 @@ module.exports = [
         process: 'readonly',
         console: 'readonly',
         fetch: 'readonly',
+        Response: 'readonly',
+        AbortSignal: 'readonly',
         URL: 'readonly',
         Buffer: 'readonly',
         global: 'readonly',

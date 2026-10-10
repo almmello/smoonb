@@ -103,7 +103,7 @@ for (const locale of ['en', 'pt-BR']) {
     assert.deepEqual(result.failedFiles, []);
     assert.equal(result.warnings[0].replicaRolePrologue, true);
     assert.deepEqual(result.warnings[0].tables, ['steps', 'after_catalog']);
-    assert.match(output, /ON_ERROR_STOP=1/);
+    assert.match(output, /smoonb restore/);
     assert.match(output, locale === 'en' ? /do not mean the export failed/ : /não significam falha/);
     assert.doesNotMatch(output, /pg_dump: warning:/);
   });

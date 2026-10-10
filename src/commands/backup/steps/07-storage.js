@@ -106,17 +106,12 @@ module.exports = async ({ projectId, accessToken, backupDir, supabaseUrl, supaba
       try {
         console.log(chalk.white(`   - ${getT('backup.steps.storage.processing', { bucketName: bucket.name })}`));
 
-        const objectsResponse = await fetch(`https://api.supabase.com/v1/projects/${projectId}/storage/buckets/${bucket.name}/objects`, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        let objects = [];
-        if (objectsResponse.ok) {
-          objects = await objectsResponse.json();
-        }
+        const { readDump, records } = require('../../restore/dump');
+        const dumpFile = (await fs.readdir(backupDir)).find(f => /\.backup(?:\.gz)?$/.test(f));
+        if (!dumpFile) throw new Error('Database inventory required for Storage metadata');
+        const dump = readDump(path.join(backupDir, dumpFile));
+        const objects = records(dump.tables.find(t => t.schema === 'storage' && t.name === 'objects'))
+          .filter(o => o.bucket_id === bucket.id).map(o => ({ ...o, metadata: JSON.parse(o.metadata || '{}') }));
 
         const bucketInfo = {
           id: bucket.id,

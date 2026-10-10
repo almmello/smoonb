@@ -1,69 +1,87 @@
-const chalk = require('chalk');
-const path = require('path');
 const fs = require('fs');
-const { execSync } = require('child_process');
-const { t } = require('../../../i18n');
-
-/**
- * Etapa 7: Restaurar Database Settings (via SQL)
- */
-module.exports = async ({ backupPath, targetProject }) => {
-  try {
-    const getT = global.smoonbI18n?.t || t;
-    const files = fs.readdirSync(backupPath);
-    const dbSettingsFile = files.find(f => f.startsWith('database-settings-') && f.endsWith('.json'));
-    
-    if (!dbSettingsFile) {
-      console.log(chalk.yellow(`   ⚠️  ${getT('restore.steps.databaseSettings.notFound')}`));
-      return { success: false };
-    }
-    
-    const dbSettingsData = JSON.parse(fs.readFileSync(path.join(backupPath, dbSettingsFile), 'utf8'));
-    const dbSettings = dbSettingsData.database_settings || dbSettingsData;
-    
-    const extensions = dbSettings.extensions || [];
-    
-    if (extensions.length > 0) {
-      console.log(chalk.white(`   - ${getT('restore.steps.databaseSettings.enabling', { count: extensions.length })}`));
-      
-      for (const ext of extensions) {
-        const extName = typeof ext === 'string' ? ext : ext.name;
-        console.log(chalk.white(`     ${getT('restore.steps.databaseSettings.extension', { extName })}`));
-        
-        const sqlCommand = `CREATE EXTENSION IF NOT EXISTS ${extName};`;
-        
-        const urlMatch = targetProject.targetDatabaseUrl.match(/postgresql:\/\/([^@:]+):([^@]+)@(.+)$/);
-        
-        if (!urlMatch) {
-          console.log(chalk.yellow(`     ⚠️  ${getT('restore.steps.databaseSettings.invalidUrl', { extName })}`));
-          continue;
-        }
-        
-        const dockerCmd = [
-          'docker run --rm',
-          '--network host',
-          `-e PGPASSWORD="${encodeURIComponent(urlMatch[2])}"`,
-          'postgres:17 psql',
-          `-d "${targetProject.targetDatabaseUrl}"`,
-          `-c "${sqlCommand}"`
-        ].join(' ');
-        
-        try {
-          execSync(dockerCmd, { stdio: 'pipe', encoding: 'utf8' });
-        } catch {
-          console.log(chalk.yellow(`     ⚠️  ${getT('restore.steps.databaseSettings.extensionExists', { extName })}`));
-        }
-      }
-    }
-    
-    console.log(chalk.green(`   ✅ ${getT('restore.steps.databaseSettings.success')}`));
-    
-    return { success: true, extensions_count: extensions.length };
-    
-  } catch (error) {
-    const getT = global.smoonbI18n?.t || t;
-    console.error(chalk.red(`   ❌ ${getT('restore.steps.databaseSettings.error', { message: error.message })}`));
-    throw error;
+const path = require('path');
+const { runSql, ident, literal } = require('../pg');
+module.exports = async ({ backupPath, targetProject, postgresMajor = 17 }) => {
+  const file = fs
+    .readdirSync(backupPath)
+    .find((f) => f.startsWith('database-settings-') && f.endsWith('.json'));
+  if (!file) throw new Error('Database settings missing from backup');
+  const data = JSON.parse(fs.readFileSync(path.join(backupPath, file), 'utf8'));
+  const settings = data.database_settings || data;
+  const query = async (sql) =>
+    JSON.parse(
+      await runSql(targetProject.targetDatabaseUrl, sql, { postgresMajor }),
+    );
+  const actual = await query(
+    "SELECT json_build_object('settings',(SELECT json_object_agg(name,setting) FROM pg_settings),'roles',(SELECT json_object_agg(rolname,rolconfig) FROM pg_roles),'extensions',(SELECT json_object_agg(extname,extversion) FROM pg_extension));",
+  );
+  const commands = [],
+    pending = [];
+  for (const ext of settings.extensions || []) {
+    if (!actual.extensions[ext.name])
+      commands.push(
+        `CREATE EXTENSION IF NOT EXISTS ${ident(ext.name)} WITH SCHEMA ${ident(ext.schema)};`,
+      );
   }
+  for (const item of settings.postgres_settings || []) {
+    if (actual.settings[item.name] === item.setting) continue;
+    if (!['user', 'superuser'].includes(item.context)) {
+      pending.push(item.name);
+      continue;
+    }
+    const value =
+      item.unit && Number(item.setting) >= 0
+        ? `${Number(item.setting) * (item.unit === '8kB' ? 8 : 1)}${item.unit === '8kB' ? 'kB' : item.unit}`
+        : item.setting;
+    commands.push(
+      `ALTER DATABASE ${ident(new URL(targetProject.targetDatabaseUrl).pathname.slice(1) || 'postgres')} SET ${ident(item.name)} TO ${literal(value)};`,
+    );
+  }
+  for (const role of [
+    ...(settings.role_configurations || []),
+    ...(settings.pgaudit_configurations || []),
+  ]) {
+    for (const config of role.config || []) {
+      if ((actual.roles[role.role] || []).includes(config)) continue;
+      const eq = config.indexOf('=');
+      commands.push(
+        `ALTER ROLE ${ident(role.role)} SET ${ident(config.slice(0, eq))} TO ${literal(config.slice(eq + 1))};`,
+      );
+    }
+  }
+  if (pending.length)
+    throw new Error(
+      `Database platform settings require compatible destination configuration: ${pending.join(', ')}`,
+    );
+  if (commands.length)
+    await runSql(
+      targetProject.targetDatabaseUrl,
+      'BEGIN;\n' + commands.join('\n') + '\nCOMMIT;',
+      { postgresMajor },
+    );
+  const after = await query(
+    "SELECT json_build_object('settings',(SELECT json_object_agg(name,setting) FROM pg_settings),'roles',(SELECT json_object_agg(rolname,rolconfig) FROM pg_roles),'extensions',(SELECT json_object_agg(extname,extversion) FROM pg_extension));",
+  );
+  const differences = (settings.postgres_settings || [])
+    .filter((s) => after.settings[s.name] !== s.setting)
+    .map((s) => s.name);
+  for (const role of settings.role_configurations || [])
+    if (
+      (role.config || []).some(
+        (c) => !(after.roles[role.role] || []).includes(c),
+      )
+    )
+      differences.push(`role:${role.role}`);
+  for (const ext of settings.extensions || [])
+    if (!after.extensions[ext.name]) differences.push(`extension:${ext.name}`);
+  if (differences.length)
+    throw new Error(
+      `Database settings verification failed: ${differences.join(', ')}`,
+    );
+  return {
+    success: true,
+    verified: true,
+    extensions_count: (settings.extensions || []).length,
+    settings_count: (settings.postgres_settings || []).length,
+  };
 };
-

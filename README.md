@@ -296,14 +296,28 @@ npx smoonb restore --skip-supabase-version-check
    - 🔄 Realtime Settings (if available in backup)
 9. **Detailed summary** - Shows selected backup, target project and components
 10. **Final confirmation** - Confirms before starting
-11. **Disclaimer** - Explains that errors during restore are expected; link to [Supabase Dashboard Restore docs](https://supabase.com/docs/guides/platform/migrating-within-supabase/dashboard-restore); you should wait for the process to finish and then test the result before accepting to proceed
+11. **Project URLs** - Confirms whether Supabase URLs in data and files should point to the new project
 12. **Restore execution:**
     - 📊 Database - Restores via `psql` (supports `.backup.gz` and `.backup`)
-    - ⚡ Edge Functions - Copies and deploys to target project
-    - 🔐 Auth Settings - Displays configurations for manual application
-    - 📦 Storage - Restores buckets and files from ZIP (if available) or displays information for manual migration
+    - ⚡ Edge Functions - Deploys from a temporary copy, preserving local sources
+    - 🔐 Auth Settings - Applies via API and verifies the resulting values
+    - 📦 Storage - Restores buckets and ZIP files, preserves metadata and verifies every download
     - 🔧 Database Settings - Restores extensions and settings via SQL
-    - 🔄 Realtime Settings - Displays configurations for manual application
+    - 🔄 Realtime Settings - Applies and verifies the snapshot recorded in the backup
+
+### Verified restoration (1.0.8)
+
+Use a new, empty destination project and Node.js 20 or later. Existing complete 1.0.7 backups can be reused without another capture. Version 1.0.8 uses the complete dump as one snapshot for application structure, Auth data, migration history, buckets and object metadata. Platform schemas and internal migrations remain at the destination's version.
+
+Database loading uses one transaction, stops on errors, suspends triggers only on its connection, compares every restored column and checks foreign keys before commit. Extra destination default grants are cleared before replaying the backup's grants. Failed SQL is never reported as success. Compressed archives and local function sources remain untouched.
+
+Optional URL remapping changes only the project's Supabase hostname, including URLs inside JSON and text files. It does not rename files or replace isolated project IDs. Historical URLs may also change; choose preservation when needed. Signed URLs, custom domains, external integrations and application API keys need separate validation. Destination platform keys are not replaced.
+
+Auth and Realtime are applied through the Management API and verified by reading them back. Legacy Realtime captures may be stale: restoration reproduces the recorded values and date, not the source project's current settings. New backups capture Realtime directly through the API. Legacy function backups without the JWT flag default to requiring JWT; new backups preserve that flag.
+
+Reports are saved after each stage, including failures. External services cannot share the database transaction: earlier stages remain completed if a later stage fails. Do not reload the database into a populated destination. Resolve the reported stage and select only pending components, or use another empty project.
+
+Unsupported internal data (such as encrypted Vault secrets without key migration) and destination plan/version incompatibilities stop the operation. Verified status covers the selected components; validate login, email delivery and business workflows before production use.
 
 **Supported file formats:**
 - ✅ `.backup.gz` (compressed) - Automatically decompresses before restoring
@@ -503,7 +517,7 @@ restore/
    npx smoonb restore
    ```
    (Select desired backup, select components, execute restoration.)
-6. **Apply manual configurations** if necessary: Auth Settings (Dashboard → Authentication → Settings), Realtime (Dashboard → Database → Replication). Storage is restored automatically from ZIP when available.
+6. **Review the result**: inspect `backups/restore-*/report.json` and test login, email and application workflows on the destination.
 
 ## 🎨 User Experience
 
@@ -602,7 +616,7 @@ npx smoonb restore --skip-supabase-version-check
 ### .backup.gz file cannot be restored
 
 smoonb automatically supports:
-- ✅ `.backup.gz` - Decompresses via Docker before restoring
+- ✅ `.backup.gz` - Reads compressed content without changing the original archive
 - ✅ `.backup` - Restores directly
 
 If there are problems:
@@ -661,3 +675,5 @@ Contributions are welcome. [www.smoonb.com/#price](https://www.smoonb.com/#price
 **Developed by:** Goalmoon Tecnologia LTDA  
 **Website:** https://www.smoonb.com  
 **GitHub:** https://github.com/almmello/smoonb
+
+Additional restore-path test: `npm run test:restore:docker`. Uses disposable PostgreSQL, synthetic data and mocked Storage HTTP transport; covers Auth, grants, cycles, rollback, files and metadata.

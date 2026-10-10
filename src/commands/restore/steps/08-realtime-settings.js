@@ -1,53 +1,61 @@
-const chalk = require('chalk');
-const path = require('path');
 const fs = require('fs');
-const inquirer = require('inquirer');
-const { t } = require('../../../i18n');
-
-/**
- * Etapa 8: Restaurar Realtime Settings (interativo - exibir URL e valores)
- */
+const path = require('path');
+const { applyConfig } = require('../management');
+const allowed = [
+  'private_only',
+  'connection_pool',
+  'postgres_changes_pool',
+  'max_concurrent_users',
+  'max_events_per_second',
+  'max_bytes_per_second',
+  'max_channels_per_client',
+  'max_joins_per_second',
+  'max_presence_events_per_second',
+  'max_payload_size_in_kb',
+  'suspend',
+  'presence_enabled',
+];
 module.exports = async ({ backupPath, targetProject }) => {
-  
-  try {
-    const getT = global.smoonbI18n?.t || t;
-    const realtimeSettingsPath = path.join(backupPath, 'realtime-settings.json');
-    
-    if (!fs.existsSync(realtimeSettingsPath)) {
-      console.log(chalk.yellow(`   ⚠️  ${getT('restore.steps.realtime.notFound')}`));
-      return;
-    }
-    
-    const realtimeSettings = JSON.parse(fs.readFileSync(realtimeSettingsPath, 'utf8'));
-    const dashboardUrl = `https://supabase.com/dashboard/project/${targetProject.targetProjectId}/realtime/settings`;
-    
-    console.log(chalk.green(`\n   ✅ ${getT('restore.steps.realtime.urlTitle')}`));
-    console.log(chalk.cyan(`   ${dashboardUrl}`));
-    console.log(chalk.yellow(`\n   📋 ${getT('restore.steps.realtime.configureTitle')}`));
-    
-    if (realtimeSettings.realtime_settings?.settings) {
-      Object.values(realtimeSettings.realtime_settings.settings).forEach((setting) => {
-        console.log(chalk.white(`   - ${setting.label}: ${setting.value}`));
-        if (setting.description) {
-          console.log(chalk.white(`     ${setting.description}`));
-        }
-      });
-    }
-    
-    console.log(chalk.yellow(`\n   ⚠️  ${getT('restore.steps.realtime.pressEnter')}`));
-    
-    await inquirer.prompt([{
-      type: 'input',
-      name: 'continue',
-      message: getT('restore.steps.realtime.pressEnter'),
-      prefix: ''
-    }]);
-    
-    console.log(chalk.green(`   ✅ ${getT('restore.steps.realtime.success')}`));
-    
-  } catch (error) {
-    const getT = global.smoonbI18n?.t || t;
-    console.error(chalk.red(`   ❌ ${getT('restore.steps.realtime.error', { message: error.message })}`));
+  const backup = JSON.parse(
+    fs.readFileSync(path.join(backupPath, 'realtime-settings.json'), 'utf8'),
+  );
+  let desired = backup.settings;
+  if (!desired) {
+    const legacy = backup.realtime_settings?.settings;
+    if (!legacy) throw new Error('Realtime configuration missing from backup');
+    const mapping = {
+      enable_realtime_service: 'suspend',
+      allow_public_access: 'private_only',
+      database_connection_pool_size: 'connection_pool',
+      max_concurrent_clients: 'max_concurrent_users',
+      max_events_per_second: 'max_events_per_second',
+      max_presence_events_per_second: 'max_presence_events_per_second',
+      max_payload_size_kb: 'max_payload_size_in_kb',
+    };
+    desired = Object.fromEntries(
+      Object.entries(legacy).map(([key, item]) => {
+        if (!mapping[key])
+          throw new Error(`Unsupported Realtime configuration: ${key}`);
+        return [
+          mapping[key],
+          ['enable_realtime_service', 'allow_public_access'].includes(key)
+            ? !item.value
+            : item.value,
+        ];
+      }),
+    );
+    console.log(
+      `Realtime: restoring the recorded snapshot (${backup.realtime_settings.captured_at || 'date unavailable'}).`,
+    );
   }
+  const result = await applyConfig(
+    targetProject,
+    'config/realtime',
+    desired,
+    allowed,
+  );
+  return {
+    ...result,
+    captured_at: backup.captured_at || backup.realtime_settings?.captured_at,
+  };
 };
-

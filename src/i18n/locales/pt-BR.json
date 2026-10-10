@@ -412,7 +412,7 @@
   "backup.steps.database.separated.exportingSchema": "Exportando schema...",
   "backup.steps.database.separated.exportingData": "Exportando dados...",
   "backup.steps.database.separated.circularSummary": "Exportação dos dados concluída com avisos de chaves estrangeiras circulares: {tables}. Esses avisos não significam falha na exportação.",
-  "backup.steps.database.separated.circularProtected": "data.sql começa com SET session_replication_role = replica. Restaure o schema antes dos dados, com uma role autorizada a alterar essa configuração e ON_ERROR_STOP=1. Teste a restauração antes de depender deste backup.",
+  "backup.steps.database.separated.circularProtected": "O smoonb restore trata esses relacionamentos, confere os dados recuperados e interrompe em caso de falha. Você não precisa alterar suas tabelas nem refazer o backup por causa deste aviso.",
   "backup.steps.database.separated.circularUnprotected": "O início de data.sql não contém a configuração replica. As referências circulares podem impedir a restauração. Siga o procedimento do Supabase e teste em banco isolado.",
   "backup.steps.database.separated.incomplete": "Backup SQL separado incompleto. Arquivos que falharam: {files}.",
   "backup.steps.database.separated.exportingRoles": "Exportando roles...",
@@ -424,8 +424,8 @@
   "backup.steps.auth.title": "Backup das Auth Settings via API...",
   "backup.steps.auth.exporting": "Exportando configurações de Auth via Management API...",
 
-  "backup.steps.realtime.title": "Backup das Realtime Settings via Captura Interativa...",
-  "backup.steps.realtime.capturing": "Capturando Realtime Settings interativamente...",
+  "backup.steps.realtime.title": "Backup das Realtime Settings via API...",
+  "backup.steps.realtime.capturing": "Capturando as configurações atuais de Realtime...",
   "backup.steps.realtime.previousFound": "Foi identificada uma gravação anterior de Realtime Settings.",
   "backup.steps.realtime.reuse": "Deseja reutilizar as configurações anteriores?",
   "backup.steps.realtime.configTitle": "Configurações de Realtime Settings",
@@ -568,8 +568,8 @@
   "restore.steps.components.edgeFunctions.include": "Deseja restaurar Edge Functions",
 
   "restore.steps.components.auth.title": "Auth Settings:",
-  "restore.steps.components.auth.description1": "As configurações de Auth serão exibidas para configuração manual no Dashboard.",
-  "restore.steps.components.auth.description2": "Algumas configurações não podem ser aplicadas automaticamente por questões de segurança.",
+  "restore.steps.components.auth.description1": "As configurações de Auth serão aplicadas pela API e verificadas no destino.",
+  "restore.steps.components.auth.description2": "Inclui SMTP e redirecionamentos registrados no backup.",
   "restore.steps.components.auth.include": "Deseja restaurar Auth",
 
   "restore.steps.components.storage.title": "Storage:",
@@ -587,8 +587,8 @@
   "restore.steps.components.databaseSettings.include": "Deseja restaurar Database Settings",
 
   "restore.steps.components.realtime.title": "Realtime Settings:",
-  "restore.steps.components.realtime.description1": "As configurações de Realtime serão exibidas para configuração manual no Dashboard.",
-  "restore.steps.components.realtime.description2": "Algumas configurações precisam ser aplicadas manualmente.",
+  "restore.steps.components.realtime.description1": "As configurações de Realtime do backup serão aplicadas e verificadas pela API.",
+  "restore.steps.components.realtime.description2": "Capturas antigas reproduzem os valores registrados naquela data.",
   "restore.steps.components.realtime.include": "Deseja restaurar Realtime",
   "restore.steps.components.database.include": "Deseja restaurar Database",
 
@@ -741,7 +741,7 @@
   "restore.index.restoringStorageBuckets": "Restaurando Storage Buckets...",
   "restore.index.restoringDatabaseSettings": "Restaurando Database Settings...",
   "restore.index.restoringRealtimeSettings": "Restaurando Realtime Settings...",
-  "restore.index.restoreComplete": "RESTAURAÇÃO COMPLETA FINALIZADA!",
+  "restore.index.restoreComplete": "Restauração dos componentes selecionados concluída e verificada.",
   "restore.index.targetProjectFinal": "Projeto destino: {projectId}",
   "restore.index.databaseRestored": "Database: Restaurada com sucesso via Docker",
   "restore.index.edgeFunctionsRestored": "Edge Functions: {success}/{total} functions restauradas",
@@ -794,6 +794,6 @@
   "error.databaseUrlInvalid": "Database URL inválida. Formato esperado: postgresql://user:password@host/database",
   "error.databaseUrlInvalidSimple": "Database URL inválida",
   "error.storageCredentialsNotConfigured": "Credenciais do projeto destino não configuradas. É necessário SUPABASE_PROJECT_ID e SUPABASE_ACCESS_TOKEN",
-  "error.supabaseCredentialsNotConfigured": "Credenciais do Supabase não configuradas. É necessário NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY"
+  "error.supabaseCredentialsNotConfigured": "Credenciais do Supabase não configuradas. É necessário NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY",
+  "restore.verified.remapUrls": "Atualizar os endereços Supabase do projeto antigo para o novo nos dados e arquivos? (Inclui URLs em campos JSON; outros textos e IDs são preservados.)"
 }
-

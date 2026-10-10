@@ -296,14 +296,28 @@ npx smoonb restore --skip-supabase-version-check
    - 🔄 Realtime Settings (se disponível no backup)
 9. **Resumo detalhado** - Mostra backup selecionado, projeto destino e componentes
 10. **Confirmação final** - Confirma antes de iniciar
-11. **Aviso** - Explica que erros durante a restauração são esperados; link para [documentação de restore do Dashboard Supabase](https://supabase.com/docs/guides/platform/migrating-within-supabase/dashboard-restore); aguardar o fim do processo e testar o resultado antes de aceitar para prosseguir
+11. **Endereços do projeto** - Confirma se as URLs Supabase nos dados e arquivos devem apontar para o novo projeto
 12. **Execução da restauração:**
     - 📊 Database - Restaura via `psql` (suporta `.backup.gz` e `.backup`)
-    - ⚡ Edge Functions - Copia e faz deploy no projeto destino
-    - 🔐 Auth Settings - Exibe configurações para aplicação manual
-    - 📦 Storage - Restaura buckets e arquivos do ZIP (se disponível) ou exibe informações para migração manual
+    - ⚡ Edge Functions - Faz deploy de uma cópia temporária, preservando as fontes locais
+    - 🔐 Auth Settings - Aplica via API e verifica os valores recuperados
+    - 📦 Storage - Restaura buckets e arquivos do ZIP, preserva metadados e verifica cada download
     - 🔧 Database Settings - Restaura extensões e configurações via SQL
-    - 🔄 Realtime Settings - Exibe configurações para aplicação manual
+    - 🔄 Realtime Settings - Aplica e verifica o snapshot registrado no backup
+
+### Restauração verificada (1.0.8)
+
+Use um projeto de destino novo e vazio e Node.js 20 ou mais recente. O backup completo existente da versão 1.0.7 pode ser reutilizado, sem nova captura. A versão 1.0.8 usa o dump completo como snapshot único: recupera a estrutura da aplicação, dados de Auth, histórico de migrações, buckets e metadados. Os schemas internos e as migrações da plataforma são mantidos na versão do destino.
+
+A carga do banco usa uma transação com interrupção em erro, suspende triggers apenas nessa conexão, compara todas as colunas recuperadas e verifica chaves estrangeiras antes de confirmar. Permissões herdadas dos defaults do destino são removidas antes da reaplicação dos grants do backup. SQL com falha nunca é classificado como sucesso. O arquivo compactado e a pasta local de funções são preservados.
+
+O remapeamento opcional troca apenas o domínio Supabase do projeto em URLs, inclusive em JSON e arquivos de texto. Não troca IDs isolados nem nomes de arquivos. URLs históricas também podem ser afetadas; escolha preservar quando isso for necessário. URLs assinadas, domínios personalizados, integrações externas e chaves de API da aplicação precisam de validação específica. As chaves de plataforma do destino não são substituídas.
+
+Auth e Realtime são aplicados pela Management API e conferidos por nova leitura. A captura antiga de Realtime pode conter valores desatualizados: a restauração reproduz os valores e a data registrados, não o estado atual do projeto original. Novos backups capturam Realtime diretamente pela API. Em backups antigos sem o sinalizador de JWT de Functions, o padrão seguro é exigir JWT; os novos backups guardam esse sinalizador.
+
+O relatório é salvo durante cada etapa, inclusive em falhas. Serviços externos não participam da transação do banco: se uma etapa posterior falhar, as anteriores permanecem registradas como concluídas. Não repita a carga do banco em um destino já preenchido. Resolva a etapa indicada e selecione apenas os componentes pendentes, ou use outro projeto vazio.
+
+Dados internos não suportados (por exemplo, Vault com segredos criptografados sem migração da chave) e configurações incompatíveis com o plano/versão do destino interrompem o processo. O status verificado cobre os componentes selecionados; ainda é necessário validar login, envio de e-mail e fluxos de negócio antes de usar o destino em produção.
 
 **Formato de arquivos suportados:**
 - ✅ `.backup.gz` (compactado) - Descompacta automaticamente antes de restaurar
@@ -503,7 +517,7 @@ restore/
    npx smoonb restore
    ```
    (Seleciona backup desejado, componentes a restaurar, executa restauração.)
-6. **Aplicar configurações manuais** se necessário: Auth Settings (Dashboard → Authentication → Settings), Realtime (Dashboard → Database → Replication). O Storage é restaurado automaticamente do ZIP quando disponível.
+6. **Conferir o resultado**: leia `backups/restore-*/report.json` e teste login, e-mail e os fluxos da aplicação no destino.
 
 ## 🎨 Experiência do Usuário
 
@@ -602,7 +616,7 @@ npx smoonb restore --skip-supabase-version-check
 ### Arquivo .backup.gz não pode ser restaurado
 
 O smoonb suporta automaticamente:
-- ✅ `.backup.gz` - Descompacta via Docker antes de restaurar
+- ✅ `.backup.gz` - Lê o conteúdo compactado sem modificar o arquivo original
 - ✅ `.backup` - Restaura diretamente
 
 Se houver problemas:
@@ -661,3 +675,5 @@ Contribuições são bem-vindas. [www.smoonb.com/#price](https://www.smoonb.com/
 **Desenvolvido por:** Goalmoon Tecnologia LTDA  
 **Website:** https://www.smoonb.com  
 **GitHub:** https://github.com/almmello/smoonb
+
+Teste adicional do caminho real de restore: `npm run test:restore:docker`. Usa PostgreSQL descartável, dados fictícios e transporte HTTP simulado para Storage; cobre Auth, permissões, ciclos, rollback, arquivos e metadados.

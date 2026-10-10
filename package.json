@@ -1,6 +1,6 @@
 {
   "name": "smoonb",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Complete Supabase backup and migration tool. https://www.smoonb.com/#price",
   "preferGlobal": false,
   "preventGlobalInstall": true,
@@ -18,7 +18,8 @@
     "build": "node scripts/build.js",
     "build:check": "node scripts/build.js",
     "prepublishOnly": "npm test && npm run lint && npm run build",
-    "test:docker": "node tests/integration/circular-restore.js"
+    "test:docker": "node tests/integration/circular-restore.js",
+    "test:restore:docker": "node tests/integration/verified-restore.js"
   },
   "keywords": [
     "supabase",
@@ -33,7 +34,7 @@
   "author": "Goalmoon Tecnologia LTDA <https://www.smoonb.com>",
   "license": "SEE LICENSE IN LICENSE.md",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=20.0.0"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.93.0",

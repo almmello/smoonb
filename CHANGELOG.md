@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.8] - 2026-10-10
+
+### Fixed
+
+- Restore application and Auth data from the existing full dump in one checked transaction. Fail on SQL errors; compare restored columns and validate foreign keys before commit, including pre-existing Auth constraints.
+- Remove extra destination object grants before replaying source ACLs, preventing unintended anonymous/authenticated access to restricted functions and tables.
+- Apply and verify Auth configuration through the Management API, including SMTP and redirect configuration.
+- Remap source Supabase hostnames in application data and text objects when selected; preserve unrelated IDs and paths.
+- Recover Storage MIME types, cache directives, ownership and user metadata from the full dump even when legacy Storage JSON inventories are empty. Validate ZIP inventory, count empty buckets, and verify every uploaded file by download and SHA-256.
+- Use isolated temporary workspaces for Edge Function backup and deployment; preserve local modified sources and compressed backup archives. Address npm CLI shims on Windows without shell interpolation.
+- Persist stage results and failures; never report unsuccessful or unverified components as restored.
+
+### Changed
+
+- Apply and verify Realtime snapshots through the API; capture fresh Realtime settings for new backups instead of reusing interactive recordings.
+- Verify database settings and fail explicitly for incompatible platform settings rather than silently skipping them.
+- Require Node.js 20 or later. A new, empty destination is required for the database restore; platform-managed schemas and administrator defaults remain destination-managed.
+- Preserve Function JWT configuration in new backups. Legacy backups default to requiring JWT.
+
+### Tests
+
+- Add regression coverage for configuration readback, failure reporting, URL mapping, archive preservation, isolated Functions, and PostgreSQL arrays.
+- Add an opt-in Docker test of the actual restore step with cyclic references, Auth identities, broad destination defaults, invalid-data rollback, populated-target refusal and Storage metadata/content verification (mock HTTP, real PostgreSQL).
+
+---
+
 ## [1.0.7] - 2026-10-10
 
 ### Fixed
