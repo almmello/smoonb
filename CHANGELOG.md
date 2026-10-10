@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.7] - 2026-10-10
+
+### Fixed
+
+- Consolidate known PostgreSQL circular foreign-key warnings during separate SQL data export. Explain that export completion is distinct from restore validation, list affected tables, and verify the Supabase replica-role prologue before describing it.
+- Preserve original circular-FK diagnostics and prologue detection in the backup manifest; keep unrelated warnings, errors, and failed-export diagnostics visible.
+- Mark separate SQL backup incomplete when any of schema, data, or roles fails, instead of treating one exported file as full success.
+- Clear progress timers on subprocess errors, drain stdout, and avoid terminal control output when stdout is redirected.
+
+### Added
+
+- Regression tests for chunked diagnostics, translations, missing protection, partial exports and subprocess failures.
+- Opt-in Docker integration test using synthetic cyclic references, real Supabase CLI exports, successful protected/full restores and failing unprotected/unprivileged controls.
+- English and Portuguese restore guidance; release checks now run tests and lint before the build.
+
+---
+
 ## [1.0.6] - 2026-02-21
 
 ### Changed
@@ -64,6 +81,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+[1.0.7]: https://github.com/almmello/smoonb/releases/tag/v1.0.7
 [1.0.6]: https://github.com/almmello/smoonb/releases/tag/v1.0.6
 [1.0.5]: https://github.com/almmello/smoonb/releases/tag/v1.0.5
 [1.0.4]: https://github.com/almmello/smoonb/releases/tag/v1.0.4

@@ -268,6 +268,8 @@ module.exports = async (options) => {
     manifest.components.database_separated = {
       success: dbSeparatedResult.success,
       method: 'supabase-cli',
+      warnings: dbSeparatedResult.warnings || [],
+      failed_files: dbSeparatedResult.failedFiles || [],
       files: dbSeparatedResult.files || [],
       total_size_kb: dbSeparatedResult.totalSizeKB || '0.0'
     };
@@ -339,7 +341,11 @@ module.exports = async (options) => {
     console.log(chalk.green(`\n🎉 ${getT('backup.complete.title')}`));
     console.log(chalk.blue(`📁 ${getT('backup.complete.location', { path: finalBackupDir })}`));
     console.log(chalk.green(`📊 ${getT('backup.complete.database', { fileName: databaseResult.fileName, size: `${databaseResult.size} KB` })}`));
-    console.log(chalk.green(`📊 ${getT('backup.complete.databaseSql', { count: dbSeparatedResult.files?.length || 0, size: `${dbSeparatedResult.totalSizeKB} KB` })}`));
+    if (dbSeparatedResult.success) {
+      console.log(chalk.green(`📊 ${getT('backup.complete.databaseSql', { count: dbSeparatedResult.files?.length || 0, size: `${dbSeparatedResult.totalSizeKB} KB` })}`));
+    } else {
+      console.log(chalk.yellow(`⚠️ ${getT('backup.steps.database.separated.incomplete', { files: (dbSeparatedResult.failedFiles || []).join(', ') })}`));
+    }
     console.log(chalk.green(`🔧 ${getT('backup.complete.databaseSettings', { fileName: databaseSettingsResult.fileName, size: `${databaseSettingsResult.size} KB` })}`));
     
     if (flags?.includeAuth && manifest.components.auth_settings) {

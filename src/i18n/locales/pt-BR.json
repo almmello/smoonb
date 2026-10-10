@@ -411,6 +411,10 @@
   "backup.steps.database.separated.creating": "Criando backups SQL separados via Supabase CLI...",
   "backup.steps.database.separated.exportingSchema": "Exportando schema...",
   "backup.steps.database.separated.exportingData": "Exportando dados...",
+  "backup.steps.database.separated.circularSummary": "Exportação dos dados concluída com avisos de chaves estrangeiras circulares: {tables}. Esses avisos não significam falha na exportação.",
+  "backup.steps.database.separated.circularProtected": "data.sql começa com SET session_replication_role = replica. Restaure o schema antes dos dados, com uma role autorizada a alterar essa configuração e ON_ERROR_STOP=1. Teste a restauração antes de depender deste backup.",
+  "backup.steps.database.separated.circularUnprotected": "O início de data.sql não contém a configuração replica. As referências circulares podem impedir a restauração. Siga o procedimento do Supabase e teste em banco isolado.",
+  "backup.steps.database.separated.incomplete": "Backup SQL separado incompleto. Arquivos que falharam: {files}.",
   "backup.steps.database.separated.exportingRoles": "Exportando roles...",
 
   "backup.steps.databaseSettings.title": "Backup das Database Extensions and Settings via SQL...",

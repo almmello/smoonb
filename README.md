@@ -531,6 +531,25 @@ All interactions are **automatically translated** based on system locale or `SMO
 
 ## 🐛 Troubleshooting
 
+### Circular foreign-key warnings during data export
+
+Tables can reference each other (or themselves). PostgreSQL warns that a **data-only** dump cannot always be restored with ordinary foreign-key checks. This warning alone is not an export failure: check the exit result and the backup manifest.
+
+smoonb consolidates these known warnings, lists the affected tables, and records the original diagnostics in `backup-manifest.json` under `components.database_separated.warnings`. Other warnings and errors remain visible. A failed schema, data, or roles export marks this component as incomplete.
+
+The Supabase CLI currently prepends `SET session_replication_role = replica;` to `data.sql`. smoonb checks the first line before reporting its presence. This is **not a restore validation**: the destination role must be allowed to change that setting. Restore schema before data and stop on SQL errors. For a controlled restore into an appropriate, separate target, follow the [Supabase backup/restore guide](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore):
+
+```bash
+psql --dbname "$TARGET_DB_URL" --single-transaction --variable ON_ERROR_STOP=1 --file roles.sql --file schema.sql --command 'SET session_replication_role = replica' --file data.sql
+```
+
+The setting affects that restore connection; it does not modify the source database. Verify row counts and references in the restored target before relying on the backup. Do not remove foreign keys from your application to silence these warnings. The main `.backup.gz` is a full cluster dump; the separate SQL files are additional artifacts.
+
+### Development checks
+
+Use Node.js 22 for development checks: `npm test`, `npm run lint`, and `npm run build`. The explicit `npm run test:docker` integration test requires Docker, the `postgres:17` image and Supabase CLI. It creates only synthetic data in its own disposable PostgreSQL container, tests protected and unprotected restores, and removes that container afterward. It does not use a project's credentials or remote database.
+
+
 ### Docker not found or not running
 
 Verify Docker is installed and running:

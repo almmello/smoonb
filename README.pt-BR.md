@@ -531,6 +531,25 @@ Todas as interações são em **Português do Brasil**:
 
 ## 🐛 Solução de Problemas
 
+### Avisos de chaves estrangeiras circulares na exportação dos dados
+
+Tabelas podem referenciar umas às outras ou a si mesmas. O PostgreSQL avisa que um dump **somente de dados** nem sempre pode ser restaurado com a verificação normal de chaves estrangeiras. Esse aviso isolado não significa falha na exportação: confira o resultado do comando e o manifesto do backup.
+
+O smoonb agrupa esses avisos conhecidos, lista as tabelas envolvidas e registra os diagnósticos originais em `backup-manifest.json`, em `components.database_separated.warnings`. Outros avisos e erros continuam visíveis. Se schema, dados ou roles falharem, esse componente será marcado como incompleto.
+
+Atualmente, o Supabase CLI coloca `SET session_replication_role = replica;` no início de `data.sql`. O smoonb verifica a primeira linha antes de informar sua presença. Isso **não valida a restauração**: a role de destino precisa ter permissão para alterar essa configuração. Restaure o schema antes dos dados e interrompa ao encontrar erros SQL. Para uma restauração controlada em destino separado e adequado, siga o [guia de backup/restauração do Supabase](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore):
+
+```bash
+psql --dbname "$TARGET_DB_URL" --single-transaction --variable ON_ERROR_STOP=1 --file roles.sql --file schema.sql --command 'SET session_replication_role = replica' --file data.sql
+```
+
+A configuração afeta essa conexão de restauração; não altera o banco de origem. Confira contagens e referências no destino restaurado antes de depender do backup. Não remova chaves estrangeiras da aplicação para silenciar os avisos. O `.backup.gz` principal é um dump completo do cluster; os SQL separados são arquivos adicionais.
+
+### Verificações de desenvolvimento
+
+Use Node.js 22 para as verificações de desenvolvimento: `npm test`, `npm run lint` e `npm run build`. O teste explícito `npm run test:docker` exige Docker, imagem `postgres:17` e Supabase CLI. Ele cria somente dados fictícios em um PostgreSQL descartável próprio, testa restaurações com e sem proteção e remove esse contêiner ao terminar. Não usa credenciais do projeto nem banco remoto.
+
+
 ### Docker não encontrado ou não está rodando
 
 Verifique se o Docker está instalado e em execução:

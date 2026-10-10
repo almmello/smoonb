@@ -411,6 +411,10 @@
   "backup.steps.database.separated.creating": "Creating separate SQL backups via Supabase CLI...",
   "backup.steps.database.separated.exportingSchema": "Exporting schema...",
   "backup.steps.database.separated.exportingData": "Exporting data...",
+  "backup.steps.database.separated.circularSummary": "Data export completed with circular foreign-key warnings: {tables}. These warnings do not mean the export failed.",
+  "backup.steps.database.separated.circularProtected": "data.sql starts with SET session_replication_role = replica. Restore schema before data, using a role allowed to change this setting and ON_ERROR_STOP=1. Test restoration before relying on this backup.",
+  "backup.steps.database.separated.circularUnprotected": "No replica-role prologue was found in data.sql. Circular references may prevent restoration. Follow the Supabase restore procedure and test in an isolated database.",
+  "backup.steps.database.separated.incomplete": "Separate SQL backup is incomplete. Failed files: {files}.",
   "backup.steps.database.separated.exportingRoles": "Exporting roles...",
 
   "backup.steps.databaseSettings.title": "Database Extensions and Settings Backup via SQL...",

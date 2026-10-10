@@ -21,6 +21,8 @@ const filesToCheck = [
   'src/i18n/index.js',
   'src/utils/banner.js',
   'src/utils/prompt.js',
+  'src/utils/pg-dump-diagnostics.js',
+  'src/commands/backup/steps/03-database-separated.js',
   'src/utils/installationId.js'
 ];
 
