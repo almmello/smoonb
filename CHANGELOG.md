@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.10] - 2026-10-10
+
+### Fixed
+
+- When a Realtime PATCH succeeds but capacity limits remain different, show the backup and destination values and offer an explicit choice to retain the destination limits. Record accepted differences instead of failing with field names only or claiming an identical restore.
+- Retry readback without repeating PATCH, then re-read all selected Realtime settings after consent. Security switches, connection pools, invalid values, API failures and concurrent configuration changes remain failures.
+- Record refused quota differences in the failure report; allow a retry selecting only Realtime without repeating Database, Auth or Storage. Non-interactive runs never silently accept differences.
+- Preserve SMTP verification limits in combined reports and show completion with notes when any selected component has accepted differences or unverified secrets.
+- Replace obsolete manual-configuration messages in the English and Portuguese Auth/Realtime summaries.
+
+### Tests
+
+- Cover legacy and API snapshots, delayed readback, consent and rejection, non-interactive execution, strict security validation, concurrent changes, secret-safe errors, partial reports and Realtime-only retries.
+
 ## [1.0.9] - 2026-10-10
 
 ### Fixed

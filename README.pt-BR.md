@@ -26,7 +26,7 @@ O smoonb faz backup completo de todos os componentes do seu projeto Supabase:
 - ✅ **Edge Functions** (download automático do servidor)
 - ✅ **Auth Settings** (configurações de autenticação via Management API)
 - ✅ **Storage Buckets** (backup completo: metadados, configurações e todos os arquivos via Management API + Supabase Client, cria ZIP no padrão do Dashboard)
-- ✅ **Realtime Settings** (7 parâmetros capturados interativamente)
+- ✅ **Realtime Settings** (configurações atuais capturadas pela Management API)
 - ✅ **Supabase .temp** (arquivos temporários do Supabase CLI)
 - ✅ **Migrations** (todas as migrations do projeto via `supabase migration fetch`)
 
@@ -319,6 +319,10 @@ Se uma restauração 1.0.8 parou em `Configuration verification failed: smtp_pas
 
 A captura antiga de Realtime pode conter valores desatualizados: a restauração reproduz os valores e a data registrados, não o estado atual do projeto original. Novos backups capturam Realtime diretamente pela API. Em backups antigos sem o sinalizador de JWT de Functions, o padrão seguro é exigir JWT; os novos backups guardam esse sinalizador.
 
+Desde a versão 1.0.10, se o Supabase não aplicar limites numéricos de Realtime, o smoonb mostra **valor do backup × valor atual do destino** e pergunta se você aceita manter os valores do destino. O padrão é **não**. Ao aceitar, ele relê as configurações e registra `completed_with_accepted_differences`, com os valores exatos, sem afirmar que o destino é idêntico ao backup. Configurações de segurança, ativação do serviço e pools de conexão continuam exigindo correspondência. A ferramenta não altera seu plano nem o limite de gastos.
+
+Se uma restauração anterior terminou apenas com `Configuration verification failed: max_presence_events_per_second, max_payload_size_in_kb`, consulte o relatório anterior e execute `npx smoonb@1.0.10 restore` selecionando **somente Realtime Settings**. Não repita componentes já concluídos. Se concordar com os limites mostrados, responda **sim** à nova pergunta. Recusar mantém a etapa pendente e registra as diferenças; alterações já aplicadas não são desfeitas.
+
 O relatório é salvo durante cada etapa, inclusive em falhas. Serviços externos não participam da transação do banco: se uma etapa posterior falhar, as anteriores permanecem registradas como concluídas. Não repita a carga do banco em um destino já preenchido. Resolva a etapa indicada e selecione apenas os componentes pendentes, ou use outro projeto vazio.
 
 Dados internos não suportados (por exemplo, Vault com segredos criptografados sem migração da chave) e configurações incompatíveis com o plano/versão do destino interrompem o processo. O status verificado cobre os componentes selecionados; ainda é necessário validar login, envio de e-mail e fluxos de negócio antes de usar o destino em produção.
@@ -472,7 +476,7 @@ restore/
 #### Auth, Realtime
 - **Management API**: Usa Personal Access Token
 - **JSON Export**: Configurações exportadas como JSON
-- **Realtime Settings**: Captura interativa de 7 parâmetros:
+- **Realtime Settings**: Captura atual pela API, incluindo:
   1. Habilitar serviço Realtime
   2. Permitir acesso público
   3. Tamanho do pool de conexões do database
@@ -480,25 +484,25 @@ restore/
   5. Máximo de eventos por segundo
   6. Máximo de eventos de presença por segundo
   7. Tamanho máximo do payload em KB
-- **Manual para alguns**: Alguns settings precisam ser aplicados manualmente por segurança
+- **Senha SMTP**: Não exportável; solicitada em campo oculto durante a restauração.
 
 ### Estratégia de Restauração
 
 #### Database
 - **Suporte a Formatos**:
-  - `.backup.gz` - Descompacta automaticamente via Docker
+  - `.backup.gz` - Lê o conteúdo compactado sem alterar o arquivo original
   - `.backup` - Restaura diretamente via `psql` (Docker)
-- **Restauração Limpa**: Pode sobrescrever dados existentes (com confirmação)
+- **Destino Vazio**: Exige destino vazio para restaurar o banco; desmarque esse componente ao repetir etapas posteriores que falharam.
 
 #### Edge Functions
-- **Deploy Limpo**: Limpa `supabase/functions` antes do deploy
-- **Reset de Link**: Garante link correto com projeto destino
+- **Deploy Isolado**: Usa uma pasta temporária, preservando os arquivos locais de `supabase/functions`
+- **Destino Explícito**: Passa a referência do projeto de destino ao CLI
 - **Deploy Automático**: Usa `supabase functions deploy`
 
 #### Outros Componentes
 - **Database Settings**: Restaura via SQL
 - **Storage**: Restaura buckets e arquivos do ZIP (se disponível) ou exibe informações para configuração manual
-- **Auth/Realtime**: Exibe informações para configuração manual no Dashboard
+- **Auth/Realtime**: Aplica e confere as configurações pela API; registra os limites da verificação SMTP e diferenças de capacidade do Realtime aceitas explicitamente.
 
 ### Multiplataforma
 

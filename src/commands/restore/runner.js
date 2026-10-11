@@ -4,6 +4,10 @@ const { t } = require('../../i18n');
 const { buildRestore, readDump } = require('./dump');
 const { storagePlan } = require('./steps/06-storage');
 const { prepareAuth } = require('./auth');
+const {
+  RealtimeRestoreError,
+  capacityLimits,
+} = require('./steps/08-realtime-settings');
 const steps = {
   database: require('./steps/03-database'),
   edgeFunctions: require('./steps/04-edge-functions'),
@@ -110,21 +114,45 @@ async function runRestore(
         result?.email_delivery_verified === false &&
         result?.write_only_fields_accepted?.length === 1 &&
         result.write_only_fields_accepted[0] === 'smtp_pass';
-      if (!result?.success || (!result?.verified && !acceptedSmtp))
+      const acceptedLimits =
+        name === 'realtimeSettings' &&
+        result?.effective_configuration_verified === true &&
+        result?.destination_limits_accepted === true &&
+        Array.isArray(result?.accepted_differences) &&
+        result.accepted_differences.length > 0 &&
+        result.accepted_differences.every(
+          (d) =>
+            capacityLimits.has(d.field) &&
+            Number.isInteger(d.backup_value) &&
+            d.backup_value > 0 &&
+            Number.isInteger(d.destination_value) &&
+            d.destination_value > 0,
+        );
+      if (
+        !result?.success ||
+        (!result?.verified && !acceptedSmtp && !acceptedLimits)
+      )
         throw new Error(`Component ${name} did not pass verification`);
       report.results[name] = {
         ...result,
         status: result.verified
           ? 'verified'
-          : 'applied_with_unverified_secrets',
+          : acceptedLimits
+            ? 'completed_with_accepted_differences'
+            : 'applied_with_unverified_secrets',
       };
       save();
       if (acceptedSmtp)
         console.log((global.smoonbI18n?.t || t)('restore.smtp.accepted'));
     }
-    report.status = Object.values(report.results).every((r) => r.verified)
-      ? 'verified'
-      : 'applied_with_unverified_secrets';
+    const results = Object.values(report.results);
+    report.status = results.some(
+      (r) => r.status === 'completed_with_accepted_differences',
+    )
+      ? 'completed_with_accepted_differences'
+      : results.every((r) => r.verified)
+        ? 'verified'
+        : 'applied_with_unverified_secrets';
     report.completed_at = new Date().toISOString();
     save();
     return report.results;
@@ -132,6 +160,8 @@ async function runRestore(
     report.status = 'failed';
     report.failed_component = current;
     report.results[current] = { success: false, status: 'failed' };
+    if (current === 'realtimeSettings' && error instanceof RealtimeRestoreError)
+      report.results[current].unapplied_limits = error.differences;
     report.completed_at = new Date().toISOString();
     save();
     throw error;

@@ -174,7 +174,10 @@ module.exports = async (options = {}) => {
     const restoreResults = await runRestore({ selectedBackup, components, targetProject, processDir, postgresMajor:parsedMajor, remapUrls });
 
     // Exibir resumo final
-    ui.success(`\n🎉 ${getT('restore.index.restoreComplete')}`);
+    if (Object.values(restoreResults).some(result => !result.verified))
+      ui.warn(`\n${getT('restore.index.restoreCompleteWithNotes')}`);
+    else
+      ui.success(`\n🎉 ${getT('restore.index.restoreComplete')}`);
     ui.link(`🎯 ${getT('restore.index.targetProjectFinal', { projectId: targetProject.targetProjectId || getT('restore.index.notConfigured') })}`);
 
     if (restoreResults.database) {
@@ -211,7 +214,10 @@ module.exports = async (options = {}) => {
     }
 
     if (restoreResults.realtimeSettings) {
-      ui.success(`🔄 ${getT('restore.index.realtimeSettingsRestored')}`);
+      if (restoreResults.realtimeSettings.verified)
+        ui.success(`🔄 ${getT('restore.index.realtimeSettingsRestored')}`);
+      else
+        ui.warn(getT('restore.realtime.accepted'));
     }
 
     sendTelemetry({

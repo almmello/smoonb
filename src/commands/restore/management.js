@@ -1,5 +1,15 @@
 const { isMasked } = require('../../utils/auth-secrets');
 
+class ConfigurationVerificationError extends Error {
+  constructor(fields, updatedFields) {
+    super(`Configuration verification failed: ${fields.join(', ')}`);
+    this.name = 'ConfigurationVerificationError';
+    // Field names only: Auth readback may contain credentials.
+    this.fields = [...fields];
+    this.updatedFields = [...updatedFields];
+  }
+}
+
 async function management(
   target,
   endpoint,
@@ -80,9 +90,7 @@ async function applyConfig(
     (k) => JSON.stringify(desired[k]) !== JSON.stringify(after[k]),
   );
   if (differences.length)
-    throw new Error(
-      `Configuration verification failed: ${differences.join(', ')}`,
-    );
+    throw new ConfigurationVerificationError(differences, Object.keys(patch));
   return {
     success: true,
     verified: secretFields.length === 0,
@@ -93,4 +101,4 @@ async function applyConfig(
     fields_updated: Object.keys(patch),
   };
 }
-module.exports = { management, applyConfig };
+module.exports = { management, applyConfig, ConfigurationVerificationError };

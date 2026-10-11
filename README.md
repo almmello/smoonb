@@ -26,7 +26,7 @@ smoonb performs a complete backup of all components of your Supabase project:
 - ✅ **Edge Functions** (download automático do servidor)
 - ✅ **Auth Settings** (configurações de autenticação via Management API)
 - ✅ **Storage Buckets** (backup completo: metadados, configurações e todos os arquivos via Management API + Supabase Client, cria ZIP no padrão do Dashboard)
-- ✅ **Realtime Settings** (7 parâmetros capturados interativamente)
+- ✅ **Realtime Settings** (current settings captured through the Management API)
 - ✅ **Supabase .temp** (arquivos temporários do Supabase CLI)
 - ✅ **Migrations** (todas as migrations do projeto via `supabase migration fetch`)
 
@@ -217,7 +217,7 @@ npx smoonb backup --skip-supabase-version-check
    - ⚡ Edge Functions (explanation about link reset and download)
    - 📦 Storage (explanation about full backup: file download + ZIP in Dashboard format)
    - 🔐 Auth Settings (explanation about configurations)
-   - 🔄 Realtime Settings (explanation about interactive capture of 7 parameters)
+   - 🔄 Realtime Settings (current configuration captured through the API)
    - 🗑️ Cleanup options (functions, .temp, migrations after backup)
 8. **Configuration summary** - Shows everything that will be done
 9. **Final confirmation** - Confirms before starting
@@ -226,7 +226,7 @@ npx smoonb backup --skip-supabase-version-check
    - 📊 2/10 - Separate Database SQL (schema, data, roles)
    - 🔧 3/10 - Database Extensions and Settings Backup
    - 🔐 4/10 - Auth Settings Backup (if selected)
-   - 🔄 5/10 - Realtime Settings Backup (if selected) - 7 parameters captured interactively
+   - 🔄 5/10 - Realtime Settings Backup (if selected) - fresh API snapshot
    - 📦 6/10 - Storage Backup (if selected) - Full file download + ZIP in Dashboard format
    - 👥 7/10 - Custom Roles Backup
    - ⚡ 8/10 - Edge Functions Backup (if selected)
@@ -318,6 +318,10 @@ Readable Auth and Realtime settings are applied through the Management API and v
 If a 1.0.8 restore stopped at `Configuration verification failed: smtp_pass` and its `report.json` confirms Database and Edge Functions, reuse the same backup and project: run `npx smoonb@1.0.9 restore`, answer **no** for Database and Edge Functions, and **yes** for the pending Auth, Storage, Database Settings and Realtime components. Enter the provider SMTP password when prompted. This specific failure does not require another backup or a database reload.
 
 Legacy Realtime captures may be stale: restoration reproduces the recorded values and date, not the source project's current settings. New backups capture Realtime directly through the API. Legacy function backups without the JWT flag default to requiring JWT; new backups preserve that flag.
+
+Since 1.0.10, if Supabase does not apply numeric Realtime capacity limits, smoonb shows **backup value vs current destination value** and asks whether to retain the destination values. The default is **no**. After acceptance, it re-reads the configuration and records `completed_with_accepted_differences` with exact values, without claiming an identical restore. Security switches, service activation and connection pools still require a match. The tool does not change your plan or spend cap.
+
+If an earlier restore ended only with `Configuration verification failed: max_presence_events_per_second, max_payload_size_in_kb`, consult its report and run `npx smoonb@1.0.10 restore` selecting **only Realtime Settings**. Do not repeat completed components. If you agree with the displayed limits, answer **yes** to the new prompt. Refusal leaves the step pending and records the differences; changes already applied are not undone.
 
 Reports are saved after each stage, including failures. External services cannot share the database transaction: earlier stages remain completed if a later stage fails. Do not reload the database into a populated destination. Resolve the reported stage and select only pending components, or use another empty project.
 
@@ -472,7 +476,7 @@ restore/
 #### Auth, Realtime
 - **Management API**: Uses Personal Access Token
 - **JSON Export**: Configurations exported as JSON
-- **Realtime Settings**: Interactive capture of 7 parameters:
+- **Realtime Settings**: Fresh API capture, including:
   1. Enable Realtime service
   2. Allow public access
   3. Database connection pool size
@@ -480,25 +484,25 @@ restore/
   5. Max events per second
   6. Max presence events per second
   7. Max payload size in KB
-- **Manual for some**: Some settings need to be applied manually for security
+- **SMTP password**: Not exportable; requested with hidden input during restore.
 
 ### Restore Strategy
 
 #### Database
 - **Format Support**:
-  - `.backup.gz` - Automatically decompresses via Docker
+  - `.backup.gz` - Reads compressed content without modifying the archive
   - `.backup` - Restores directly via `psql` (Docker)
-- **Clean Restore**: Can overwrite existing data (with confirmation)
+- **Empty Destination**: Requires an empty destination for the database; skip this component when retrying later stages that failed.
 
 #### Edge Functions
-- **Clean Deploy**: Cleans `supabase/functions` before deploy
-- **Link Reset**: Ensures correct link with target project
+- **Isolated Deploy**: Uses a temporary workspace, preserving local `supabase/functions` files
+- **Explicit Destination**: Passes the target project reference to the CLI
 - **Automatic Deploy**: Uses `supabase functions deploy`
 
 #### Other Components
 - **Database Settings**: Restores via SQL
 - **Storage**: Restores buckets and files from ZIP (if available) or displays information for manual configuration
-- **Auth/Realtime**: Displays information for manual configuration in Dashboard
+- **Auth/Realtime**: Applies and checks configurations through the API; reports SMTP verification limits and any explicitly accepted Realtime capacity differences.
 
 ### Cross-Platform
 
