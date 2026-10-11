@@ -150,7 +150,7 @@ module.exports = async (
     log(getT('restore.realtime.limitsExplanation'));
     if (
       !interactive ||
-      (await confirmLimits(getT('restore.realtime.acceptLimits'), false)) !==
+      (await confirmLimits(getT('restore.realtime.acceptLimits'), true)) !==
         true
     )
       throw new RealtimeRestoreError(

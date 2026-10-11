@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.11] - 2026-10-10
+
+### Changed
+
+- Recommend retaining destination Realtime capacity limits by default: the interactive prompt now uses `(S/n)` in Portuguese and `(Y/n)` in English. Values are still displayed before confirmation; declining, non-interactive execution and strict security checks retain their existing behavior.
+
 ## [1.0.10] - 2026-10-10
 
 ### Fixed

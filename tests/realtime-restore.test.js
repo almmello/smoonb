@@ -77,7 +77,7 @@ for (const legacy of [true, false])
       ...transport,
       confirmLimits: async (_q, defaultYes) => {
         confirmations++;
-        assert.equal(defaultYes, false);
+        assert.equal(defaultYes, true);
         return true;
       },
     });
