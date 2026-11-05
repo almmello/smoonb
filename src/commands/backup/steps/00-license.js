@@ -1,7 +1,7 @@
 const https = require('https');
 const inquirer = require('inquirer');
 const path = require('path');
-const { readEnvFile, writeEnvFile } = require('../../../utils/env');
+const { readEnvFile } = require('../../../utils/env');
 const { APP_CONFIG } = require('../../../config/appConfig');
 const { t } = require('../../../i18n');
 const ui = require('../../../utils/cliUi');
@@ -271,8 +271,8 @@ module.exports = async (options) => {
       ui.link(`   ${appUrl}`);
       process.exit(1);
     }
-    const currentEnv = await readEnvFile(envPath);
-    await writeEnvFile(envPath, { ...currentEnv, [LICENSE_KEY_ENV]: licenseKey });
+    // Keep interactive credentials in memory; preserve the project's environment file.
+    process.env[LICENSE_KEY_ENV] = licenseKey;
   }
 
   let cliVersion = '0.0.0';

@@ -154,8 +154,8 @@
   "disclaimer.acceptImport": "Você aceita os Termos de Uso e o Aviso de Risco de Importação?",
   "disclaimer.operationCancelled": "Operação cancelada pelo usuário.",
 
-  "consent.title": "O smoonb irá ler e escrever o arquivo .env.local localmente.",
-  "consent.backup": "Um backup automático do .env.local será criado antes de qualquer alteração.",
+  "consent.title": "O smoonb irá ler .env.local e preservar o arquivo do projeto.",
+  "consent.backup": "Uma cópia de .env.local será salva dentro do backup.",
   "consent.mapping": "Vamos mapear suas variáveis de ambiente para garantir que todas as chaves necessárias estejam presentes e com os valores corretos do projeto de destino.",
   "consent.proceed": "Você consente em prosseguir?",
 
@@ -819,5 +819,6 @@
   "error.databaseUrlInvalidSimple": "Database URL inválida",
   "error.storageCredentialsNotConfigured": "Credenciais do projeto destino não configuradas. É necessário SUPABASE_PROJECT_ID e SUPABASE_ACCESS_TOKEN",
   "error.supabaseCredentialsNotConfigured": "Credenciais do Supabase não configuradas. É necessário NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY",
-  "restore.verified.remapUrls": "Atualizar os endereços Supabase do projeto antigo para o novo nos dados e arquivos? (Inclui URLs em campos JSON; outros textos e IDs são preservados.)"
+  "restore.verified.remapUrls": "Atualizar os endereços Supabase do projeto antigo para o novo nos dados e arquivos? (Inclui URLs em campos JSON; outros textos e IDs são preservados.)",
+  "backup.environmentPreserved": "Ambiente mapeado para esta execução; arquivo do projeto preservado."
 }

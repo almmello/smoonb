@@ -88,7 +88,7 @@ module.exports = async ({ projectId, accessToken, backupDir, supabaseUrl, supaba
 
     if (!supabaseUrl || !supabaseServiceKey) {
       console.log(chalk.yellow(`   ⚠️  ${getT('backup.steps.storage.credentialsNotAvailable')}`));
-      return await backupMetadataOnly(buckets, storageDir, projectId, accessToken);
+      return { ...await backupMetadataOnly(buckets, storageDir, projectId, accessToken), success: false, reason: 'storage_files_not_exported' };
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -211,6 +211,7 @@ module.exports = async ({ projectId, accessToken, backupDir, supabaseUrl, supaba
           objectCount: objects?.length || 0,
           filesDownloaded,
           filesSkipped,
+          listingFailed,
           totalFiles: allFiles.length
         });
 
@@ -251,9 +252,9 @@ module.exports = async ({ projectId, accessToken, backupDir, supabaseUrl, supaba
       console.log(chalk.white(`   ℹ️  ${getT('backup.steps.storage.tempKept', { path: path.relative(process.cwd(), tempStorageDir) })}`));
     }
 
-    console.log(chalk.green(`✅ ${getT('backup.steps.storage.done', { buckets: processedBuckets.length, files: totalFilesDownloaded })}`));
+    console.log(require('../outcome').storageComplete(processedBuckets, buckets.length) ? 'Storage: exportação concluída.' : 'Storage: exportação incompleta; arquivos disponíveis preservados.');
     return {
-      success: true,
+      success: require('../outcome').storageComplete(processedBuckets, buckets.length),
       buckets: processedBuckets,
       zipFile: zipFileName,
       zipSizeMB,

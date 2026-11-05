@@ -10,7 +10,6 @@ yarn-error.log*
 
 # Dependencies
 node_modules/
-npm-shrinkwrap.json
 package-lock.json
 yarn.lock
 

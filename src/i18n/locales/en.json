@@ -154,8 +154,8 @@
   "disclaimer.acceptImport": "Do you accept the Terms of Use and Risk Warning for Import?",
   "disclaimer.operationCancelled": "Operation cancelled by user.",
 
-  "consent.title": "The smoonb will read and write the .env.local file locally.",
-  "consent.backup": "An automatic backup of .env.local will be created before any changes.",
+  "consent.title": "Smoonb will read .env.local and preserve the project file.",
+  "consent.backup": "A copy of .env.local will be saved inside the backup.",
   "consent.mapping": "We will map your environment variables to ensure all required keys are present and have the correct values for the target project.",
   "consent.proceed": "Do you consent to proceed?",
 
@@ -820,5 +820,6 @@
   "error.databaseUrlInvalidSimple": "Invalid Database URL",
   "error.storageCredentialsNotConfigured": "Target project credentials not configured. SUPABASE_PROJECT_ID and SUPABASE_ACCESS_TOKEN are required",
   "error.supabaseCredentialsNotConfigured": "Supabase credentials not configured. NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required",
-  "restore.verified.remapUrls": "Update old Supabase service URLs to the new project in data and files? (Includes URLs inside JSON; unrelated text and IDs are preserved.)"
+  "restore.verified.remapUrls": "Update old Supabase service URLs to the new project in data and files? (Includes URLs inside JSON; unrelated text and IDs are preserved.)",
+  "backup.environmentPreserved": "Environment mapped for this run; project file preserved."
 }

@@ -1,7 +1,7 @@
 const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs').promises;
-const { execSync } = require('child_process');
+const { runSql } = require('../../restore/pg');
 const { t } = require('../../../i18n');
 const { parseDatabaseUrl } = require('../utils');
 
@@ -21,8 +21,8 @@ module.exports = async ({ databaseUrl, projectId, backupDir, postgresMajor }) =>
     if (!parsed) {
       throw new Error(getT('error.databaseUrlInvalidSimple'));
     }
-    const { username, password, host, port, database } = parsed;
-    
+
+
     // Gerar nome do arquivo
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
@@ -31,12 +31,12 @@ module.exports = async ({ databaseUrl, projectId, backupDir, postgresMajor }) =>
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
-    
+
     const fileName = `database-settings-${day}-${month}-${year}@${hours}-${minutes}-${seconds}.json`;
-    
+
     // Usar caminho absoluto igual às outras funções
-    const backupDirAbs = path.resolve(backupDir);
-    
+
+
     // Script SQL para capturar todas as configurações
     const sqlScript = `
 -- Database Extensions and Settings Backup
@@ -62,10 +62,10 @@ SELECT json_agg(
     'description', short_desc
   )
 ) as postgres_settings
-FROM pg_settings 
+FROM pg_settings
 WHERE name IN (
   'statement_timeout',
-  'idle_in_transaction_session_timeout', 
+  'idle_in_transaction_session_timeout',
   'lock_timeout',
   'shared_buffers',
   'work_mem',
@@ -75,7 +75,7 @@ WHERE name IN (
   'log_statement',
   'log_min_duration_statement',
   'timezone',
-  'log_timezone', 
+  'log_timezone',
   'default_transaction_isolation',
   'default_transaction_read_only',
   'checkpoint_completion_target',
@@ -91,7 +91,7 @@ SELECT json_agg(
     'config', rolconfig
   )
 ) as role_configurations
-FROM pg_roles 
+FROM pg_roles
 WHERE rolname IN ('anon', 'authenticated', 'authenticator', 'postgres', 'service_role')
 AND rolconfig IS NOT NULL;
 
@@ -102,10 +102,10 @@ SELECT json_agg(
     'config', rolconfig
   )
 ) as pgaudit_configurations
-FROM pg_roles 
-WHERE rolconfig IS NOT NULL 
+FROM pg_roles
+WHERE rolconfig IS NOT NULL
 AND EXISTS (
-  SELECT 1 FROM unnest(rolconfig) AS config 
+  SELECT 1 FROM unnest(rolconfig) AS config
   WHERE config LIKE '%pgaudit%'
 );
 `;
@@ -113,29 +113,14 @@ AND EXISTS (
     // Salvar script SQL temporário
     const sqlFile = path.join(backupDir, 'temp_settings.sql');
     await fs.writeFile(sqlFile, sqlScript);
-    
+
     // Executar via Docker (mesma major do step Postgres version)
-    const postgresImage = `postgres:${postgresMajor}`;
-    const dockerCmd = [
-      'docker run --rm --network host',
-      `-v "${backupDirAbs}:/host"`,
-      `-e PGPASSWORD="${password}"`,
-      `${postgresImage} psql`,
-      `-h ${host}`,
-      `-p ${port}`,
-      `-U ${username}`,
-      `-d ${database}`,
-      '-f /host/temp_settings.sql',
-      '-t', // Tuples only
-      '-A'  // Unaligned output
-    ].join(' ');
-    
-    console.log(chalk.white(`   - ${getT('backup.steps.databaseSettings.executing')}`));
-    const output = execSync(dockerCmd, { stdio: 'pipe', encoding: 'utf8' });
-    
+
+    const output = await runSql(databaseUrl, sqlScript, { postgresMajor });
+
     // Processar output e criar JSON estruturado
     const lines = output.trim().split('\n').filter(line => line.trim());
-    
+
     const result = {
       database_settings: {
         note: "Configurações específicas do database Supabase capturadas via SQL",
@@ -161,19 +146,19 @@ AND EXISTS (
         }
       }
     };
-    
+
     // Salvar arquivo JSON
     const jsonFile = path.join(backupDir, fileName);
     await fs.writeFile(jsonFile, JSON.stringify(result, null, 2));
-    
+
     // Limpar arquivo temporário
     await fs.unlink(sqlFile);
-    
+
     const stats = await fs.stat(jsonFile);
     const sizeKB = (stats.size / 1024).toFixed(1);
-    
+
     console.log(chalk.green(`     ✅ Database Settings: ${fileName} (${sizeKB} KB)`));
-    
+
     return { success: true, size: sizeKB, fileName: fileName };
   } catch (error) {
     const getT = global.smoonbI18n?.t || t;
@@ -181,4 +166,3 @@ AND EXISTS (
     return { success: false };
   }
 };
-

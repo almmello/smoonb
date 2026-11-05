@@ -2,6 +2,7 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 
 const execAsync = promisify(exec);
+const { runSupabase } = require('./supabaseCli');
 
 /**
  * Detecta se Docker Desktop está instalado no sistema
@@ -37,7 +38,7 @@ async function detectDockerRunning() {
  */
 async function detectSupabaseCLI() {
   try {
-    await execAsync('supabase --version');
+    runSupabase('supabase', ['--version'], { encoding: 'utf8', stdio: 'pipe' });
     return true;
   } catch {
     return false;
@@ -50,7 +51,7 @@ async function detectSupabaseCLI() {
  */
 async function getSupabaseCLIVersion() {
   try {
-    const { stdout } = await execAsync('supabase --version');
+    const { stdout } = runSupabase('supabase', ['--version'], { encoding: 'utf8', stdio: 'pipe' });
     const match = stdout.match(/(\d+)\.(\d+)\.(\d+)/);
     return match ? `${match[1]}.${match[2]}.${match[3]}` : null;
   } catch {
@@ -178,7 +179,7 @@ async function detectDockerDependencies() {
  * @param {boolean} [opts.skipSupabaseVersionCheck=false] - Pular checagem de versão do Supabase CLI
  * @returns {Promise<{canBackupComplete: boolean, reason?: string, dockerStatus: any}>}
  */
-async function canPerformCompleteBackup({ skipSupabaseVersionCheck = false } = {}) {
+async function canPerformCompleteBackup() {
   const dockerStatus = await detectDockerDesktop();
   
   if (!dockerStatus.installed) {
@@ -206,54 +207,6 @@ async function canPerformCompleteBackup({ skipSupabaseVersionCheck = false } = {
     };
   }
 
-  if (skipSupabaseVersionCheck) {
-    return {
-      canBackupComplete: true,
-      supabaseVersionCheckSkipped: true,
-      dockerStatus
-    };
-  }
-
-  const supabaseCliVersion = await getSupabaseCLIVersion();
-  const latestResult = await getSupabaseCLILatestVersion();
-  if (latestResult.error) {
-    return {
-      canBackupComplete: false,
-      reason: 'supabase_cli_latest_unknown',
-      latestError: latestResult.error,
-      supabaseCliVersion: supabaseCliVersion || null,
-      dockerStatus
-    };
-  }
-
-  const minVersion = getMinAcceptableVersion(latestResult.version);
-  if (supabaseCliVersion && minVersion && compareSemver(supabaseCliVersion, minVersion) < 0) {
-    return {
-      canBackupComplete: false,
-      reason: 'supabase_cli_outdated',
-      supabaseCliVersion,
-      supabaseCliLatest: latestResult.version,
-      supabaseCliMinVersion: minVersion,
-      dockerStatus
-    };
-  }
-  
-  return {
-    canBackupComplete: true,
-    dockerStatus
-  };
+  return { canBackupComplete: true, dockerStatus };
 }
-
-module.exports = {
-  detectDockerInstallation,
-  detectDockerRunning,
-  detectSupabaseCLI,
-  detectDockerDependencies,
-  detectDockerDesktop,
-  getDockerVersion,
-  getSupabaseCLIVersion,
-  getSupabaseCLILatestVersion,
-  compareSemver,
-  getMinAcceptableVersion,
-  canPerformCompleteBackup
-};
+module.exports = { detectDockerInstallation, detectDockerRunning, detectSupabaseCLI, detectDockerDependencies, detectDockerDesktop, getDockerVersion, getSupabaseCLIVersion, compareSemver, getMinAcceptableVersion, getSupabaseCLILatestVersion, canPerformCompleteBackup };

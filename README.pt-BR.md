@@ -685,3 +685,11 @@ Contribuições são bem-vindas. [www.smoonb.com/#price](https://www.smoonb.com/
 **GitHub:** https://github.com/almmello/smoonb
 
 Teste adicional do caminho real de restore: `npm run test:restore:docker`. Usa PostgreSQL descartável, dados fictícios e transporte HTTP simulado para Storage; cobre Auth, permissões, ciclos, rollback, arquivos e metadados.
+
+## Estabilidade a partir da 1.0.12
+
+Use Node.js LTS 22, 24 ou 26 e Docker ativo. O pacote inclui Supabase CLI 2.122.1 e npm-shrinkwrap.json; não utiliza o CLI global nem exige acompanhar latest. O canal v2 recebe manutenção, sem promessa de prazo LTS. Atualizações de ferramentas devem ser homologadas em uma nova versão do smoonb. A primeira exportação pode precisar baixar a imagem PostgreSQL usada pelo CLI; confira conectividade e espaço em disco.
+
+O backup usa diretórios temporários para SQL, roles, Functions e migrations, preserva os arquivos do projeto e retorna código 1/status incomplete quando um componente solicitado falha. Os arquivos concluídos ficam disponíveis, mas o conjunto não deve ser tratado como completo. O mapeamento de ambiente vale para a execução, sem regravar o arquivo do projeto.
+
+Após publicação, no Sicoop execute `npm install --save-exact smoonb@1.0.12`, confira `npx smoonb --version` e execute um novo backup. A versão 0.0.60 não consulta o validador e não pode ser bloqueada remotamente. Não reutilize um backup incompleto como se fosse completo.

@@ -1,56 +1,24 @@
 const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs').promises;
-const { spawn } = require('child_process');
 const { t } = require('../../../i18n');
 const { createPgDumpDiagnostics, hasReplicaRolePrologue } = require('../../../utils/pg-dump-diagnostics');
 
-function runWithElapsedTicker(command, args, env, label, collectWarnings = false) {
-  return new Promise((resolve, reject) => {
-    const start = Date.now();
-    const useTty = Boolean(process.stdout.isTTY);
-    const clearTicker = () => {
-      if (useTty) process.stdout.write('\r' + ' '.repeat(80) + '\r');
-    };
-    const diagnostics = createPgDumpDiagnostics(chunk => {
-      clearTicker();
-      process.stderr.write(chunk);
-    });
-    const ticker = useTty ? setInterval(() => {
-      const elapsed = Math.floor((Date.now() - start) / 1000);
-      process.stdout.write(`\r     ⏱ ${label} ${elapsed}s`);
-    }, 1000) : null;
-    let settled = false;
-    const finish = (error) => {
-      if (settled) return;
-      settled = true;
-      clearInterval(ticker);
-      clearTicker();
-      const result = diagnostics.end();
-      if (error) {
-        // A failed export must never hide the diagnostics already collected.
-        if (result.messages.length) process.stderr.write(result.messages.join('\n') + '\n');
-        reject(error);
-      } else resolve(result);
-    };
-    try {
-      const proc = spawn(command, args, {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        shell: true,
-        env: { ...process.env, ...env }
-      });
-      // Drain stdout as well, so a verbose CLI cannot fill its pipe and hang.
-      proc.stdout.on('data', chunk => { clearTicker(); process.stdout.write(chunk); });
-      proc.stderr.on('data', chunk => {
-        if (collectWarnings) diagnostics.write(chunk);
-        else { clearTicker(); process.stderr.write(chunk); }
-      });
-      proc.on('close', code => finish(code === 0 ? null : new Error(`Exited with code ${code}`)));
-      proc.on('error', finish);
-    } catch (error) {
-      finish(error);
-    }
-  });
+const { isolatedSupabase } = require('../../../utils/supabaseCli');
+async function runWithElapsedTicker(_command, args, env) {
+  const result = await isolatedSupabase(args, env, { capture: true });
+  let stderr = String(result.stderr || '');
+  const secrets = Object.values(env || {}).filter(Boolean);
+  const databaseUrl = args[args.indexOf('--db-url') + 1];
+  if (databaseUrl) {
+    secrets.push(databaseUrl);
+    try { secrets.push(decodeURIComponent(new URL(databaseUrl).password)); } catch { /* invalid URLs are handled by the CLI */ }
+  }
+  for (const secret of secrets.filter(Boolean).sort((a, b) => b.length - a.length)) stderr = stderr.split(secret).join('[redacted]');
+  stderr = stderr.replace(/postgres(?:ql)?:\/\/[^\s"']+/gi, '[database URL redacted]');
+  const diagnostics = createPgDumpDiagnostics(chunk => process.stderr.write(chunk));
+  diagnostics.write(stderr);
+  return diagnostics.end();
 }
 
 /**
@@ -74,8 +42,8 @@ function createDatabaseSeparatedStep(runDump = runWithElapsedTicker) {
 
       try {
         await runDump(
-          `supabase db dump --db-url "${dbUrl}" -f "${schemaFile}"`,
-          [],
+          'supabase',
+          ['db', 'dump', '--db-url', dbUrl, '-f', path.resolve(schemaFile)],
           { SUPABASE_ACCESS_TOKEN: accessToken || '' },
           getT('backup.steps.database.separated.exportingSchema')
         );
@@ -95,8 +63,8 @@ function createDatabaseSeparatedStep(runDump = runWithElapsedTicker) {
 
       try {
         const diagnostics = await runDump(
-          `supabase db dump --db-url "${dbUrl}" --data-only -f "${dataFile}"`,
-          [],
+          'supabase',
+          ['db', 'dump', '--db-url', dbUrl, '--data-only', '-f', path.resolve(dataFile)],
           { SUPABASE_ACCESS_TOKEN: accessToken || '' },
           getT('backup.steps.database.separated.exportingData'),
           true
@@ -125,8 +93,8 @@ function createDatabaseSeparatedStep(runDump = runWithElapsedTicker) {
 
       try {
         await runDump(
-          `supabase db dump --db-url "${dbUrl}" --role-only -f "${rolesFile}"`,
-          [],
+          'supabase',
+          ['db', 'dump', '--db-url', dbUrl, '--role-only', '-f', path.resolve(rolesFile)],
           { SUPABASE_ACCESS_TOKEN: accessToken || '' },
           getT('backup.steps.database.separated.exportingRoles')
         );

@@ -4,7 +4,7 @@ const fs = require('fs').promises;
 const { ensureDir, writeJson } = require('../../utils/fsx');
 const { showBetaBanner } = require('../../utils/banner');
 const { getDockerVersion } = require('../../utils/docker');
-const { readEnvFile, writeEnvFile, backupEnvFile } = require('../../utils/env');
+const { readEnvFile, backupEnvFile } = require('../../utils/env');
 const { saveEnvMap } = require('../../utils/envMap');
 const { mapEnvVariablesInteractively, askComponentsFlags, printSupabasePostgresMajorHintOnce } = require('../../interactive/envMapper');
 const { confirm } = require('../../utils/prompt');
@@ -25,6 +25,11 @@ const step10SupabaseTemp = require('./steps/10-supabase-temp');
 const step11Migrations = require('./steps/11-migrations');
 const { sendTelemetry } = require('../../telemetry');
 const ui = require('../../utils/cliUi');
+const { backupOutcome } = require('./outcome');
+
+async function captureStep(step, context) {
+  try { return await step(context); } catch { return { success: false, reason: 'component_failed' }; }
+}
 
 // Exportar FUNÇÃO em vez de objeto Command
 module.exports = async (options) => {
@@ -106,9 +111,9 @@ module.exports = async (options) => {
     ];
     const currentEnv = await readEnvFile(envPath);
     const { finalEnv, dePara } = await mapEnvVariablesInteractively(currentEnv, expectedKeys);
-    await writeEnvFile(envPath, finalEnv);
+    // Mapping applies to this run only.
     await saveEnvMap(dePara, path.join(backupDir, 'env', 'env-map.json'));
-    console.log(chalk.green(`✅ ${getT('env.mapping.updated')}`));
+    console.log(chalk.green(`✅ ${getT('backup.environmentPreserved')}`));
 
     function getValue(expectedKey) {
       const clientKey = Object.keys(dePara).find(k => dePara[k] === expectedKey);
@@ -258,13 +263,13 @@ module.exports = async (options) => {
     // 1. Backup Database via pg_dumpall Docker
     stepNumber++;
     console.log(chalk.blue(`\n📊 ${stepNumber}/${totalSteps} - ${getT('backup.steps.database.title')}`));
-    const databaseResult = await step02Database(context);
+    const databaseResult = await captureStep(step02Database, context);
     manifest.components.database = databaseResult;
 
     // 3. Backup Database Separado
     stepNumber++;
     console.log(chalk.blue(`\n📊 ${stepNumber}/${totalSteps} - ${getT('backup.steps.database.separated.title')}`));
-    const dbSeparatedResult = await step03DatabaseSeparated(context);
+    const dbSeparatedResult = await captureStep(step03DatabaseSeparated, context);
     manifest.components.database_separated = {
       success: dbSeparatedResult.success,
       method: 'supabase-cli',
@@ -277,14 +282,14 @@ module.exports = async (options) => {
     // 4. Backup Database Settings
     stepNumber++;
     console.log(chalk.blue(`\n🔧 ${stepNumber}/${totalSteps} - ${getT('backup.steps.databaseSettings.title')}`));
-    const databaseSettingsResult = await step04DatabaseSettings(context);
+    const databaseSettingsResult = await captureStep(step04DatabaseSettings, context);
     manifest.components.database_settings = databaseSettingsResult;
 
     // 5. Backup Auth Settings
     if (flags?.includeAuth) {
       stepNumber++;
       console.log(chalk.blue(`\n🔐 ${stepNumber}/${totalSteps} - ${getT('backup.steps.auth.title')}`));
-      const authResult = await step05AuthSettings(context);
+      const authResult = await captureStep(step05AuthSettings, context);
       manifest.components.auth_settings = authResult;
     }
 
@@ -292,7 +297,7 @@ module.exports = async (options) => {
     if (flags?.includeRealtime) {
       stepNumber++;
       console.log(chalk.blue(`\n🔄 ${stepNumber}/${totalSteps} - ${getT('backup.steps.realtime.title')}`));
-      const realtimeResult = await step06RealtimeSettings(context);
+      const realtimeResult = await captureStep(step06RealtimeSettings, context);
       manifest.components.realtime = realtimeResult;
     }
 
@@ -300,21 +305,21 @@ module.exports = async (options) => {
     if (flags?.includeStorage) {
       stepNumber++;
       console.log(chalk.blue(`\n📦 ${stepNumber}/${totalSteps} - ${getT('backup.steps.storage.title')}`));
-      const storageResult = await step07Storage(context);
+      const storageResult = await captureStep(step07Storage, context);
       manifest.components.storage = storageResult;
     }
 
     // 8. Backup Custom Roles
     stepNumber++;
     console.log(chalk.blue(`\n👥 ${stepNumber}/${totalSteps} - ${getT('backup.steps.roles.title')}`));
-    const rolesResult = await step08CustomRoles(context);
+    const rolesResult = await captureStep(step08CustomRoles, context);
     manifest.components.custom_roles = rolesResult;
 
     // 9. Backup Edge Functions
     if (flags?.includeFunctions) {
       stepNumber++;
       console.log(chalk.blue(`\n⚡ ${stepNumber}/${totalSteps} - ${getT('backup.steps.functions.title')}`));
-      const functionsResult = await step09EdgeFunctions(context);
+      const functionsResult = await captureStep(step09EdgeFunctions, context);
       manifest.components.edge_functions = functionsResult;
     }
 
@@ -322,7 +327,7 @@ module.exports = async (options) => {
     if (flags?.includeTemp) {
       stepNumber++;
       console.log(chalk.blue(`\n📁 ${stepNumber}/${totalSteps} - ${getT('backup.steps.temp.title')}`));
-      const supabaseTempResult = await step10SupabaseTemp(context);
+      const supabaseTempResult = await captureStep(step10SupabaseTemp, context);
       manifest.components.supabase_temp = supabaseTempResult;
     }
 
@@ -330,13 +335,17 @@ module.exports = async (options) => {
     if (flags?.includeMigrations) {
       stepNumber++;
       console.log(chalk.blue(`\n📋 ${stepNumber}/${totalSteps} - ${getT('backup.steps.migrations.title')}`));
-      const migrationsResult = await step11Migrations(context);
+      const migrationsResult = await captureStep(step11Migrations, context);
       manifest.components.migrations = migrationsResult;
     }
 
+    const outcome = backupOutcome(manifest.components);
+    Object.assign(manifest, outcome);
+    if (!outcome.success) process.exitCode = 1;
     // Salvar manifest
     await writeJson(path.join(finalBackupDir, 'backup-manifest.json'), manifest);
 
+    if (outcome.success) {
     // Exibir resumo final (na ordem de captura)
     console.log(chalk.green(`\n🎉 ${getT('backup.complete.title')}`));
     console.log(chalk.blue(`📁 ${getT('backup.complete.location', { path: finalBackupDir })}`));
@@ -391,8 +400,15 @@ module.exports = async (options) => {
       console.log(chalk.green(`📋 ${getT('backup.complete.migrations', { count: migrationsResult.file_count || 0 })}`));
     }
 
+    } else {
+      console.error('BACKUP INCOMPLETO: ' + outcome.failed_components.join(', '));
+      console.log('Arquivos preservados em: ' + finalBackupDir);
+    }
+
     // report.json
     await writeJson(path.join(finalBackupDir, 'report.json'), {
+      ...outcome,
+      results: manifest.components,
       process: 'backup',
       created_at: manifest.created_at,
       project_id: manifest.project_id,
@@ -415,9 +431,9 @@ module.exports = async (options) => {
       enabled: context.telemetryEnabled,
       command: 'backup',
       durationMs: Date.now() - backupStartTime,
-      success: true
+      success: outcome.success
     });
-    return { success: true, backupDir: finalBackupDir, manifest };
+    return { ...outcome, backupDir: finalBackupDir, manifest };
 
   } catch (error) {
     sendTelemetry({

@@ -307,10 +307,8 @@ async function askComponentsFlags() {
   const includeFunctions = await confirm(getT('backup.components.edgeFunctions.include'), true);
   
   // Pergunta de limpeza de functions imediatamente após
-  let cleanFunctions = false;
-  if (includeFunctions) {
-    cleanFunctions = await confirm(getT('backup.components.edgeFunctions.cleanup'), false);
-  }
+  const cleanFunctions = false;
+
 
   // Explicação sobre .temp
   console.log(chalk.cyan(`\n📁 ${getT('backup.components.temp.title')}`));
@@ -320,10 +318,8 @@ async function askComponentsFlags() {
   const includeTemp = await confirm(getT('backup.components.temp.include'), true);
   
   // Pergunta de limpeza de .temp imediatamente após
-  let cleanTemp = false;
-  if (includeTemp) {
-    cleanTemp = await confirm(getT('backup.components.temp.cleanup'), false);
-  }
+  const cleanTemp = false;
+
 
   // Explicação sobre Migrations
   console.log(chalk.cyan(`\n📋 ${getT('backup.components.migrations.title')}`));
@@ -334,10 +330,8 @@ async function askComponentsFlags() {
   const includeMigrations = await confirm(getT('backup.components.migrations.include'), true);
   
   // Pergunta de limpeza de migrations imediatamente após
-  let cleanMigrations = false;
-  if (includeMigrations) {
-    cleanMigrations = await confirm(getT('backup.components.migrations.cleanup'), false);
-  }
+  const cleanMigrations = false;
+
 
   // Continuar com outras perguntas
   const includeStorage = await confirm(getT('backup.components.storage.include'), true);

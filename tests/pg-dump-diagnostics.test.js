@@ -4,7 +4,7 @@ const fs = require('fs').promises;
 const os = require('os');
 const path = require('path');
 const { createPgDumpDiagnostics, hasReplicaRolePrologue } = require('../src/utils/pg-dump-diagnostics');
-const { createDatabaseSeparatedStep, runWithElapsedTicker } = require('../src/commands/backup/steps/03-database-separated');
+const { createDatabaseSeparatedStep } = require('../src/commands/backup/steps/03-database-separated');
 const { initI18n } = require('../src/i18n');
 
 const warning = [
@@ -79,11 +79,11 @@ test('recognizes only the Supabase prologue, not SQL inside dumped records', asy
 });
 
 function fakeDump({ fail, protectedData = true, emitWarnings = true } = {}) {
-  return async (command, _args, _env, _label, consolidate) => {
-    const file = command.match(/-f "([^"]+)"/)[1];
+  return async (_command, args, _env, _label, consolidate) => {
+    const file = args[args.indexOf('-f') + 1];
     if (path.basename(file) === fail) throw new Error('simulated export failure');
     await fs.writeFile(file, protectedData ? 'SET session_replication_role = replica;\n' : '-- no protection\n');
-    if (command.includes('--data-only')) {
+    if (args.includes('--data-only')) {
       assert.equal(consolidate, true);
       return collect(emitWarnings ? warning : '').diagnostics;
     }
@@ -138,18 +138,3 @@ for (const fail of ['schema.sql', 'data.sql', 'roles.sql']) {
     assert.match(output, /simulated export failure/);
   });
 }
-
-test('subprocess errors reject even when preceded by circular warnings', async t => {
-  const dir = await directory(t);
-  const fixture = path.join(dir, 'failure.js');
-  await fs.writeFile(fixture, `process.stderr.write(${JSON.stringify(warning + 'pg_dump: error: real failure\n')}); process.exitCode = 7;`);
-  await assert.rejects(runWithElapsedTicker(`"${process.execPath}" "${fixture}"`, [], {}, 'fixture', true), /Exited with code 7/);
-});
-
-test('subprocess completes after warning-only exit and drains stdout', async t => {
-  const dir = await directory(t);
-  const fixture = path.join(dir, 'success.js');
-  await fs.writeFile(fixture, `process.stdout.write('fixture stdout drained\\n'); process.stderr.write(${JSON.stringify(warning)});`);
-  const result = await runWithElapsedTicker(`"${process.execPath}" "${fixture}"`, [], {}, 'fixture', true);
-  assert.equal(result.circularForeignKeys, true);
-});

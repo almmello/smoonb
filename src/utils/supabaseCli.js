@@ -1,32 +1,26 @@
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
-
-// npm installs a .cmd shim on Windows; execFile cannot execute that shim safely.
-// Resolve its package entry point instead of interpolating arguments into cmd.exe.
+const os = require('os');
+const { spawnSync } = require('child_process');
 function runSupabase(_command, args, options = {}) {
-  if (process.platform !== 'win32')
-    return execFileSync('supabase', args, options);
-  for (const directory of (process.env.PATH || '').split(path.delimiter)) {
-    const executable = path.join(directory, 'supabase.exe');
-    if (fs.existsSync(executable))
-      return execFileSync(executable, args, options);
-    for (const root of [
-      path.join(directory, 'node_modules', 'supabase'),
-      path.resolve(directory, '..', 'supabase'),
-    ]) {
-      const file = path.join(root, 'package.json');
-      if (!fs.existsSync(file)) continue;
-      const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
-      const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.supabase;
-      if (!bin) continue;
-      const entry = path.resolve(root, bin);
-      if (!fs.existsSync(entry)) continue;
-      if (entry.endsWith('.js'))
-        return execFileSync(process.execPath, [entry, ...args], options);
-      return execFileSync(entry, args, options);
-    }
+  const root = path.dirname(require.resolve('supabase/package.json'));
+  const pkg = require(path.join(root, 'package.json'));
+  if (pkg.version !== require('../../package.json').dependencies.supabase) throw new Error('Supabase CLI version mismatch; reinstall smoonb');
+  const entry = path.resolve(root, typeof pkg.bin === 'string' ? pkg.bin : pkg.bin.supabase);
+  try {
+    const result = spawnSync(entry.endsWith('.js') ? process.execPath : entry, entry.endsWith('.js') ? [entry, ...args] : args, { ...options, shell: false, windowsHide: true, timeout: options.timeout || 180000, maxBuffer: 16 * 1024 * 1024 });
+    if (result.error || result.status !== 0) throw { status: result.status, code: result.error?.code };
+    return options.capture ? result : result.stdout;
+  } catch (error) {
+    throw new Error(`Supabase CLI operation failed (${error.code === 'ETIMEDOUT' ? 'timeout; check Docker image downloads and connectivity' : 'exit ' + (Number.isInteger(error.status) ? error.status : 'unavailable')}). Check connectivity and credentials.`);
   }
-  throw new Error('Supabase CLI executable was not found in PATH');
 }
-module.exports = { runSupabase };
+async function isolatedSupabase(args, env = {}, options = {}) {
+  const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'smoonb-cli-'));
+  try {
+    await fs.promises.mkdir(path.join(root, 'supabase'));
+    await fs.promises.writeFile(path.join(root, 'supabase', 'config.toml'), 'project_id = "smoonb-backup"\n');
+    return runSupabase('supabase', [...args, '--workdir', root], { ...options, cwd: root, env: { ...process.env, ...env }, encoding: 'utf8', stdio: 'pipe' });
+  } finally { await fs.promises.rm(root, { recursive: true, force: true }); }
+}
+module.exports = { runSupabase, isolatedSupabase };

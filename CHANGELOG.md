@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.12] - 2026-11-05
+
+### Fixed
+- Bundle exactly Supabase CLI 2.122.1 (v2 maintenance channel) and lock distribution dependencies; never require npm latest or use the global CLI.
+- Isolate SQL, role and migration exports from project configuration and preserve local migrations, Functions, .temp and environment files.
+- Record incomplete backups and exit with failure when any requested component fails. Preserve successful exports.
+- Keep credentials out of shell commands and command failure messages.
+- Support Node.js LTS branches 22, 24 and 26. Update ZIP handling dependency.
+
 ## [1.0.11] - 2026-10-10
 
 ### Changed

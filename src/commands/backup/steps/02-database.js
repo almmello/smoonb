@@ -47,13 +47,13 @@ async function estimateClusterBytes({ postgresImage, username, password, host, p
   const query = "SELECT COALESCE(sum(pg_database_size(datname)),0) FROM pg_database WHERE datistemplate = false;";
   const args = [
     'run', '--rm', '--network', 'host',
-    '-e', `PGPASSWORD=${password}`,
+    '-e', 'PGPASSWORD',
     postgresImage, 'psql',
     '-h', host, '-p', port, '-U', username, '-d', 'postgres',
     '-t', '-A', '-c', query
   ];
   return new Promise((resolve) => {
-    const proc = spawn('docker', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const proc = spawn('docker', args, { env: { ...process.env, PGPASSWORD: password }, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let done = false;
     const timeout = setTimeout(() => {
@@ -163,7 +163,7 @@ module.exports = async ({ databaseUrl, backupDir, postgresMajor: contextMajor })
     const dockerArgs = [
       'run', '--rm', '--network', 'host',
       '-v', `${backupDirAbs}:/host`,
-      '-e', `PGPASSWORD=${password}`,
+      '-e', 'PGPASSWORD',
       postgresImage, 'pg_dumpall',
       '-h', host,
       '-p', port,
@@ -183,10 +183,10 @@ module.exports = async ({ databaseUrl, backupDir, postgresMajor: contextMajor })
     let lastProgressLine = '';
 
     const runDump = () => new Promise((resolve, reject) => {
-      const proc = spawn('docker', dockerArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
+      const proc = spawn('docker', dockerArgs, { env: { ...process.env, PGPASSWORD: password }, stdio: ['ignore', 'pipe', 'pipe'] });
 
       proc.stderr.on('data', (chunk) => {
-        process.stderr.write(chunk);
+        void chunk;
         if (useTty && lastProgressLine) {
           readline.cursorTo(process.stdout, 0);
           process.stdout.write(lastProgressLine);
@@ -302,7 +302,7 @@ module.exports = async ({ databaseUrl, backupDir, postgresMajor: contextMajor })
     const runGzip = () => new Promise((resolve, reject) => {
       const proc = spawn('docker', gzipArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
 
-      proc.stderr.on('data', (chunk) => process.stderr.write(chunk));
+      proc.stderr.on('data', (chunk) => void chunk);
 
       const pollGzip = async () => {
         if (!(await exists(gzipOutputPath))) return;

@@ -1,7 +1,6 @@
 const chalk = require('chalk');
 const path = require('path');
 const { copyDirSafe } = require('../../../utils/fsExtra');
-const { cleanDir } = require('../../../utils/fsExtra');
 const { t } = require('../../../i18n');
 
 /**
@@ -22,14 +21,6 @@ module.exports = async (context) => {
       console.log(chalk.white(`   - ${getT('backup.steps.temp.noFiles')}`));
     } else {
       console.log(chalk.green(`   ✅ ${getT('backup.steps.temp.copied', { count: fileCount })}`));
-    }
-    
-    // Usar flag de limpeza do contexto (já foi perguntado no início)
-    const shouldClean = context?.cleanupFlags?.cleanTemp || false;
-    
-    if (shouldClean) {
-      await cleanDir(tempDir);
-      console.log(chalk.white(`   - ${getT('backup.steps.temp.cleaned')}`));
     }
     
     return {
