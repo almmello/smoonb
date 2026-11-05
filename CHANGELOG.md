@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.14] - 2026-11-05
+
+### Fixed
+- Restore environment persistence removed in 1.0.12: save each confirmed backup configuration value immediately to .env.local, before exporting any component. Later failures or cancellation no longer discard entered values.
+- Persist a prompted license key before validation, so a network or validation failure does not require retyping it.
+- Replace environment files atomically, preserving unrelated lines, comments and line endings. A failed replacement leaves the original intact.
+- Save the pre-mapping configuration as env/.env.local.before and the effective configuration as env/.env.local inside the backup.
+
 ## [1.0.13] - 2026-11-05
 
 ### Fixed

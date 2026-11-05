@@ -4,7 +4,7 @@ const fs = require('fs').promises;
 const { ensureDir, writeJson } = require('../../utils/fsx');
 const { showBetaBanner } = require('../../utils/banner');
 const { getDockerVersion } = require('../../utils/docker');
-const { readEnvFile, backupEnvFile } = require('../../utils/env');
+const { readEnvFile, writeEnvFile, backupEnvFile } = require('../../utils/env');
 const { saveEnvMap } = require('../../utils/envMap');
 const { mapEnvVariablesInteractively, askComponentsFlags, printSupabasePostgresMajorHintOnce } = require('../../interactive/envMapper');
 const { confirm } = require('../../utils/prompt');
@@ -85,7 +85,7 @@ module.exports = async (options) => {
     await ensureDir(backupDir);
 
     // Backup e mapeamento do .env.local
-    const envBackupPath = path.join(backupDir, 'env', '.env.local');
+    const envBackupPath = path.join(backupDir, 'env', '.env.local.before');
     await ensureDir(path.dirname(envBackupPath));
     
     // Verificar se o arquivo existe antes de fazer backup
@@ -93,7 +93,8 @@ module.exports = async (options) => {
       await fs.access(envPath);
       await backupEnvFile(envPath, envBackupPath);
       console.log(chalk.blue(`📁 ${getT('env.mapping.backupCreated', { path: path.relative(process.cwd(), envBackupPath) })}`));
-    } catch {
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
       // Arquivo não existe, não fazer backup
       console.log(chalk.yellow(`⚠️  ${getT('env.mapping.fileNotFound')}`));
     }
@@ -110,10 +111,13 @@ module.exports = async (options) => {
       'SMOONB_TELEMETRY_ENABLED'
     ];
     const currentEnv = await readEnvFile(envPath);
-    const { finalEnv, dePara } = await mapEnvVariablesInteractively(currentEnv, expectedKeys);
-    // Mapping applies to this run only.
+    const { finalEnv, dePara } = await mapEnvVariablesInteractively(currentEnv, expectedKeys, async (entry, mapping) => {
+      await writeEnvFile(envPath, entry);
+      await saveEnvMap(mapping, path.join(backupDir, 'env', 'env-map.json'));
+    });
+    await backupEnvFile(envPath, path.join(backupDir, 'env', '.env.local'));
     await saveEnvMap(dePara, path.join(backupDir, 'env', 'env-map.json'));
-    console.log(chalk.green(`✅ ${getT('backup.environmentPreserved')}`));
+    console.log(chalk.green(`✅ ${getT('backup.environmentSaved')}`));
 
     function getValue(expectedKey) {
       const clientKey = Object.keys(dePara).find(k => dePara[k] === expectedKey);

@@ -155,8 +155,8 @@
   "disclaimer.operationCancelled": "Operação cancelada pelo usuário.",
 
   "consent.title": "O smoonb irá ler .env.local e preservar o arquivo do projeto.",
-  "consent.backup": "Uma cópia de .env.local será salva dentro do backup.",
-  "consent.mapping": "Vamos mapear suas variáveis de ambiente para garantir que todas as chaves necessárias estejam presentes e com os valores corretos do projeto de destino.",
+  "consent.backup": "A configuração anterior e a configuração usada serão copiadas para a pasta env do backup.",
+  "consent.mapping": "Cada valor confirmado será salvo imediatamente em .env.local, antes do backup. As demais variáveis serão preservadas, e os valores salvos continuarão disponíveis se a execução falhar ou for cancelada.",
   "consent.proceed": "Você consente em prosseguir?",
 
   "help.configuration": "CONFIGURAÇÃO:",
@@ -820,5 +820,5 @@
   "error.storageCredentialsNotConfigured": "Credenciais do projeto destino não configuradas. É necessário SUPABASE_PROJECT_ID e SUPABASE_ACCESS_TOKEN",
   "error.supabaseCredentialsNotConfigured": "Credenciais do Supabase não configuradas. É necessário NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY",
   "restore.verified.remapUrls": "Atualizar os endereços Supabase do projeto antigo para o novo nos dados e arquivos? (Inclui URLs em campos JSON; outros textos e IDs são preservados.)",
-  "backup.environmentPreserved": "Ambiente mapeado para esta execução; arquivo do projeto preservado."
+  "backup.environmentSaved": "Configuração salva em .env.local; disponível para a próxima execução, mesmo se o backup falhar."
 }

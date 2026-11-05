@@ -14,7 +14,7 @@ function printSupabasePostgresMajorHintOnce(getT) {
   ui.hint(`      ${getT('env.supabasePostgresMajor.hintBody')}`);
 }
 
-async function mapEnvVariablesInteractively(env, expectedKeys) {
+async function mapEnvVariablesInteractively(env, expectedKeys, onMapped = async () => {}) {
   _printedSupabasePostgresMajorHint = false;
   const finalEnv = { ...env };
   const dePara = {};
@@ -208,6 +208,7 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
           throw new Error(`Duplicidade de mapeamento detectada para ${clientKey}`);
         }
         dePara[clientKey] = expected;
+        await onMapped({ [clientKey]: finalEnv[clientKey] }, { ...dePara });
         continue;
       }
     }
@@ -261,6 +262,7 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
       throw new Error(`Duplicidade de mapeamento detectada para ${clientKey}`);
     }
     dePara[clientKey] = expected;
+    await onMapped({ [clientKey]: finalEnv[clientKey] }, { ...dePara });
   }
 
   // Após processar todas as variáveis, perguntar sobre idioma padrão se SMOONB_OUTPUT_DIR foi processado
@@ -288,6 +290,7 @@ async function mapEnvVariablesInteractively(env, expectedKeys) {
     }]);
 
     finalEnv.SMOONB_LANG = selectedLang;
+    await onMapped({ SMOONB_LANG: selectedLang }, { ...dePara });
     console.log(chalk.green(`✅ ${getT('env.language.saved', { lang: selectedLang })}`));
     console.log(chalk.yellow(`💡 ${getT('env.language.note')}`));
   }

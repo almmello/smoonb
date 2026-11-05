@@ -155,8 +155,8 @@
   "disclaimer.operationCancelled": "Operation cancelled by user.",
 
   "consent.title": "Smoonb will read .env.local and preserve the project file.",
-  "consent.backup": "A copy of .env.local will be saved inside the backup.",
-  "consent.mapping": "We will map your environment variables to ensure all required keys are present and have the correct values for the target project.",
+  "consent.backup": "The previous configuration and the configuration used will be copied to the backup env folder.",
+  "consent.mapping": "Each confirmed value will be saved immediately to .env.local, before backup. Other variables will be preserved, and saved values will remain available if execution fails or is canceled.",
   "consent.proceed": "Do you consent to proceed?",
 
   "help.configuration": "CONFIGURATION:",
@@ -821,5 +821,5 @@
   "error.storageCredentialsNotConfigured": "Target project credentials not configured. SUPABASE_PROJECT_ID and SUPABASE_ACCESS_TOKEN are required",
   "error.supabaseCredentialsNotConfigured": "Supabase credentials not configured. NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required",
   "restore.verified.remapUrls": "Update old Supabase service URLs to the new project in data and files? (Includes URLs inside JSON; unrelated text and IDs are preserved.)",
-  "backup.environmentPreserved": "Environment mapped for this run; project file preserved."
+  "backup.environmentSaved": "Configuration saved to .env.local; available on the next run even if backup fails."
 }

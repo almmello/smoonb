@@ -1,6 +1,6 @@
 {
   "name": "smoonb",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Complete Supabase backup and migration tool. https://www.smoonb.com/#price",
   "preferGlobal": false,
   "preventGlobalInstall": true,
