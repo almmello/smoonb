@@ -403,6 +403,8 @@ module.exports = async (options) => {
     } else {
       console.error('BACKUP INCOMPLETO: ' + outcome.failed_components.join(', '));
       console.log('Arquivos preservados em: ' + finalBackupDir);
+      for (const line of require('./outcome').componentSummary(manifest.components)) console.log(line);
+      console.log('Consulte backup-manifest.json para os detalhes e refaça o backup após resolver as etapas com falha.');
     }
 
     // report.json

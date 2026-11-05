@@ -26,9 +26,15 @@ const docker = args => execFileSync('docker', args, { stdio: 'pipe', timeout: 12
       try { docker(['exec', name, 'pg_isready', '-U', 'postgres']); break; }
       catch { await new Promise(r => setTimeout(r, 1000)); }
     }
-    docker(['exec', name, 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', "CREATE TABLE public.fixture(id integer primary key); INSERT INTO public.fixture VALUES (7); CREATE SCHEMA supabase_migrations; CREATE TABLE supabase_migrations.schema_migrations(version text primary key, statements text[], name text); INSERT INTO supabase_migrations.schema_migrations VALUES ('20261105000000', ARRAY['CREATE TABLE public.fixture(id integer primary key);'], 'fixture');"]);
+    docker(['exec', name, 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', "CREATE TABLE public.fixture(id integer primary key); INSERT INTO public.fixture VALUES (7);"]);
     const backupDir = path.join(root, 'backup'); await fs.mkdir(backupDir);
     const context = { databaseUrl: 'postgresql://postgres:fixture@127.0.0.1:55438/postgres?sslmode=disable', backupDir };
+    // Reproduce the unguarded CLI failure that affected fresh databases in 1.0.12.
+    await assert.rejects(isolatedSupabase(['migration', 'fetch', '--db-url', context.databaseUrl, '--yes']), /operation failed/);
+    assert.equal((await migrations(context)).reason, 'history_absent');
+    docker(['exec', name, 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', 'CREATE SCHEMA supabase_migrations; CREATE TABLE supabase_migrations.schema_migrations(version text primary key, statements text[], name text);']);
+    assert.equal((await migrations(context)).reason, 'history_empty');
+    docker(['exec', name, 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', "INSERT INTO supabase_migrations.schema_migrations VALUES ('20261105000000', ARRAY['CREATE TABLE public.fixture(id integer primary key);'], 'fixture');"]);
     const result = await separated(context);
     assert.equal(result.success, true);
     assert.equal(result.files.length, 3);

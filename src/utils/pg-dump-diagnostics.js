@@ -61,4 +61,8 @@ async function hasReplicaRolePrologue(file) {
   }
 }
 
-module.exports = { createPgDumpDiagnostics, hasReplicaRolePrologue };
+// The bundled CLI is deliberately pinned. Suppress only its generic upgrade advert.
+function withoutCliUpgradeNotice(text) {
+  return String(text).split(/(?<=\n)/).filter(line => !/^A new version of Supabase CLI is available: v[0-9.]+ \(currently installed v[0-9.]+\)\r?\n?$/.test(line) && !/^We recommend updating regularly for new features and bug fixes: https:\/\/supabase\.com\/docs\/guides\/cli\/getting-started#updating-the-supabase-cli\r?\n?$/.test(line)).join('');
+}
+module.exports = { createPgDumpDiagnostics, hasReplicaRolePrologue, withoutCliUpgradeNotice };

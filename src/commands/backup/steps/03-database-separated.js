@@ -2,12 +2,12 @@ const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs').promises;
 const { t } = require('../../../i18n');
-const { createPgDumpDiagnostics, hasReplicaRolePrologue } = require('../../../utils/pg-dump-diagnostics');
+const { createPgDumpDiagnostics, hasReplicaRolePrologue, withoutCliUpgradeNotice } = require('../../../utils/pg-dump-diagnostics');
 
 const { isolatedSupabase } = require('../../../utils/supabaseCli');
 async function runWithElapsedTicker(_command, args, env) {
   const result = await isolatedSupabase(args, env, { capture: true });
-  let stderr = String(result.stderr || '');
+  let stderr = withoutCliUpgradeNotice(result.stderr || '');
   const secrets = Object.values(env || {}).filter(Boolean);
   const databaseUrl = args[args.indexOf('--db-url') + 1];
   if (databaseUrl) {

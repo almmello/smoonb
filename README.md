@@ -691,3 +691,5 @@ Additional restore-path test: `npm run test:restore:docker`. Uses disposable Pos
 Use Node.js LTS 22, 24 or 26 and a running Docker engine. Supabase CLI 2.122.1 is an exact package dependency, with npm-shrinkwrap.json locking distribution dependencies. The global CLI and npm latest do not determine backup compatibility. The v2 channel receives maintenance; no fixed LTS term is assumed. The first export may need to download the PostgreSQL image used by the CLI.
 
 SQL, roles, Functions and migrations run in temporary workspaces. Project files are preserved. Failed requested components yield exit code 1 and incomplete status; successful files remain available. Environment mappings apply to the current run without rewriting the project file. Upgrade legacy installations explicitly after publication: `npm install --save-exact smoonb@1.0.12`.
+
+In 1.0.13, databases without migration history complete that component with zero files. Connection/permission failures still produce an incomplete backup, with a summary of every component.

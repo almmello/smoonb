@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.13] - 2026-11-05
+
+### Fixed
+- Query migration history in read-only mode before export. Missing or empty history is a successful zero-file backup, not an export error. Connection/permission failures remain failures.
+- Keep a component-by-component summary for incomplete backups, including successful components and actionable migration failure reasons.
+- Suppress only the bundled CLI's generic upgrade advertisement; retain database diagnostics.
+- Verify exported migration file count against the recorded history count.
+
 ## [1.0.12] - 2026-11-05
 
 ### Fixed

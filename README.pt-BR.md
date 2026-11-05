@@ -693,3 +693,5 @@ Use Node.js LTS 22, 24 ou 26 e Docker ativo. O pacote inclui Supabase CLI 2.122.
 O backup usa diretórios temporários para SQL, roles, Functions e migrations, preserva os arquivos do projeto e retorna código 1/status incomplete quando um componente solicitado falha. Os arquivos concluídos ficam disponíveis, mas o conjunto não deve ser tratado como completo. O mapeamento de ambiente vale para a execução, sem regravar o arquivo do projeto.
 
 Após publicação, no Sicoop execute `npm install --save-exact smoonb@1.0.12`, confira `npx smoonb --version` e execute um novo backup. A versão 0.0.60 não consulta o validador e não pode ser bloqueada remotamente. Não reutilize um backup incompleto como se fosse completo.
+
+Na 1.0.13, bancos sem histórico de migrations concluem essa etapa com zero arquivos. Falhas reais de conexão/permissão continuam produzindo backup incompleto, sempre com resumo de todas as etapas.

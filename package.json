@@ -1,6 +1,6 @@
 {
   "name": "smoonb",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "Complete Supabase backup and migration tool. https://www.smoonb.com/#price",
   "preferGlobal": false,
   "preventGlobalInstall": true,
@@ -11,8 +11,8 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "start": "node bin/smoonb.js",
-    "preinstall": "node -e \"if(process.env.npm_config_global) { console.error('\\n\u274c SMOONB N\u00c3O DEVE SER INSTALADO GLOBALMENTE!\\n\\n\ud83d\udccb Para usar o smoonb, instale localmente no seu projeto:\\n   npm install smoonb\\n\\n\ud83d\udca1 Depois execute com:\\n   npx smoonb backup\\n\\n\ud83d\udeab Instala\u00e7\u00e3o global cancelada!\\n'); process.exit(1); }\"",
-    "postinstall": "echo '\\n\u2705 smoonb instalado com sucesso!\\n\ud83d\udca1 Execute: npx smoonb backup\\n\ud83d\udcd6 Documenta\u00e7\u00e3o: https://github.com/almmello/smoonb\\n'",
+    "preinstall": "node -e \"if(process.env.npm_config_global) { console.error('\\n❌ SMOONB NÃO DEVE SER INSTALADO GLOBALMENTE!\\n\\n📋 Para usar o smoonb, instale localmente no seu projeto:\\n   npm install smoonb\\n\\n💡 Depois execute com:\\n   npx smoonb backup\\n\\n🚫 Instalação global cancelada!\\n'); process.exit(1); }\"",
+    "postinstall": "echo '\\n✅ smoonb instalado com sucesso!\\n💡 Execute: npx smoonb backup\\n📖 Documentação: https://github.com/almmello/smoonb\\n'",
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix",
     "build": "node scripts/build.js",
